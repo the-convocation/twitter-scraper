@@ -14,14 +14,14 @@ enum SearchMode {
 }
 
 export class Scraper {
-  bearerToken: string;
-  delay?: number;
-  guestToken?: string;
-  guestCreatedAt?: Date;
-  includeReplies?: boolean;
-  searchMode?: SearchMode;
-  cookie?: string;
-  xCsrfToken?: string;
+  private bearerToken: string;
+  private delay?: number;
+  private guestToken?: string;
+  private guestCreatedAt?: Date;
+  private includeReplies?: boolean;
+  private searchMode?: SearchMode;
+  private cookie?: string;
+  private xCsrfToken?: string;
 
   constructor() {
     this.bearerToken = bearerToken;
