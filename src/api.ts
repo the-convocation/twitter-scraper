@@ -3,9 +3,9 @@ import { gotScraping, Headers, Response } from 'got-scraping';
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAPYXBAAAAAAACLXUNDekMxqa8h%2F40K4moUkGsoc%3DTYfbDKbT3jJPCEVnMYqilB28NHfOPqkca3qaAxGfsyKCs0wRbw';
 
-type RequestApiResult<T> =
+export type RequestApiResult<T> =
   | { success: true; deleteGuest: boolean; value: T }
-  | { success: false; err: Error };
+  | { success: false; deleteGuest: boolean; err: Error };
 
 export async function requestApi<T>(
   url: string,
@@ -26,7 +26,7 @@ export async function requestApi<T>(
 
   let res: Response<string>;
   try {
-    res = await gotScraping.post({
+    res = await gotScraping.get({
       url,
       headers,
     });
@@ -37,6 +37,7 @@ export async function requestApi<T>(
 
     return {
       success: false,
+      deleteGuest: false,
       err: new Error('Failed to perform request.'),
     };
   }
@@ -44,6 +45,7 @@ export async function requestApi<T>(
   if (res.statusCode != 200 && res.statusCode != 403) {
     return {
       success: false,
+      deleteGuest: false,
       err: new Error(`Response status: ${res.statusCode}`),
     };
   }
@@ -56,13 +58,14 @@ export async function requestApi<T>(
   }
 }
 
-type GuestAuthenticationResult =
-  | { success: true; token: string; createdAt: Date }
-  | { success: false; err: Error };
+export interface GuestAuthentication {
+  token: string;
+  createdAt: Date;
+}
 
 export async function getGuestToken(
   authorization: string,
-): Promise<GuestAuthenticationResult> {
+): Promise<RequestApiResult<GuestAuthentication>> {
   let res: Response<string>;
   try {
     res = await gotScraping.post({
@@ -76,22 +79,38 @@ export async function getGuestToken(
       throw err;
     }
 
-    return { success: false, err: new Error('Failed to request guest token.') };
+    return {
+      success: false,
+      deleteGuest: false,
+      err: new Error('Failed to request guest token.'),
+    };
   }
 
   if (res.statusCode != 200) {
-    return { success: false, err: new Error(res.body) };
+    return { success: false, deleteGuest: false, err: new Error(res.body) };
   }
 
   const o = JSON.parse(res.body);
   if (o == null || o['guest_token'] == null) {
-    return { success: false, err: new Error('guest_token not found.') };
+    return {
+      success: false,
+      deleteGuest: false,
+      err: new Error('guest_token not found.'),
+    };
   }
 
   const guestToken = o['guest_token'];
   if (typeof guestToken !== 'string') {
-    return { success: false, err: new Error('guest_token was not a string.') };
+    return {
+      success: false,
+      deleteGuest: false,
+      err: new Error('guest_token was not a string.'),
+    };
   }
 
-  return { success: true, token: guestToken, createdAt: new Date() };
+  return {
+    success: true,
+    deleteGuest: false,
+    value: { token: guestToken, createdAt: new Date() },
+  };
 }

@@ -1,4 +1,5 @@
-import { bearerToken, getGuestToken, requestApi } from './api';
+import { bearerToken, getGuestToken, RequestApiResult } from './api';
+import { getProfile, getUserIdByScreenName, Profile } from './profile';
 
 export function add(a: number, b: number): number {
   return a + b;
@@ -26,37 +27,47 @@ export class Scraper {
     this.bearerToken = bearerToken;
   }
 
-  public async requestApi<T>(url: string): Promise<T> {
-    if (this.shouldUpdateGuest()) {
-      await this.getGuestToken();
-    }
+  public async getProfile(username: string): Promise<Profile> {
+    await this.tryUpdateGuestToken();
 
-    const res = await requestApi<T>(
-      url,
+    const res = await getProfile(
+      username,
       this.bearerToken,
       this.guestToken || '',
       this.cookie || '',
       this.xCsrfToken || '',
     );
-    if (!res.success) {
-      throw res.err;
+
+    return this.handleResponse(res);
+  }
+
+  public async getUserIdByScreenName(screenName: string): Promise<string> {
+    await this.tryUpdateGuestToken();
+
+    const res = await getUserIdByScreenName(
+      screenName,
+      this.bearerToken,
+      this.guestToken || '',
+      this.cookie || '',
+      this.xCsrfToken || '',
+    );
+
+    return this.handleResponse(res);
+  }
+
+  public async tryUpdateGuestToken(): Promise<boolean> {
+    if (this.shouldUpdateGuest()) {
+      await this.getGuestToken();
     }
 
-    if (res.deleteGuest) {
-      this.guestToken = undefined;
-    }
-
-    return res.value;
+    return this.isGuestToken();
   }
 
   public async getGuestToken() {
     const res = await getGuestToken(this.bearerToken);
-    if (!res.success) {
-      throw res.err;
-    }
-
-    this.guestToken = res.token;
-    this.guestCreatedAt = res.createdAt;
+    const { token, createdAt } = this.handleResponse(res);
+    this.guestToken = token;
+    this.guestCreatedAt = createdAt;
   }
 
   public shouldUpdateGuest(): boolean {
@@ -100,5 +111,17 @@ export class Scraper {
   private setBearerToken(token: string) {
     this.bearerToken = token;
     this.guestToken = undefined;
+  }
+
+  private handleResponse<T>(res: RequestApiResult<T>): T {
+    if (res.deleteGuest) {
+      delete this.guestToken;
+    }
+
+    if (!res.success) {
+      throw res.err;
+    }
+
+    return res.value;
   }
 }
