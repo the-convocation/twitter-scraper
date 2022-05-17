@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "got": "^12.0.4",
+    "got-scraping": "^3.2.9",
     "tslib": "^2.4.0"
   },
   "devDependencies": {
