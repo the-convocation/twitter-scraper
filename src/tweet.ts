@@ -1,6 +1,6 @@
 export interface Video {
-  id?: string;
-  preview?: string;
+  id: string;
+  preview: string;
   url?: string;
 }
 
@@ -18,7 +18,7 @@ export interface PlaceRaw {
 }
 
 export interface Tweet {
-  hashtags?: string[];
+  hashtags: string[];
   html?: string;
   id?: string;
   inReplyToStatus?: Tweet;
@@ -28,18 +28,18 @@ export interface Tweet {
   isRetweet?: boolean;
   likes?: number;
   permanentUrl?: string;
-  photos?: string[];
+  photos: string[];
   place?: PlaceRaw;
   quotedStatus?: Tweet;
   replies?: number;
   retweets?: number;
   retweetedStatus?: Tweet;
   text?: string;
-  timeParse?: Date;
+  timeParsed?: Date;
   timestamp?: number;
-  urls?: string[];
+  urls: string[];
   userId?: string;
   username?: string;
-  videos?: Video[];
+  videos: Video[];
   sensitiveContent?: boolean;
 }
