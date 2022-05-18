@@ -58,6 +58,41 @@ export async function requestApi<T>(
   }
 }
 
+export function addApiParams(
+  params: URLSearchParams,
+  includeTweetReplies: boolean,
+): URLSearchParams {
+  params.set('include_profile_interstitial_type', '1');
+  params.set('include_blocking', '1');
+  params.set('include_blocked_by', '1');
+  params.set('include_followed_by', '1');
+  params.set('include_want_retweets', '1');
+  params.set('include_mute_edge', '1');
+  params.set('include_can_dm', '1');
+  params.set('include_can_media_tag', '1');
+  params.set('include_ext_has_nft_avatar', '1');
+  params.set('skip_status', '1');
+  params.set('cards_platform', 'Web-12');
+  params.set('include_cards', '1');
+  params.set('include_ext_alt_text', 'true');
+  params.set('include_quote_count', 'true');
+  params.set('include_reply_count', '1');
+  params.set('tweet_mode', 'extended');
+  params.set('include_entities', 'true');
+  params.set('include_user_entities', 'true');
+  params.set('include_ext_media_color', 'true');
+  params.set('include_ext_media_availability', 'true');
+  params.set('include_ext_sensitive_media_warning', 'true');
+  params.set('send_error_codes', 'true');
+  params.set('simple_quoted_tweet', 'true');
+  params.set('include_tweet_replies', `${includeTweetReplies}`);
+  params.set(
+    'ext',
+    'mediaStats,highlightedLabel,hasNftAvatar,voiceInfo,superFollowMetadata',
+  );
+  return params;
+}
+
 export interface GuestAuthentication {
   token: string;
   createdAt: Date;
