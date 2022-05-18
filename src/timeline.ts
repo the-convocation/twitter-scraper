@@ -142,6 +142,10 @@ export interface TimelineRaw {
   timeline: TimelineDataRaw;
 }
 
+const reHashtag = /\B(\#\S+\b)/g;
+const reTwitterUrl = /https:(\/\/t\.co\/([A-Za-z0-9]|[A-Za-z]){10})/g;
+const reUsername = /\B(\@\S{1,15}\b)/g;
+
 export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   const tweets = timeline.globalObjects.tweets ?? {};
   const tweet = tweets[id];
@@ -271,7 +275,65 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     }
   }
 
-  // TODO: HTML
+  // HTML parsing with regex :)
+  let html = tweet.full_text ?? '';
+
+  const hashtagMatches = [...html.matchAll(reHashtag)];
+  for (const hashtag of hashtagMatches) {
+    html = html.replace(
+      hashtag[0],
+      `<a href="https://twitter.com/hashtag/${hashtag[0].replace('#', '')}">${
+        hashtag[0]
+      }</a>`,
+    );
+  }
+
+  const usernameMatches = [...html.matchAll(reUsername)];
+  for (const username of usernameMatches) {
+    html = html.replace(
+      username[0],
+      `<a href="https://twitter.com/${username[0].replace('@', '')}">${
+        username[0]
+      }</a>`,
+    );
+  }
+
+  const foundedMedia: string[] = [];
+
+  const urlMatches = [...html.matchAll(reTwitterUrl)];
+  for (const tco of urlMatches) {
+    for (const entity of tweet.entities?.urls ?? []) {
+      if (tco[0] === entity.url && entity.expanded_url != null) {
+        html = html.replace(
+          tco[0],
+          `<a href="${entity.expanded_url}">${tco[0]}</a>`,
+        );
+        break;
+      }
+    }
+
+    for (const entity of tweet.extendedEntities?.media ?? []) {
+      if (tco[0] === entity.url && entity.media_url_https != null) {
+        foundedMedia.push(entity.media_url_https);
+        html = html.replace(
+          tco[0],
+          `<br><a href="${tco[0]}"><img src="${entity.media_url_https}"/></a>`,
+        );
+        break;
+      }
+    }
+  }
+
+  for (const url of tw.photos) {
+    if (foundedMedia.indexOf(url) !== -1) {
+      continue;
+    }
+
+    html += `<br><img src="${url}"/>`;
+  }
+
+  html = html.replace('\n', '<br>');
+  tw.html = html;
 
   return tw;
 }
