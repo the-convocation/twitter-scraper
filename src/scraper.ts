@@ -14,7 +14,6 @@ enum SearchMode {
 }
 
 export class Scraper {
-  private bearerToken: string;
   private delay?: number;
   private guestToken?: string;
   private guestCreatedAt?: Date;
@@ -23,16 +22,12 @@ export class Scraper {
   private cookie?: string;
   private xCsrfToken?: string;
 
-  constructor() {
-    this.bearerToken = bearerToken;
-  }
-
   public async getProfile(username: string): Promise<Profile> {
     await this.tryUpdateGuestToken();
 
     const res = await getProfile(
       username,
-      this.bearerToken,
+      bearerToken,
       this.guestToken || '',
       this.cookie || '',
       this.xCsrfToken || '',
@@ -46,7 +41,7 @@ export class Scraper {
 
     const res = await getUserIdByScreenName(
       screenName,
-      this.bearerToken,
+      bearerToken,
       this.guestToken || '',
       this.cookie || '',
       this.xCsrfToken || '',
@@ -64,7 +59,7 @@ export class Scraper {
   }
 
   public async getGuestToken() {
-    const res = await getGuestToken(this.bearerToken);
+    const res = await getGuestToken(bearerToken);
     const { token, createdAt } = this.handleResponse(res);
     this.guestToken = token;
     this.guestCreatedAt = createdAt;
@@ -106,11 +101,6 @@ export class Scraper {
   public withXCsrfToken(token: string): Scraper {
     this.xCsrfToken = token;
     return this;
-  }
-
-  private setBearerToken(token: string) {
-    this.bearerToken = token;
-    this.guestToken = undefined;
   }
 
   private handleResponse<T>(res: RequestApiResult<T>): T {

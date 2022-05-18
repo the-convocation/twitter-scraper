@@ -2,6 +2,8 @@ import { gotScraping, Headers, Response } from 'got-scraping';
 
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAPYXBAAAAAAACLXUNDekMxqa8h%2F40K4moUkGsoc%3DTYfbDKbT3jJPCEVnMYqilB28NHfOPqkca3qaAxGfsyKCs0wRbw';
+export const bearerToken2 =
+  'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
 export type RequestApiResult<T> =
   | { success: true; deleteGuest: boolean; value: T }
