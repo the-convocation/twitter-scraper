@@ -61,7 +61,7 @@ export interface UserRaw {
   }[];
 }
 
-function parseProfile(user: LegacyUserRaw): Profile {
+export function parseProfile(user: LegacyUserRaw): Profile {
   const profile: Profile = {
     avatar: user.profile_image_url_https,
     banner: user.profile_banner_url,

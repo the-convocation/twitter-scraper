@@ -1,4 +1,4 @@
-import { LegacyUserRaw } from './profile';
+import { LegacyUserRaw, parseProfile, Profile } from './profile';
 import { PlaceRaw } from './tweet';
 
 export interface Hashtag {
@@ -69,7 +69,7 @@ export interface TimelineDataRawGlobalObjects {
 }
 
 export interface TimelineDataRaw {
-  instructions?: {
+  instructions: {
     addEntries?: {
       entries?: {
         content?: {
@@ -85,8 +85,8 @@ export interface TimelineDataRaw {
           };
           operation?: {
             cursor?: {
-              value?: string;
-              cursorType?: string;
+              value: string;
+              cursorType: string;
             };
           };
           timelineModule?: {
@@ -97,7 +97,7 @@ export interface TimelineDataRaw {
                     guideDetails?: {
                       transparentGuideDetails?: {
                         trendMetadata?: {
-                          trendName?: string;
+                          trendName: string;
                         };
                       };
                     };
@@ -115,7 +115,7 @@ export interface TimelineDataRaw {
           item?: {
             content?: {
               tweet?: {
-                id?: string;
+                id: string;
               };
             };
           };
@@ -127,8 +127,8 @@ export interface TimelineDataRaw {
         content?: {
           operation?: {
             cursor?: {
-              value?: string;
-              cursorType?: string;
+              value: string;
+              cursorType: string;
             };
           };
         };
@@ -138,6 +138,40 @@ export interface TimelineDataRaw {
 }
 
 export interface TimelineRaw {
-  globalObjects?: TimelineDataRawGlobalObjects;
-  timeline?: TimelineDataRaw;
+  globalObjects: TimelineDataRawGlobalObjects;
+  timeline: TimelineDataRaw;
+}
+
+export function parseUsers(
+  timeline: TimelineRaw,
+): [Profile[], string | undefined] {
+  const users = new Map<string | undefined, Profile>();
+
+  for (const id in timeline.globalObjects.users) {
+    const user = parseProfile(timeline.globalObjects.users[id]);
+    users.set(id, user);
+  }
+
+  let cursor: string | undefined;
+  const orderedProfiles: Profile[] = [];
+  for (const instruction of timeline.timeline.instructions) {
+    for (const entry of instruction.addEntries?.entries ?? []) {
+      const profile = users.get(entry.content?.item?.content?.user?.id);
+      if (profile != null) {
+        orderedProfiles.push(profile);
+      }
+
+      const operation = entry.content?.operation;
+      if (operation?.cursor?.cursorType === 'Bottom') {
+        cursor = operation?.cursor?.value;
+      }
+    }
+
+    const operation = instruction.replaceEntry?.entry?.content?.operation;
+    if (operation?.cursor?.cursorType === 'Bottom') {
+      cursor = operation.cursor.value;
+    }
+  }
+
+  return [orderedProfiles, cursor];
 }
