@@ -63,82 +63,89 @@ export interface TimelineTweetRaw {
   user_id_str?: string;
 }
 
-export interface TimelineDataRawGlobalObjects {
+export interface TimelineGlobalObjectsRaw {
   tweets?: { [key: string]: TimelineTweetRaw | undefined };
   users?: { [key: string]: LegacyUserRaw | undefined };
 }
 
-export interface TimelineDataRaw {
-  instructions?: {
-    addEntries?: {
-      entries?: {
-        content?: {
-          item?: {
-            content?: {
-              tweet?: {
-                id?: string;
-              };
-              user?: {
-                id?: string;
-              };
-            };
-          };
-          operation?: {
-            cursor?: {
-              value?: string;
-              cursorType?: string;
-            };
-          };
-          timelineModule?: {
-            items?: {
-              item?: {
-                clientEventInfo?: {
-                  details?: {
-                    guideDetails?: {
-                      transparentGuideDetails?: {
-                        trendMetadata?: {
-                          trendName?: string;
-                        };
-                      };
-                    };
-                  };
-                };
-              };
-            }[];
+export interface TimelineDataRawCursor {
+  value?: string;
+  cursorType?: string;
+}
+
+export interface TimelineDataRawEntity {
+  id?: string;
+}
+
+export interface TimelineDataRawModuleItem {
+  clientEventInfo?: {
+    details?: {
+      guideDetails?: {
+        transparentGuideDetails?: {
+          trendMetadata?: {
+            trendName?: string;
           };
         };
+      };
+    };
+  };
+}
+
+export interface TimelineDataRawAddEntry {
+  content?: {
+    item?: {
+      content?: {
+        tweet?: TimelineDataRawEntity;
+        user?: TimelineDataRawEntity;
+      };
+    };
+    operation?: {
+      cursor?: TimelineDataRawCursor;
+    };
+    timelineModule?: {
+      items?: {
+        item?: TimelineDataRawModuleItem;
       }[];
     };
-    pinEntry?: {
-      entry?: {
-        content?: {
-          item?: {
-            content?: {
-              tweet?: {
-                id?: string;
-              };
-            };
-          };
-        };
+  };
+}
+
+export interface TimelineDataRawPinEntry {
+  content?: {
+    item?: {
+      content?: {
+        tweet?: TimelineDataRawEntity;
       };
     };
-    replaceEntry?: {
-      entry?: {
-        content?: {
-          operation?: {
-            cursor?: {
-              value?: string;
-              cursorType?: string;
-            };
-          };
-        };
-      };
+  };
+}
+
+export interface TimelineDataRawReplaceEntry {
+  content?: {
+    operation?: {
+      cursor?: TimelineDataRawCursor;
     };
-  }[];
+  };
+}
+
+export interface TimelineDataRawInstruction {
+  addEntries?: {
+    entries?: TimelineDataRawAddEntry[];
+  };
+  pinEntry?: {
+    entry?: TimelineDataRawPinEntry;
+  };
+  replaceEntry?: {
+    entry?: TimelineDataRawReplaceEntry;
+  };
+}
+
+export interface TimelineDataRaw {
+  instructions?: TimelineDataRawInstruction[];
 }
 
 export interface TimelineRaw {
-  globalObjects: TimelineDataRawGlobalObjects;
+  globalObjects: TimelineGlobalObjectsRaw;
   timeline: TimelineDataRaw;
 }
 
