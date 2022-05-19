@@ -1,10 +1,9 @@
 import { bearerToken, RequestApiResult } from './api';
 import { TwitterGuestAuth } from './auth';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
-
-export function add(a: number, b: number): number {
-  return a + b;
-}
+import { SearchMode, searchProfiles, searchTweets } from './search';
+import { getTrends } from './trends';
+import { getTweet, getTweets, Tweet } from './tweets';
 
 export class Scraper {
   private auth: TwitterGuestAuth;
@@ -21,6 +20,52 @@ export class Scraper {
   public async getUserIdByScreenName(screenName: string): Promise<string> {
     const res = await getUserIdByScreenName(screenName, this.auth);
     return this.handleResponse(res);
+  }
+
+  public searchTweets(
+    query: string,
+    maxTweets: number,
+    includeReplies: boolean,
+    searchMode: SearchMode,
+  ): AsyncGenerator<Tweet> {
+    return searchTweets(
+      query,
+      maxTweets,
+      includeReplies,
+      searchMode,
+      this.auth,
+    );
+  }
+
+  public searchProfiles(
+    query: string,
+    maxProfiles: number,
+    includeReplies: boolean,
+    searchMode: SearchMode,
+  ): AsyncGenerator<Profile> {
+    return searchProfiles(
+      query,
+      maxProfiles,
+      includeReplies,
+      searchMode,
+      this.auth,
+    );
+  }
+
+  public getTrends(includeReplies: boolean): Promise<string[]> {
+    return getTrends(includeReplies, this.auth);
+  }
+
+  public getTweets(
+    user: string,
+    maxTweets: number,
+    includeReplies: boolean,
+  ): AsyncGenerator<Tweet> {
+    return getTweets(user, maxTweets, includeReplies, this.auth);
+  }
+
+  public getTweet(id: string, includeReplies: boolean): Promise<Tweet | null> {
+    return getTweet(id, includeReplies, this.auth);
   }
 
   public hasGuestToken(): boolean {

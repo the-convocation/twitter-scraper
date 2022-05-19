@@ -93,7 +93,7 @@ export function getTweets(
   maxTweets: number,
   includeReplies: boolean,
   auth: TwitterGuestAuth,
-) {
+): AsyncGenerator<Tweet> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const [tweets, next] = await fetchTweets(q, mt, c, includeReplies, auth);
     return { tweets, next };

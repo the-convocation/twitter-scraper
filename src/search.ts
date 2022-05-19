@@ -5,7 +5,7 @@ import { parseTweets, parseUsers, TimelineRaw } from './timeline';
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
 
-enum SearchMode {
+export enum SearchMode {
   Top,
   Latest,
   Photos,
@@ -61,7 +61,7 @@ export function searchProfiles(
   });
 }
 
-export async function fetchSearchTweets(
+async function fetchSearchTweets(
   query: string,
   maxTweets: number,
   includeReplies: boolean,
@@ -81,7 +81,7 @@ export async function fetchSearchTweets(
   return parseTweets(timeline);
 }
 
-export async function fetchSearchProfiles(
+async function fetchSearchProfiles(
   query: string,
   maxProfiles: number,
   includeReplies: boolean,
