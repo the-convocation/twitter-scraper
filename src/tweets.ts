@@ -1,7 +1,7 @@
 import { addApiParams, requestApi } from './api';
 import { TwitterGuestAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
-import { TimelineRaw, parseTweets } from './timeline';
+import { TimelineRaw, parseTweets, QueryTweetsResponse } from './timeline';
 import { getTweetTimeline } from './timeline-async';
 
 export interface Video {
@@ -56,10 +56,7 @@ export async function fetchTweets(
   includeReplies: boolean,
   cursor: string | undefined,
   auth: TwitterGuestAuth,
-): Promise<{
-  tweets: Tweet[];
-  next?: string;
-}> {
+): Promise<QueryTweetsResponse> {
   if (maxTweets > 200) {
     maxTweets = 200;
   }

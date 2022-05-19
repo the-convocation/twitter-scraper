@@ -1,7 +1,13 @@
 import { addApiParams, requestApi } from './api';
 import { TwitterGuestAuth } from './auth';
 import { Profile } from './profile';
-import { parseTweets, parseUsers, TimelineRaw } from './timeline';
+import {
+  parseTweets,
+  parseUsers,
+  QueryProfilesResponse,
+  QueryTweetsResponse,
+  TimelineRaw,
+} from './timeline';
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
 
@@ -44,10 +50,7 @@ export async function fetchSearchTweets(
   searchMode: SearchMode,
   auth: TwitterGuestAuth,
   cursor?: string,
-): Promise<{
-  tweets: Tweet[];
-  next?: string;
-}> {
+): Promise<QueryTweetsResponse> {
   const timeline = await getSearchTimeline(
     query,
     maxTweets,
@@ -67,10 +70,7 @@ export async function fetchSearchProfiles(
   searchMode: SearchMode,
   auth: TwitterGuestAuth,
   cursor?: string,
-): Promise<{
-  profiles: Profile[];
-  next?: string;
-}> {
+): Promise<QueryProfilesResponse> {
   const timeline = await getSearchTimeline(
     query,
     maxProfiles,

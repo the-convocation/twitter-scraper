@@ -345,10 +345,12 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   return tw;
 }
 
-export function parseTweets(timeline: TimelineRaw): {
+export interface QueryTweetsResponse {
   tweets: Tweet[];
   next?: string;
-} {
+}
+
+export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
   let cursor: string | undefined;
   let pinnedTweet: Tweet | undefined;
   let orderedTweets: Tweet[] = [];
@@ -393,10 +395,12 @@ export function parseTweets(timeline: TimelineRaw): {
   };
 }
 
-export function parseUsers(timeline: TimelineRaw): {
+export interface QueryProfilesResponse {
   profiles: Profile[];
   next?: string;
-} {
+}
+
+export function parseUsers(timeline: TimelineRaw): QueryProfilesResponse {
   const users = new Map<string | undefined, Profile>();
 
   const userObjects = timeline.globalObjects?.users ?? {};

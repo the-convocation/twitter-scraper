@@ -1,6 +1,6 @@
 import { Scraper } from './scraper';
 import { SearchMode } from './search';
-import { Tweet } from './tweets';
+import { QueryTweetsResponse } from './timeline';
 
 test('scraper can process search cursor', async () => {
   const scraper = new Scraper();
@@ -9,10 +9,7 @@ test('scraper can process search cursor', async () => {
   const maxTweets = 150;
   let nTweets = 0;
   while (nTweets < maxTweets) {
-    const res: {
-      tweets: Tweet[];
-      next?: string;
-    } = await scraper.fetchSearchTweets(
+    const res: QueryTweetsResponse = await scraper.fetchSearchTweets(
       'twitter',
       150,
       false,

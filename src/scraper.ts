@@ -7,6 +7,7 @@ import {
   searchProfiles,
   searchTweets,
 } from './search';
+import { QueryTweetsResponse } from './timeline';
 import { getTrends } from './trends';
 import { getTweet, getTweets, Tweet } from './tweets';
 
@@ -63,10 +64,7 @@ export class Scraper {
     includeReplies: boolean,
     searchMode: SearchMode,
     cursor?: string,
-  ): Promise<{
-    tweets: Tweet[];
-    next?: string;
-  }> {
+  ): Promise<QueryTweetsResponse> {
     return fetchSearchTweets(
       query,
       maxTweets,
