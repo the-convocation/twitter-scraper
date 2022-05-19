@@ -53,10 +53,13 @@ export interface Tweet {
 export async function fetchTweets(
   user: string,
   maxTweets: number,
-  cursor: string | undefined,
   includeReplies: boolean,
+  cursor: string | undefined,
   auth: TwitterGuestAuth,
-): Promise<[Tweet[], string | undefined]> {
+): Promise<{
+  tweets: Tweet[];
+  next?: string;
+}> {
   if (maxTweets > 200) {
     maxTweets = 200;
   }
@@ -94,9 +97,8 @@ export function getTweets(
   includeReplies: boolean,
   auth: TwitterGuestAuth,
 ): AsyncGenerator<Tweet> {
-  return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
-    const [tweets, next] = await fetchTweets(q, mt, c, includeReplies, auth);
-    return { tweets, next };
+  return getTweetTimeline(user, maxTweets, (q, mt, c) => {
+    return fetchTweets(q, mt, includeReplies, c, auth);
   });
 }
 
@@ -116,7 +118,7 @@ export async function getTweet(
     throw res.err;
   }
 
-  const [tweets] = parseTweets(res.value);
+  const { tweets } = parseTweets(res.value);
   for (const tweet of tweets) {
     if (tweet.id === id) {
       return tweet;

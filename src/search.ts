@@ -20,20 +20,8 @@ export function searchTweets(
   searchMode: SearchMode,
   auth: TwitterGuestAuth,
 ): AsyncGenerator<Tweet> {
-  return getTweetTimeline(query, maxTweets, async (q, mt, c) => {
-    const [tweets, next] = await fetchSearchTweets(
-      q,
-      mt,
-      includeReplies,
-      searchMode,
-      auth,
-      c,
-    );
-
-    return {
-      tweets,
-      next,
-    };
+  return getTweetTimeline(query, maxTweets, (q, mt, c) => {
+    return fetchSearchTweets(q, mt, includeReplies, searchMode, auth, c);
   });
 }
 
@@ -44,31 +32,22 @@ export function searchProfiles(
   searchMode: SearchMode,
   auth: TwitterGuestAuth,
 ): AsyncGenerator<Profile> {
-  return getUserTimeline(query, maxProfiles, async (q, mt, c) => {
-    const [profiles, next] = await fetchSearchProfiles(
-      q,
-      mt,
-      includeReplies,
-      searchMode,
-      auth,
-      c,
-    );
-
-    return {
-      profiles,
-      next,
-    };
+  return getUserTimeline(query, maxProfiles, (q, mt, c) => {
+    return fetchSearchProfiles(q, mt, includeReplies, searchMode, auth, c);
   });
 }
 
-async function fetchSearchTweets(
+export async function fetchSearchTweets(
   query: string,
   maxTweets: number,
   includeReplies: boolean,
   searchMode: SearchMode,
   auth: TwitterGuestAuth,
   cursor?: string,
-): Promise<[Tweet[], string | undefined]> {
+): Promise<{
+  tweets: Tweet[];
+  next?: string;
+}> {
   const timeline = await getSearchTimeline(
     query,
     maxTweets,
@@ -81,14 +60,17 @@ async function fetchSearchTweets(
   return parseTweets(timeline);
 }
 
-async function fetchSearchProfiles(
+export async function fetchSearchProfiles(
   query: string,
   maxProfiles: number,
   includeReplies: boolean,
   searchMode: SearchMode,
   auth: TwitterGuestAuth,
   cursor?: string,
-): Promise<[Profile[], string | undefined]> {
+): Promise<{
+  profiles: Profile[];
+  next?: string;
+}> {
   const timeline = await getSearchTimeline(
     query,
     maxProfiles,

@@ -345,9 +345,10 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   return tw;
 }
 
-export function parseTweets(
-  timeline: TimelineRaw,
-): [Tweet[], string | undefined] {
+export function parseTweets(timeline: TimelineRaw): {
+  tweets: Tweet[];
+  next?: string;
+} {
   let cursor: string | undefined;
   let pinnedTweet: Tweet | undefined;
   let orderedTweets: Tweet[] = [];
@@ -386,12 +387,16 @@ export function parseTweets(
     orderedTweets = [pinnedTweet, ...orderedTweets];
   }
 
-  return [orderedTweets, cursor];
+  return {
+    tweets: orderedTweets,
+    next: cursor,
+  };
 }
 
-export function parseUsers(
-  timeline: TimelineRaw,
-): [Profile[], string | undefined] {
+export function parseUsers(timeline: TimelineRaw): {
+  profiles: Profile[];
+  next?: string;
+} {
   const users = new Map<string | undefined, Profile>();
 
   const userObjects = timeline.globalObjects?.users ?? {};
@@ -426,5 +431,8 @@ export function parseUsers(
     }
   }
 
-  return [orderedProfiles, cursor];
+  return {
+    profiles: orderedProfiles,
+    next: cursor,
+  };
 }

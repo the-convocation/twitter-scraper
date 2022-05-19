@@ -1,7 +1,12 @@
 import { bearerToken, RequestApiResult } from './api';
 import { TwitterGuestAuth } from './auth';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
-import { SearchMode, searchProfiles, searchTweets } from './search';
+import {
+  fetchSearchTweets,
+  SearchMode,
+  searchProfiles,
+  searchTweets,
+} from './search';
 import { getTrends } from './trends';
 import { getTweet, getTweets, Tweet } from './tweets';
 
@@ -49,6 +54,26 @@ export class Scraper {
       includeReplies,
       searchMode,
       this.auth,
+    );
+  }
+
+  public fetchSearchTweets(
+    query: string,
+    maxTweets: number,
+    includeReplies: boolean,
+    searchMode: SearchMode,
+    cursor?: string,
+  ): Promise<{
+    tweets: Tweet[];
+    next?: string;
+  }> {
+    return fetchSearchTweets(
+      query,
+      maxTweets,
+      includeReplies,
+      searchMode,
+      this.auth,
+      cursor,
     );
   }
 
