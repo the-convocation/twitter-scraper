@@ -1,4 +1,5 @@
 import { requestApi, RequestApiResult } from './api';
+import { TwitterGuestAuth } from './auth';
 
 export interface Profile {
   avatar?: string;
@@ -96,31 +97,23 @@ export function parseProfile(user: LegacyUserRaw): Profile {
 
 export async function getProfile(
   username: string,
-  authorization: string,
-  xGuestToken: string,
-  cookie: string,
-  xCsrfToken: string,
+  auth: TwitterGuestAuth,
 ): Promise<RequestApiResult<Profile>> {
   const res = await requestApi<UserRaw>(
     'https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?variables=%7B%22screen_name%22%3A%22' +
       username +
       '%22%2C%22withHighlightedLabel%22%3Atrue%7D',
-    authorization,
-    xGuestToken,
-    cookie,
-    xCsrfToken,
+    auth,
   );
-
   if (!res.success) {
     throw res.err;
   }
 
-  const { deleteGuest, value } = res;
+  const { value } = res;
   const { errors } = value;
   if (errors != null && errors.length > 0) {
     return {
       success: false,
-      deleteGuest,
       err: new Error(errors[0].message),
     };
   }
@@ -130,7 +123,6 @@ export async function getProfile(
   if (user.rest_id == null || user.rest_id.length === 0) {
     return {
       success: false,
-      deleteGuest,
       err: new Error('rest_id not found.'),
     };
   }
@@ -140,14 +132,12 @@ export async function getProfile(
   if (legacy.screen_name == null || legacy.screen_name.length === 0) {
     return {
       success: false,
-      deleteGuest,
-      err: new Error(`either ${username} does not exist or is private.`),
+      err: new Error(`Either ${username} does not exist or is private.`),
     };
   }
 
   return {
     success: true,
-    deleteGuest,
     value: parseProfile(user.legacy),
   };
 }
@@ -156,30 +146,16 @@ const idCache = new Map<string, string>();
 
 export async function getUserIdByScreenName(
   screenName: string,
-  authorization: string,
-  xGuestToken: string,
-  cookie: string,
-  xCsrfToken: string,
+  auth: TwitterGuestAuth,
 ): Promise<RequestApiResult<string>> {
   const cached = idCache.get(screenName);
   if (cached != null) {
-    return { success: true, deleteGuest: false, value: cached };
+    return { success: true, value: cached };
   }
 
-  const profileRes = await getProfile(
-    screenName,
-    authorization,
-    xGuestToken,
-    cookie,
-    xCsrfToken,
-  );
-  const { success, deleteGuest } = profileRes;
-  if (!success) {
-    return {
-      success: false,
-      deleteGuest,
-      err: profileRes.err,
-    };
+  const profileRes = await getProfile(screenName, auth);
+  if (!profileRes.success) {
+    return profileRes;
   }
 
   const profile = profileRes.value;
@@ -188,14 +164,12 @@ export async function getUserIdByScreenName(
 
     return {
       success: true,
-      deleteGuest,
       value: profile.userId,
     };
   }
 
   return {
     success: false,
-    deleteGuest,
-    err: new Error('user ID is undefined.'),
+    err: new Error('User ID is undefined.'),
   };
 }

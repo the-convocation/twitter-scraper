@@ -1,17 +1,10 @@
-import {
-  addApiParams,
-  bearerToken2,
-  HandleDeleteGuest,
-  requestApi,
-} from './api';
+import { addApiParams, bearerToken2, requestApi } from './api';
+import { TwitterGuestAuth } from './auth';
 import { TimelineRaw } from './timeline';
 
 export async function getTrends(
   includeTweetReplies: boolean,
-  xGuestToken: string,
-  cookie: string,
-  xCsrfToken: string,
-  handleDeleteGuest: HandleDeleteGuest,
+  auth: TwitterGuestAuth,
 ): Promise<string[]> {
   const params = new URLSearchParams();
   addApiParams(params, includeTweetReplies);
@@ -23,12 +16,9 @@ export async function getTrends(
 
   const res = await requestApi<TimelineRaw>(
     `https://twitter.com/i/api/2/guide.json?${params.toString()}`,
+    auth,
     bearerToken2,
-    xGuestToken,
-    cookie,
-    xCsrfToken,
   );
-  handleDeleteGuest(res.deleteGuest);
   if (!res.success) {
     throw res.err;
   }

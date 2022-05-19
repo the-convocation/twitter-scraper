@@ -1,9 +1,5 @@
-import {
-  addApiParams,
-  HandleDeleteGuest,
-  InjectGuestToken,
-  requestApi,
-} from './api';
+import { addApiParams, requestApi } from './api';
+import { TwitterGuestAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
 import { TimelineRaw, parseTweets } from './timeline';
 import { getTweetTimeline } from './timeline-async';
@@ -59,24 +55,13 @@ export async function fetchTweets(
   maxTweets: number,
   cursor: string | undefined,
   includeReplies: boolean,
-  authorization: string,
-  cookie: string,
-  xCsrfToken: string,
-  handleDeleteGuest: HandleDeleteGuest,
-  injectGuest: InjectGuestToken,
+  auth: TwitterGuestAuth,
 ): Promise<[Tweet[], string | undefined]> {
   if (maxTweets > 200) {
     maxTweets = 200;
   }
 
-  const userIdRes = await getUserIdByScreenName(
-    user,
-    authorization,
-    injectGuest(),
-    cookie,
-    xCsrfToken,
-  );
-  handleDeleteGuest(userIdRes.deleteGuest);
+  const userIdRes = await getUserIdByScreenName(user, auth);
   if (!userIdRes.success) {
     throw userIdRes.err;
   }
@@ -94,12 +79,8 @@ export async function fetchTweets(
     `https://api.twitter.com/2/timeline/profile/${
       userIdRes.value
     }.json?${params.toString()}`,
-    authorization,
-    injectGuest(),
-    cookie,
-    xCsrfToken,
+    auth,
   );
-  handleDeleteGuest(res.deleteGuest);
   if (!res.success) {
     throw res.err;
   }
@@ -111,25 +92,10 @@ export function getTweets(
   user: string,
   maxTweets: number,
   includeReplies: boolean,
-  authorization: string,
-  cookie: string,
-  xCsrfToken: string,
-  handleDeleteGuest: HandleDeleteGuest,
-  injectGuest: InjectGuestToken,
+  auth: TwitterGuestAuth,
 ) {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
-    const [tweets, next] = await fetchTweets(
-      q,
-      mt,
-      c,
-      includeReplies,
-      authorization,
-      cookie,
-      xCsrfToken,
-      handleDeleteGuest,
-      injectGuest,
-    );
-
+    const [tweets, next] = await fetchTweets(q, mt, c, includeReplies, auth);
     return { tweets, next };
   });
 }
@@ -137,23 +103,15 @@ export function getTweets(
 export async function getTweet(
   id: string,
   includeReplies: boolean,
-  authorization: string,
-  xGuestToken: string,
-  cookie: string,
-  xCsrfToken: string,
-  handleDeleteGuest: HandleDeleteGuest,
+  auth: TwitterGuestAuth,
 ): Promise<Tweet | null> {
   const params = new URLSearchParams();
   addApiParams(params, includeReplies);
 
   const res = await requestApi<TimelineRaw>(
     `https://twitter.com/i/api/2/timeline/conversation/${id}.json`,
-    authorization,
-    xGuestToken,
-    cookie,
-    xCsrfToken,
+    auth,
   );
-  handleDeleteGuest(res.deleteGuest);
   if (!res.success) {
     throw res.err;
   }
