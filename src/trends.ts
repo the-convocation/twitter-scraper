@@ -23,7 +23,7 @@ export async function getTrends(
     throw res.err;
   }
 
-  const instructions = res.value.timeline.instructions ?? [];
+  const instructions = res.value.timeline?.instructions ?? [];
   if (instructions.length < 2) {
     throw new Error('No trend entries found.');
   }

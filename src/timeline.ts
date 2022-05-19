@@ -145,8 +145,8 @@ export interface TimelineDataRaw {
 }
 
 export interface TimelineRaw {
-  globalObjects: TimelineGlobalObjectsRaw;
-  timeline: TimelineDataRaw;
+  globalObjects?: TimelineGlobalObjectsRaw;
+  timeline?: TimelineDataRaw;
 }
 
 const reHashtag = /\B(\#\S+\b)/g;
@@ -154,13 +154,13 @@ const reTwitterUrl = /https:(\/\/t\.co\/([A-Za-z0-9]|[A-Za-z]){10})/g;
 const reUsername = /\B(\@\S{1,15}\b)/g;
 
 export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
-  const tweets = timeline.globalObjects.tweets ?? {};
+  const tweets = timeline.globalObjects?.tweets ?? {};
   const tweet = tweets[id];
   if (tweet == null || tweet.user_id_str == null) {
     return null;
   }
 
-  const users = timeline.globalObjects.users ?? {};
+  const users = timeline.globalObjects?.users ?? {};
   const user = users[tweet.user_id_str];
   const username = user?.screen_name;
   if (user == null || username == null) {
@@ -351,7 +351,7 @@ export function parseTweets(
   let cursor: string | undefined;
   let pinnedTweet: Tweet | undefined;
   let orderedTweets: Tweet[] = [];
-  for (const instruction of timeline.timeline.instructions ?? []) {
+  for (const instruction of timeline.timeline?.instructions ?? []) {
     const pinnedTweetId =
       instruction.pinEntry?.entry?.content?.item?.content?.tweet?.id;
     if (pinnedTweetId != null) {
@@ -394,8 +394,9 @@ export function parseUsers(
 ): [Profile[], string | undefined] {
   const users = new Map<string | undefined, Profile>();
 
-  for (const id in timeline.globalObjects.users) {
-    const legacy = timeline.globalObjects.users[id];
+  const userObjects = timeline.globalObjects?.users ?? {};
+  for (const id in userObjects) {
+    const legacy = userObjects[id];
     if (legacy == null) {
       continue;
     }
@@ -406,7 +407,7 @@ export function parseUsers(
 
   let cursor: string | undefined;
   const orderedProfiles: Profile[] = [];
-  for (const instruction of timeline.timeline.instructions ?? []) {
+  for (const instruction of timeline.timeline?.instructions ?? []) {
     for (const entry of instruction.addEntries?.entries ?? []) {
       const profile = users.get(entry.content?.item?.content?.user?.id);
       if (profile != null) {
