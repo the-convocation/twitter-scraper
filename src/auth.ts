@@ -35,7 +35,7 @@ class TwitterAuthInstaller {
    * Overrides the bearer token with the provided value.
    * @param value The new bearer token to use.
    */
-  withBearerToken(value: string) {
+  withBearerToken(value: string): TwitterAuthInstaller {
     this.bearerToken = value;
     return this;
   }
@@ -85,7 +85,7 @@ export class TwitterGuestAuth {
    * Returns if the authentication state has a token.
    * @returns `true` if the authentication state has a token; `false` otherwise.
    */
-  hasToken() {
+  hasToken(): boolean {
     return this.guestToken != null;
   }
 
@@ -93,7 +93,7 @@ export class TwitterGuestAuth {
    * Returns the time that authentication was performed.
    * @returns The time at which the authentication token was created, or `null` if it hasn't been created yet.
    */
-  authenticatedAt() {
+  authenticatedAt(): Date | null {
     if (this.guestCreatedAt == null) {
       return null;
     }
@@ -124,7 +124,7 @@ export class TwitterGuestAuth {
    * @returns A builder that can be used to add or override other relevant data, or to
    * complete the task.
    */
-  installTo(headers: { [key: string]: unknown }) {
+  installTo(headers: { [key: string]: unknown }): TwitterAuthInstaller {
     const getToken = (() => {
       return this.guestToken;
     }).bind(this);
@@ -175,7 +175,7 @@ export class TwitterGuestAuth {
    * Returns if the authentication token needs to be updated or not.
    * @returns `true` if the token needs to be updated; `false` otherwise.
    */
-  private shouldUpdate() {
+  private shouldUpdate(): boolean {
     return (
       !this.hasToken() ||
       (this.guestCreatedAt != null &&
