@@ -185,7 +185,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
 
   if (tweet.created_at != null) {
     tw.timeParsed = new Date(Date.parse(tweet.created_at));
-    tw.timestamp = tw.timeParsed.valueOf();
+    tw.timestamp = Math.floor(tw.timeParsed.valueOf() / 1000);
   }
 
   if (tweet.place?.id != null) {
