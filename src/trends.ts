@@ -1,4 +1,9 @@
-import { addApiParams, bearerToken2, requestApi } from './api';
+import {
+  addApiParams,
+  bearerToken2,
+  HandleDeleteGuest,
+  requestApi,
+} from './api';
 import { TimelineRaw } from './timeline';
 
 export async function getTrends(
@@ -6,6 +11,7 @@ export async function getTrends(
   xGuestToken: string,
   cookie: string,
   xCsrfToken: string,
+  handleDeleteGuest: HandleDeleteGuest,
 ): Promise<string[]> {
   const params = new URLSearchParams();
   addApiParams(params, includeTweetReplies);
@@ -22,6 +28,7 @@ export async function getTrends(
     cookie,
     xCsrfToken,
   );
+  handleDeleteGuest(res.deleteGuest);
   if (!res.success) {
     throw res.err;
   }

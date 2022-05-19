@@ -1,5 +1,5 @@
 import { Profile } from './profile';
-import { Tweet } from './tweet';
+import { Tweet } from './tweets';
 
 export interface FetchProfilesResponse {
   profiles: Profile[];

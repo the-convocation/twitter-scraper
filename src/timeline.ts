@@ -1,5 +1,5 @@
 import { LegacyUserRaw, parseProfile, Profile } from './profile';
-import { PlaceRaw, Tweet, Video } from './tweet';
+import { PlaceRaw, Tweet, Video } from './tweets';
 
 export interface Hashtag {
   text?: string;
