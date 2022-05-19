@@ -36,3 +36,54 @@ test('scraper can get profile', async () => {
   expect(actual.username).toEqual(expected.username);
   expect(actual.website).toEqual(expected.website);
 });
+
+test('scraper can get partial private profile', async () => {
+  const expected: Profile = {
+    avatar:
+      'https://pbs.twimg.com/profile_images/1222218816484020224/ik9P1QZt_normal.jpg',
+    banner: undefined,
+    biography: 'Quien es mas macho',
+    isPrivate: true,
+    isVerified: false,
+    joined: new Date(Date.UTC(2020, 0, 26, 0, 3, 5, 0)),
+    location: '',
+    name: 'private account',
+    pinnedTweetIds: [],
+    url: 'https://twitter.com/tomdumont',
+    userId: '1221221876849995777',
+    username: 'tomdumont',
+    website: undefined,
+  };
+
+  const scraper = new Scraper();
+
+  const actual = await scraper.getProfile('tomdumont');
+  expect(actual.avatar).toEqual(expected.avatar);
+  expect(actual.banner).toEqual(expected.banner);
+  expect(actual.biography).toEqual(expected.biography);
+  expect(actual.isPrivate).toEqual(expected.isPrivate);
+  expect(actual.isVerified).toEqual(expected.isVerified);
+  expect(actual.joined).toEqual(expected.joined);
+  expect(actual.location).toEqual(expected.location);
+  expect(actual.name).toEqual(expected.name);
+  expect(actual.pinnedTweetIds).toEqual(expected.pinnedTweetIds);
+  expect(actual.url).toEqual(expected.url);
+  expect(actual.userId).toEqual(expected.userId);
+  expect(actual.username).toEqual(expected.username);
+  expect(actual.website).toEqual(expected.website);
+});
+
+test('scraper cannot get suspended profile', async () => {
+  const scraper = new Scraper();
+  expect(scraper.getProfile('123')).rejects.toThrow();
+});
+
+test('scraper cannot get not found profile', async () => {
+  const scraper = new Scraper();
+  expect(scraper.getProfile('sample3123131')).rejects.toThrow();
+});
+
+test('scraper can get profile by screen name', async () => {
+  const scraper = new Scraper();
+  await scraper.getProfile('Twitter');
+});

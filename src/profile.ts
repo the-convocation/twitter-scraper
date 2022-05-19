@@ -14,7 +14,7 @@ export interface Profile {
   joined?: Date;
   likesCount?: number;
   listedCount?: number;
-  location?: string;
+  location: string;
   name?: string;
   pinnedTweetIds?: string[];
   tweetsCount?: number;
@@ -40,7 +40,7 @@ export interface LegacyUserRaw {
   id_str?: string;
   listed_count?: number;
   name?: string;
-  location?: string;
+  location: string;
   pinned_tweet_ids_str?: string[];
   profile_banner_url?: string;
   profile_image_url_https?: string;
