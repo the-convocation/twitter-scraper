@@ -6,7 +6,6 @@ A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper) 
 > You can use this library to get the text of any user's Tweets trivially.
 
 ## Installation
-
 NPM:
 ```sh
 npm install @the-convocation/twitter-scraper
@@ -18,3 +17,6 @@ yarn add @the-convocation/twitter-scraper
 ```
 
 TypeScript types have been bundled with the distribution.
+
+## Contributing
+We use [Conventional Commits](https://www.conventionalcommits.org), and enforce this with precommit checks.
