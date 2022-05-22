@@ -2,14 +2,14 @@
   "name": "twitter-scraper",
   "version": "0.0.1",
   "main": "dist/scraper.js",
-  "repository": "https://github.com/karashiiro/twitter-scraper.git",
+  "repository": "https://github.com/the-convocation/twitter-scraper.git",
   "author": "karashiiro <49822414+karashiiro@users.noreply.github.com>",
   "license": "MIT",
   "scripts": {
     "build": "tsc",
     "commit": "cz",
     "docs:generate": "typedoc --entryPoints src --entryPointStrategy expand --exclude **/*.test.ts",
-    "docs:deploy": "yarn docs:generate && node gh-pages.js",
+    "docs:deploy": "yarn docs:generate && gh-pages -d docs",
     "format": "prettier --write \\\"src/**/*.ts\\\" \\\"test/**/*.ts\\\"",
     "prepare": "husky install",
     "test": "jest"

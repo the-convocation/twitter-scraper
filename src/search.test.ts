@@ -30,11 +30,7 @@ test('scraper can search profiles', async () => {
   const seenProfiles = new Map<string, boolean>();
   const maxProfiles = 150;
   let nProfiles = 0;
-  for await (const profile of scraper.searchProfiles(
-    'Twitter',
-    maxProfiles,
-    false,
-  )) {
+  for await (const profile of scraper.searchProfiles('Twitter', maxProfiles)) {
     nProfiles++;
 
     expect(profile.userId).toBeTruthy();

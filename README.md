@@ -6,6 +6,8 @@ A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper) 
 > You can use this library to get the text of any user's Tweets trivially.
 
 ## Installation
+This package requires Node.js v15.10.0 or greater.
+
 NPM:
 ```sh
 npm install @the-convocation/twitter-scraper
