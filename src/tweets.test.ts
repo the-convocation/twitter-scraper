@@ -33,3 +33,64 @@ test('scraper can get tweet', async () => {
   delete actual?.retweets;
   expect(expected).toEqual(actual);
 });
+
+test('scraper can get tweet quotes and replies', async () => {
+  const expected: Tweet = {
+    html: `The Easiest Problem Everyone Gets Wrong <br><br>[new video] --&gt; <a href=\"https://youtu.be/ytfCdqWhmdg\">https://t.co/YdaeDYmPAU</a> <br><a href=\"https://t.co/iKu4Xs6o2V\"><img src=\"https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg\"/></a>`,
+    id: '1237110546383724547',
+    hashtags: [],
+    permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
+    photos: ['https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg'],
+    text: 'The Easiest Problem Everyone Gets Wrong \n\n[new video] --&gt; https://t.co/YdaeDYmPAU https://t.co/iKu4Xs6o2V',
+    timeParsed: new Date(Date.UTC(2020, 2, 9, 20, 18, 33, 0)),
+    timestamp: 1583785113,
+    urls: ['https://youtu.be/ytfCdqWhmdg'],
+    userId: '978944851',
+    username: 'VsauceTwo',
+    videos: [],
+  };
+
+  const scraper = new Scraper();
+  const quote = await scraper.getTweet('1237110897597976576', false);
+  expect(quote?.isQuoted).toBeTruthy();
+  delete quote?.quotedStatus?.likes;
+  delete quote?.quotedStatus?.replies;
+  delete quote?.quotedStatus?.retweets;
+  expect(expected).toEqual(quote?.quotedStatus);
+
+  const reply = await scraper.getTweet('1237111868445134850', false);
+  expect(reply?.isReply).toBeTruthy();
+  if (reply != null) {
+    reply.isReply = false;
+  }
+  delete reply?.inReplyToStatus?.likes;
+  delete reply?.inReplyToStatus?.replies;
+  delete reply?.inReplyToStatus?.retweets;
+  expect(expected).toEqual(reply?.inReplyToStatus);
+});
+
+test('scraper can get retweet', async () => {
+  const expected: Tweet = {
+    html: `We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.`,
+    id: '1359151057872580612',
+    hashtags: [],
+    permanentUrl:
+      'https://twitter.com/TwitterTogether/status/1359151057872580612',
+    photos: [],
+    text: 'We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.',
+    timeParsed: new Date(Date.UTC(2021, 1, 9, 14, 43, 58, 0)),
+    timestamp: 1612881838,
+    urls: [],
+    userId: '773578328498372608',
+    username: 'TwitterTogether',
+    videos: [],
+  };
+
+  const scraper = new Scraper();
+  const retweet = await scraper.getTweet('1362849141248974853', false);
+  expect(retweet?.isRetweet).toBeTruthy();
+  delete retweet?.retweetedStatus?.likes;
+  delete retweet?.retweetedStatus?.replies;
+  delete retweet?.retweetedStatus?.retweets;
+  expect(expected).toEqual(retweet?.retweetedStatus);
+});
