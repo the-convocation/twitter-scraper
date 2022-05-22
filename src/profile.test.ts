@@ -42,7 +42,7 @@ test('scraper can get partial private profile', async () => {
     avatar:
       'https://pbs.twimg.com/profile_images/1222218816484020224/ik9P1QZt_normal.jpg',
     banner: undefined,
-    biography: 'Quien es mas macho',
+    biography: 'Quien es mas macho?',
     isPrivate: true,
     isVerified: false,
     joined: new Date(Date.UTC(2020, 0, 26, 0, 3, 5, 0)),

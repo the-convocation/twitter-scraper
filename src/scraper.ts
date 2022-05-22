@@ -1,4 +1,4 @@
-import { bearerToken, RequestApiResult } from './api';
+import { bearerToken, bearerToken2, RequestApiResult } from './api';
 import { TwitterGuestAuth } from './auth';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
@@ -13,9 +13,11 @@ import { getTweet, getTweets, Tweet } from './tweets';
 
 export class Scraper {
   private auth: TwitterGuestAuth;
+  private authTrends: TwitterGuestAuth;
 
   constructor() {
     this.auth = new TwitterGuestAuth(bearerToken);
+    this.authTrends = new TwitterGuestAuth(bearerToken2);
   }
 
   public async getProfile(username: string): Promise<Profile> {
@@ -76,7 +78,7 @@ export class Scraper {
   }
 
   public getTrends(includeReplies: boolean): Promise<string[]> {
-    return getTrends(includeReplies, this.auth);
+    return getTrends(includeReplies, this.authTrends);
   }
 
   public getTweets(

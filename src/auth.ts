@@ -1,65 +1,5 @@
 import { gotScraping } from 'got-scraping';
 
-class TwitterAuthInstaller {
-  private headers: { [key: string]: unknown };
-
-  private bearerToken: string;
-  private cookie?: string;
-  private xCsrfToken?: string;
-
-  private getToken: () => string | undefined;
-  private shouldUpdate: () => boolean;
-  private updateToken: () => Promise<void>;
-
-  constructor(
-    headers: { [key: string]: unknown },
-    getToken: () => string | undefined,
-    shouldUpdate: () => boolean,
-    updateToken: () => Promise<void>,
-    bearerToken: string,
-    cookie?: string,
-    xCsrfToken?: string,
-  ) {
-    this.headers = headers;
-
-    this.getToken = getToken;
-    this.shouldUpdate = shouldUpdate;
-    this.updateToken = updateToken;
-
-    this.bearerToken = bearerToken;
-    this.cookie = cookie;
-    this.xCsrfToken = xCsrfToken;
-  }
-
-  /**
-   * Overrides the bearer token with the provided value.
-   * @param value The new bearer token to use.
-   */
-  withBearerToken(value: string): TwitterAuthInstaller {
-    this.bearerToken = value;
-    return this;
-  }
-
-  async build() {
-    if (this.shouldUpdate()) {
-      await this.updateToken();
-    }
-
-    const token = this.getToken();
-    if (token == null) {
-      throw new Error('Authentication token is null or undefined.');
-    }
-
-    this.headers['Authorization'] = `Bearer ${this.bearerToken}`;
-    this.headers['X-Guest-Token'] = token;
-
-    if (this.cookie != null && this.xCsrfToken != null) {
-      this.headers['Cookie'] = this.cookie;
-      this.headers['x-csrf-token'] = this.xCsrfToken;
-    }
-  }
-}
-
 export class TwitterGuestAuth {
   private bearerToken: string;
   private cookie?: string;
@@ -124,22 +64,23 @@ export class TwitterGuestAuth {
    * @returns A builder that can be used to add or override other relevant data, or to
    * complete the task.
    */
-  installTo(headers: { [key: string]: unknown }): TwitterAuthInstaller {
-    const getToken = (() => {
-      return this.guestToken;
-    }).bind(this);
-    const shouldUpdate = this.shouldUpdate.bind(this);
-    const updateToken = this.updateToken.bind(this);
+  async installTo(headers: { [key: string]: unknown }): Promise<void> {
+    if (this.shouldUpdate()) {
+      await this.updateToken();
+    }
 
-    return new TwitterAuthInstaller(
-      headers,
-      getToken,
-      shouldUpdate,
-      updateToken,
-      this.bearerToken,
-      this.cookie,
-      this.xCsrfToken,
-    );
+    const token = this.guestToken;
+    if (token == null) {
+      throw new Error('Authentication token is null or undefined.');
+    }
+
+    headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    headers['X-Guest-Token'] = token;
+
+    if (this.cookie != null && this.xCsrfToken != null) {
+      headers['Cookie'] = this.cookie;
+      headers['x-csrf-token'] = this.xCsrfToken;
+    }
   }
 
   /**

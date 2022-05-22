@@ -50,7 +50,7 @@ export interface TimelineTweetRaw {
     media?: TimelineMediaBasicRaw[];
     urls?: TimelineUrlBasicRaw[];
   };
-  extendedEntities?: {
+  extended_entities?: {
     media?: TimelineMediaExtendedRaw[];
   };
   in_reply_to_status_id_str?: string;
@@ -231,7 +231,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     }
   }
 
-  const media = tweet.extendedEntities?.media ?? [];
+  const media = tweet.extended_entities?.media ?? [];
   for (const m of media) {
     if (m.media_url_https == null) {
       continue;
@@ -319,7 +319,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
       }
     }
 
-    for (const entity of tweet.extendedEntities?.media ?? []) {
+    for (const entity of tweet.extended_entities?.media ?? []) {
       if (tco[0] === entity.url && entity.media_url_https != null) {
         foundedMedia.push(entity.media_url_https);
         html = html.replace(

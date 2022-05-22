@@ -1,4 +1,4 @@
-import { addApiParams, bearerToken2, requestApi } from './api';
+import { addApiParams, requestApi } from './api';
 import { TwitterGuestAuth } from './auth';
 import { TimelineRaw } from './timeline';
 
@@ -17,7 +17,6 @@ export async function getTrends(
   const res = await requestApi<TimelineRaw>(
     `https://twitter.com/i/api/2/guide.json?${params.toString()}`,
     auth,
-    bearerToken2,
   );
   if (!res.success) {
     throw res.err;

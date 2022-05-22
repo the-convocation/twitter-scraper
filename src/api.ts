@@ -13,14 +13,9 @@ export type RequestApiResult<T> =
 export async function requestApi<T>(
   url: string,
   auth: TwitterGuestAuth,
-  bearerOverride?: string,
 ): Promise<RequestApiResult<T>> {
   const headers: Headers = {};
-  const builder = auth.installTo(headers);
-  if (bearerOverride != null) {
-    builder.withBearerToken(bearerOverride);
-  }
-  await builder.build();
+  await auth.installTo(headers);
 
   let res: Response<string>;
   try {

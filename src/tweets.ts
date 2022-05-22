@@ -108,7 +108,7 @@ export async function getTweet(
   addApiParams(params, includeReplies);
 
   const res = await requestApi<TimelineRaw>(
-    `https://twitter.com/i/api/2/timeline/conversation/${id}.json`,
+    `https://twitter.com/i/api/2/timeline/conversation/${id}.json?${params.toString()}`,
     auth,
   );
   if (!res.success) {
