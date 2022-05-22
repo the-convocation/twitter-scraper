@@ -1,5 +1,8 @@
 import { gotScraping } from 'got-scraping';
 
+/**
+ * A guest authentication token manager. Automatically handles token refreshes.
+ */
 export class TwitterGuestAuth {
   private bearerToken: string;
   private cookie?: string;

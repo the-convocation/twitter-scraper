@@ -331,6 +331,9 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   return tw;
 }
 
+/**
+ * A paginated tweets API response. The `next` field can be used to fetch the next page of results.
+ */
 export interface QueryTweetsResponse {
   tweets: Tweet[];
   next?: string;
@@ -381,6 +384,9 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
   };
 }
 
+/**
+ * A paginated profiles API response. The `next` field can be used to fetch the next page of results.
+ */
 export interface QueryProfilesResponse {
   profiles: Profile[];
   next?: string;

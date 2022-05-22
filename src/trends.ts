@@ -2,12 +2,9 @@ import { addApiParams, requestApi } from './api';
 import { TwitterGuestAuth } from './auth';
 import { TimelineRaw } from './timeline';
 
-export async function getTrends(
-  includeTweetReplies: boolean,
-  auth: TwitterGuestAuth,
-): Promise<string[]> {
+export async function getTrends(auth: TwitterGuestAuth): Promise<string[]> {
   const params = new URLSearchParams();
-  addApiParams(params, includeTweetReplies);
+  addApiParams(params, false);
 
   params.set('count', '20');
   params.set('candidate_source', 'trends');

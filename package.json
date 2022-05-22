@@ -8,6 +8,8 @@
   "scripts": {
     "build": "tsc",
     "commit": "cz",
+    "docs:generate": "typedoc --entryPoints src --entryPointStrategy expand --exclude **/*.test.ts",
+    "docs:deploy": "yarn docs:generate && node gh-pages.js",
     "format": "prettier --write \\\"src/**/*.ts\\\" \\\"test/**/*.ts\\\"",
     "prepare": "husky install",
     "test": "jest"
@@ -27,11 +29,13 @@
     "eslint": "^8.15.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
+    "gh-pages": "^4.0.0",
     "husky": "^8.0.1",
     "jest": "^28.1.0",
     "lint-staged": "^12.4.1",
     "prettier": "^2.6.2",
     "ts-jest": "^28.0.2",
+    "typedoc": "^0.22.15",
     "typescript": "^4.6.4"
   },
   "config": {

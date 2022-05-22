@@ -5,13 +5,12 @@ name: Node.js CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -20,19 +19,23 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Install
-      # You may pin to the exact commit or the version.
-      # uses: Borales/actions-yarn@4965e1a0f0ae9c422a9a5748ebd1fb5e097d22b9
-      uses: Borales/actions-yarn@v2.3.0
-      with:
-        cmd: install
-    - name: Test
-      uses: Borales/actions-yarn@v2.3.0
-      with:
-        cmd: test
-    - name: Build
-      uses: Borales/actions-yarn@v2.3.0
-      with:
-        cmd: build
-        auth-token: ${{ secrets.NPM_TOKEN }}
+      - uses: actions/checkout@v3
+      - name: Install
+        # You may pin to the exact commit or the version.
+        # uses: Borales/actions-yarn@4965e1a0f0ae9c422a9a5748ebd1fb5e097d22b9
+        uses: Borales/actions-yarn@v2.3.0
+        with:
+          cmd: install
+      - name: Test
+        uses: Borales/actions-yarn@v2.3.0
+        with:
+          cmd: test
+      - name: Build
+        uses: Borales/actions-yarn@v2.3.0
+        with:
+          cmd: build
+      - name: Docs
+        uses: Borales/actions-yarn@v2.3.0
+        with:
+          cmd: docs:deploy
+          auth-token: ${{ secrets.NPM_TOKEN }}

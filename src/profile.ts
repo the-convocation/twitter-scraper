@@ -1,29 +1,6 @@
 import { requestApi, RequestApiResult } from './api';
 import { TwitterGuestAuth } from './auth';
 
-export interface Profile {
-  avatar?: string;
-  banner?: string;
-  biography?: string;
-  birthday?: string;
-  followersCount?: number;
-  followingCount?: number;
-  friendsCount?: number;
-  isPrivate?: boolean;
-  isVerified?: boolean;
-  joined?: Date;
-  likesCount?: number;
-  listedCount?: number;
-  location: string;
-  name?: string;
-  pinnedTweetIds?: string[];
-  tweetsCount?: number;
-  url?: string;
-  userId?: string;
-  username?: string;
-  website?: string;
-}
-
 export interface LegacyUserRaw {
   created_at?: string;
   description?: string;
@@ -48,6 +25,32 @@ export interface LegacyUserRaw {
   screen_name?: string;
   statuses_count?: number;
   verified?: boolean;
+}
+
+/**
+ * A parsed profile object.
+ */
+export interface Profile {
+  avatar?: string;
+  banner?: string;
+  biography?: string;
+  birthday?: string;
+  followersCount?: number;
+  followingCount?: number;
+  friendsCount?: number;
+  isPrivate?: boolean;
+  isVerified?: boolean;
+  joined?: Date;
+  likesCount?: number;
+  listedCount?: number;
+  location: string;
+  name?: string;
+  pinnedTweetIds?: string[];
+  tweetsCount?: number;
+  url?: string;
+  userId?: string;
+  username?: string;
+  website?: string;
 }
 
 export interface UserRaw {

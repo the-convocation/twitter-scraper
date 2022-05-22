@@ -11,6 +11,9 @@ import {
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
 
+/**
+ * The categories that can be used in Twitter searches.
+ */
 export enum SearchMode {
   Top,
   Latest,
@@ -34,12 +37,10 @@ export function searchTweets(
 export function searchProfiles(
   query: string,
   maxProfiles: number,
-  includeReplies: boolean,
-  searchMode: SearchMode,
   auth: TwitterGuestAuth,
 ): AsyncGenerator<Profile> {
   return getUserTimeline(query, maxProfiles, (q, mt, c) => {
-    return fetchSearchProfiles(q, mt, includeReplies, searchMode, auth, c);
+    return fetchSearchProfiles(q, mt, auth, c);
   });
 }
 
@@ -66,16 +67,14 @@ export async function fetchSearchTweets(
 export async function fetchSearchProfiles(
   query: string,
   maxProfiles: number,
-  includeReplies: boolean,
-  searchMode: SearchMode,
   auth: TwitterGuestAuth,
   cursor?: string,
 ): Promise<QueryProfilesResponse> {
   const timeline = await getSearchTimeline(
     query,
     maxProfiles,
-    includeReplies,
-    searchMode,
+    false,
+    SearchMode.Users,
     auth,
     cursor,
   );

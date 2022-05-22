@@ -23,6 +23,9 @@ export interface PlaceRaw {
   };
 }
 
+/**
+ * A parsed Tweet object.
+ */
 export interface Tweet {
   hashtags: string[];
   html?: string;
