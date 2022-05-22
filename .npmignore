@@ -1,0 +1,6 @@
+docs/
+src/
+.*/
+jest.config.js
+tsconfig.json
+yarn.lock
