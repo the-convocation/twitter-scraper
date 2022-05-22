@@ -1,4 +1,6 @@
 # twitter-scraper
+[![Documentation badge](https://img.shields.io/badge/docs-here-informational)](https://the-convocation.github.io/twitter-scraper/)
+
 A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper) to Node.js.
 
 > Twitter's API is annoying to work with, and has lots of limitations — luckily their frontend (JavaScript) has it's own API, which I reverse-engineered. No API rate limits. No tokens needed. No restrictions. Extremely fast.
