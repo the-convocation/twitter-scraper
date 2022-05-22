@@ -260,10 +260,10 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
           video.url = variantUrl;
           maxBitrate = bitrate;
         }
-
-        tw.photos.push(video.preview);
-        tw.videos.push(video);
       }
+
+      tw.photos.push(video.preview);
+      tw.videos.push(video);
     }
 
     const sensitive = m.ext_sensitive_media_warning;
@@ -285,51 +285,37 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   // HTML parsing with regex :)
   let html = tweet.full_text ?? '';
 
-  const hashtagMatches = [...html.matchAll(reHashtag)];
-  for (const hashtag of hashtagMatches) {
-    html = html.replace(
-      hashtag[0],
-      `<a href="https://twitter.com/hashtag/${hashtag[0].replace('#', '')}">${
-        hashtag[0]
-      }</a>`,
-    );
-  }
+  html = html.replace(reHashtag, (hashtag) => {
+    return `<a href="https://twitter.com/hashtag/${hashtag.replace(
+      '#',
+      '',
+    )}">${hashtag}</a>`;
+  });
 
-  const usernameMatches = [...html.matchAll(reUsername)];
-  for (const username of usernameMatches) {
-    html = html.replace(
-      username[0],
-      `<a href="https://twitter.com/${username[0].replace('@', '')}">${
-        username[0]
-      }</a>`,
-    );
-  }
+  html = html.replace(reUsername, (username) => {
+    return `<a href="https://twitter.com/${username[0].replace('@', '')}">${
+      username[0]
+    }</a>`;
+  });
 
   const foundedMedia: string[] = [];
 
-  const urlMatches = [...html.matchAll(reTwitterUrl)];
-  for (const tco of urlMatches) {
+  html = html.replace(reTwitterUrl, (tco) => {
     for (const entity of tweet.entities?.urls ?? []) {
-      if (tco[0] === entity.url && entity.expanded_url != null) {
-        html = html.replace(
-          tco[0],
-          `<a href="${entity.expanded_url}">${tco[0]}</a>`,
-        );
-        break;
+      if (tco === entity.url && entity.expanded_url != null) {
+        return `<a href="${entity.expanded_url}">${tco}</a>`;
       }
     }
 
     for (const entity of tweet.extended_entities?.media ?? []) {
-      if (tco[0] === entity.url && entity.media_url_https != null) {
+      if (tco === entity.url && entity.media_url_https != null) {
         foundedMedia.push(entity.media_url_https);
-        html = html.replace(
-          tco[0],
-          `<br><a href="${tco[0]}"><img src="${entity.media_url_https}"/></a>`,
-        );
-        break;
+        return `<br><a href="${tco}"><img src="${entity.media_url_https}"/></a>`;
       }
     }
-  }
+
+    return tco;
+  });
 
   for (const url of tw.photos) {
     if (foundedMedia.indexOf(url) !== -1) {
@@ -339,7 +325,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     html += `<br><img src="${url}"/>`;
   }
 
-  html = html.replace('\n', '<br>');
+  html = html.replace(/\n/g, '<br>');
   tw.html = html;
 
   return tw;
