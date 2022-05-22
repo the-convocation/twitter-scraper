@@ -404,7 +404,8 @@ export function parseUsers(timeline: TimelineRaw): QueryProfilesResponse {
   const orderedProfiles: Profile[] = [];
   for (const instruction of timeline.timeline?.instructions ?? []) {
     for (const entry of instruction.addEntries?.entries ?? []) {
-      const profile = users.get(entry.content?.item?.content?.user?.id);
+      const userId = entry.content?.item?.content?.user?.id;
+      const profile = users.get(userId);
       if (profile != null) {
         orderedProfiles.push(profile);
       }

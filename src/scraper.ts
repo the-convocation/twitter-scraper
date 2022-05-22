@@ -49,13 +49,12 @@ export class Scraper {
     query: string,
     maxProfiles: number,
     includeReplies: boolean,
-    searchMode: SearchMode,
   ): AsyncGenerator<Profile> {
     return searchProfiles(
       query,
       maxProfiles,
       includeReplies,
-      searchMode,
+      SearchMode.Users,
       this.auth,
     );
   }
