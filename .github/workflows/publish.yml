@@ -24,4 +24,4 @@ jobs:
       - name: Publish
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn publish
+        run: yarn publish --access public
