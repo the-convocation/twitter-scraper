@@ -17,8 +17,6 @@ jobs:
         run: yarn install
       - name: Build
         run: yarn build
-      - name: Login
-        run:
       - name: Publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
