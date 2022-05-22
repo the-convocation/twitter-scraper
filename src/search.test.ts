@@ -11,15 +11,15 @@ test('scraper can process search cursor', async () => {
   while (nTweets < maxTweets) {
     const res: QueryTweetsResponse = await scraper.fetchSearchTweets(
       'twitter',
-      150,
+      maxTweets,
       false,
       SearchMode.Top,
       cursor,
     );
 
-    expect(cursor).toBeTruthy();
+    expect(res.next).toBeTruthy();
 
     nTweets += res.tweets.length;
     cursor = res.next;
   }
-});
+}, 120000);
