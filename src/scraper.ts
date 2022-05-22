@@ -94,16 +94,18 @@ export class Scraper {
   }
 
   public hasGuestToken(): boolean {
-    return this.auth.hasToken();
+    return this.auth.hasToken() || this.authTrends.hasToken();
   }
 
   public withCookie(cookie: string): Scraper {
     this.auth.useCookie(cookie);
+    this.authTrends.useCookie(cookie);
     return this;
   }
 
   public withXCsrfToken(token: string): Scraper {
     this.auth.useCsrfToken(token);
+    this.authTrends.useCsrfToken(token);
     return this;
   }
 
