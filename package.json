@@ -1,6 +1,6 @@
 {
   "name": "twitter-scraper",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "main": "dist/scraper.js",
   "repository": "https://github.com/the-convocation/twitter-scraper.git",
   "author": "karashiiro <49822414+karashiiro@users.noreply.github.com>",
