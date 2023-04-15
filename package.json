@@ -1,6 +1,6 @@
 {
   "name": "@the-convocation/twitter-scraper",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "dist/_module.js",
   "repository": "https://github.com/the-convocation/twitter-scraper.git",
   "author": "karashiiro <49822414+karashiiro@users.noreply.github.com>",
