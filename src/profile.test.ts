@@ -40,13 +40,14 @@ test('scraper can get profile', async () => {
 test('scraper can get partial private profile', async () => {
   const expected: Profile = {
     avatar:
-      'https://pbs.twimg.com/profile_images/1222218816484020224/ik9P1QZt_normal.jpg',
-    banner: undefined,
-    biography: 'Quien es mas macho?',
+      'https://pbs.twimg.com/profile_images/1612213936082030594/_HEsjv7Q_normal.jpg',
+    banner:
+      'https://pbs.twimg.com/profile_banners/1221221876849995777/1673110776',
+    biography: `t h e h e r m i t`,
     isPrivate: true,
     isVerified: false,
     joined: new Date(Date.UTC(2020, 0, 26, 0, 3, 5, 0)),
-    location: '',
+    location: 'sometimes',
     name: 'private account',
     pinnedTweetIds: [],
     url: 'https://twitter.com/tomdumont',
