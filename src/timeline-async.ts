@@ -43,6 +43,10 @@ export async function* getUserTimeline(
       break;
     }
 
+    if (next?.startsWith('scroll:')) {
+      continue;
+    }
+
     for (const profile of profiles) {
       if (nProfiles < maxProfiles) {
         cursor = next;
@@ -74,6 +78,10 @@ export async function* getTweetTimeline(
 
     if (tweets.length === 0) {
       break;
+    }
+
+    if (next?.startsWith('scroll:')) {
+      continue;
     }
 
     for (const tweet of tweets) {

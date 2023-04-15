@@ -17,6 +17,10 @@ test('scraper can process search cursor', async () => {
       cursor,
     );
 
+    if (res.next?.startsWith('scroll:')) {
+      continue;
+    }
+
     expect(res.next).toBeTruthy();
 
     nTweets += res.tweets.length;

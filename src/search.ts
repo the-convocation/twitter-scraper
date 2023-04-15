@@ -101,7 +101,9 @@ async function getSearchTimeline(
   params.set('count', `${maxItems}`);
   params.set('query_source', 'typed_query');
   params.set('pc', '1');
+  params.set('requestContext', 'launch');
   params.set('spelling_corrections', '1');
+  params.set('include_ext_edit_control', 'true');
   if (cursor != null && cursor != '') {
     params.set('cursor', cursor);
   }

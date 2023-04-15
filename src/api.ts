@@ -66,24 +66,30 @@ export function addApiParams(
   params.set('include_can_dm', '1');
   params.set('include_can_media_tag', '1');
   params.set('include_ext_has_nft_avatar', '1');
+  params.set('include_ext_is_blue_verified', '1');
+  params.set('include_ext_verified_type', '1');
   params.set('skip_status', '1');
   params.set('cards_platform', 'Web-12');
   params.set('include_cards', '1');
   params.set('include_ext_alt_text', 'true');
+  params.set('include_ext_limited_action_results', 'false');
   params.set('include_quote_count', 'true');
   params.set('include_reply_count', '1');
   params.set('tweet_mode', 'extended');
+  params.set('include_ext_collab_control', 'true');
+  params.set('include_ext_views', 'true');
   params.set('include_entities', 'true');
   params.set('include_user_entities', 'true');
   params.set('include_ext_media_color', 'true');
   params.set('include_ext_media_availability', 'true');
   params.set('include_ext_sensitive_media_warning', 'true');
+  params.set('include_ext_trusted_friends_metadata', 'true');
   params.set('send_error_codes', 'true');
   params.set('simple_quoted_tweet', 'true');
   params.set('include_tweet_replies', `${includeTweetReplies}`);
   params.set(
     'ext',
-    'mediaStats,highlightedLabel,hasNftAvatar,voiceInfo,superFollowMetadata',
+    'mediaStats,highlightedLabel,hasNftAvatar,voiceInfo,birdwatchPivot,enrichments,superFollowMetadata,unmentionInfo,editControl,collab_control,vibe',
   );
   return params;
 }
