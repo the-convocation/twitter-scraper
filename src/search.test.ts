@@ -50,7 +50,7 @@ test('scraper can search tweets', async () => {
   const maxTweets = 150;
   let nTweets = 0;
   for await (const tweet of scraper.searchTweets(
-    'twitter -filter:retweets',
+    'twitter',
     maxTweets,
     false,
     SearchMode.Top,
