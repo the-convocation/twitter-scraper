@@ -110,7 +110,7 @@ async function getSearchTimeline(
 
   switch (searchMode) {
     case SearchMode.Latest:
-      params.set('tweet_search_mode', 'live');
+      params.set('f', 'live');
       break;
     case SearchMode.Photos:
       params.set('result_filter', 'image');
