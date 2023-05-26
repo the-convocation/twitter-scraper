@@ -169,8 +169,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
 
   const users = timeline.globalObjects?.users ?? {};
   const user = users[tweet.user_id_str];
-  const username = user?.screen_name;
-  if (user == null || username == null) {
+  if (user?.screen_name == null) {
     // TODO: change the return type to a result, and return an error; this shouldn't happen, but we don't know what data we're dealing with.
     return null;
   }
@@ -180,14 +179,15 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     hashtags: [],
     likes: tweet.favorite_count,
     mentions: [],
-    permanentUrl: `https://twitter.com/${username}/status/${id}`,
+    name: user.name,
+    permanentUrl: `https://twitter.com/${user.screen_name}/status/${id}`,
     photos: [],
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
     text: tweet.full_text,
     urls: [],
     userId: tweet.user_id_str,
-    username,
+    username: user.screen_name,
     videos: [],
   };
 
