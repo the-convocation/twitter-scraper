@@ -67,7 +67,7 @@ export interface Tweet {
 }
 
 export async function fetchTweets(
-  user: string,
+  userId: string,
   maxTweets: number,
   includeReplies: boolean,
   cursor: string | undefined,
@@ -77,24 +77,17 @@ export async function fetchTweets(
     maxTweets = 200;
   }
 
-  const userIdRes = await getUserIdByScreenName(user, auth);
-  if (!userIdRes.success) {
-    throw userIdRes.err;
-  }
-
   const params = new URLSearchParams();
   addApiParams(params, includeReplies);
 
   params.set('count', `${maxTweets}`);
-  params.set('userId', userIdRes.value);
+  params.set('userId', userId);
   if (cursor != null && cursor != '') {
     params.set('cursor', cursor);
   }
 
   const res = await requestApi<TimelineRaw>(
-    `https://api.twitter.com/2/timeline/profile/${
-      userIdRes.value
-    }.json?${params.toString()}`,
+    `https://api.twitter.com/2/timeline/profile/${userId}.json?${params.toString()}`,
     auth,
   );
   if (!res.success) {
@@ -110,7 +103,25 @@ export function getTweets(
   includeReplies: boolean,
   auth: TwitterAuth,
 ): AsyncGenerator<Tweet> {
-  return getTweetTimeline(user, maxTweets, (q, mt, c) => {
+  return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
+    const userIdRes = await getUserIdByScreenName(q, auth);
+    if (!userIdRes.success) {
+      throw userIdRes.err;
+    }
+
+    const { value: userId } = userIdRes;
+
+    return fetchTweets(userId, mt, includeReplies, c, auth);
+  });
+}
+
+export function getTweetsByUserId(
+  userId: string,
+  maxTweets: number,
+  includeReplies: boolean,
+  auth: TwitterAuth,
+): AsyncGenerator<Tweet> {
+  return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
     return fetchTweets(q, mt, includeReplies, c, auth);
   });
 }
