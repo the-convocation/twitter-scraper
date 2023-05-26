@@ -1,6 +1,7 @@
 import { gotScraping } from 'got-scraping';
 import { TwitterGuestAuth } from './auth';
 import { requestApi } from './api';
+import { CookieJar } from 'tough-cookie';
 
 interface TwitterUserAuthFlow {
   errors: {
@@ -9,6 +10,9 @@ interface TwitterUserAuthFlow {
   }[];
   flow_token: string;
   status: string;
+  subtasks?: {
+    subtask_id: string;
+  }[];
 }
 
 interface TwitterUserAuthVerifyCredentials {
@@ -17,6 +21,11 @@ interface TwitterUserAuthVerifyCredentials {
     message: string;
   }[];
 }
+
+type FlowTokenResult =
+  | { status: 'success'; flowToken: string }
+  | { status: 'acid'; flowToken: string }
+  | { status: 'error'; err: Error };
 
 /**
  * A user authentication token manager.
@@ -47,11 +56,48 @@ export class TwitterUserAuth extends TwitterGuestAuth {
    * Logs into a Twitter account.
    * @param username The username to log in with.
    * @param password The password to log in with.
+   * @param email The password to log in with, if you have email confirmation enabled.
    */
-  async login(username: string, password: string): Promise<void> {
+  async login(
+    username: string,
+    password: string,
+    email?: string,
+  ): Promise<void> {
     await this.updateGuestToken();
 
-    await this.fetchFlowToken({
+    // Executes the potential acid step in the login flow
+    const executeFlowAcid = (ft: string) =>
+      this.executeFlowTask({
+        flow_token: ft,
+        subtask_inputs: {
+          subtask_id: 'LoginAcid',
+          enter_text: {
+            text: email,
+            link: 'next_link',
+          },
+        },
+      });
+
+    // Handles the result of a flow task
+    const handleFlowTokenResult = async (
+      p: Promise<FlowTokenResult>,
+    ): Promise<string> => {
+      const result = await p;
+      const { status } = result;
+      if (status === 'error') {
+        throw result.err;
+      } else if (status === 'acid') {
+        return await handleFlowTokenResult(executeFlowAcid(result.flowToken));
+      } else {
+        return result.flowToken;
+      }
+    };
+
+    // Executes a flow subtask and handles the result
+    const executeFlowSubtask = (data: Record<string, unknown>) =>
+      handleFlowTokenResult(this.executeFlowTask(data));
+
+    await executeFlowSubtask({
       flow_name: 'login',
       input_flow_data: {
         flow_context: {
@@ -63,7 +109,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       },
     })
       .then((ft) =>
-        this.fetchFlowToken({
+        executeFlowSubtask({
           flow_token: ft,
           subtask_inputs: {
             subtask_id: 'LoginJsInstrumentationSubtask',
@@ -75,7 +121,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         }),
       )
       .then((ft) =>
-        this.fetchFlowToken({
+        executeFlowSubtask({
           flow_token: ft,
           subtask_inputs: {
             subtask_id: 'LoginEnterUserIdentifierSSO',
@@ -93,7 +139,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         }),
       )
       .then((ft) =>
-        this.fetchFlowToken({
+        executeFlowSubtask({
           flow_token: ft,
           subtask_inputs: {
             subtask_id: 'LoginEnterPassword',
@@ -105,7 +151,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         }),
       )
       .then((ft) =>
-        this.fetchFlowToken({
+        executeFlowSubtask({
           flow_token: ft,
           subtask_inputs: {
             subtask_id: 'AccountDuplicationCheck',
@@ -115,6 +161,18 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           },
         }),
       );
+  }
+
+  /**
+   * Logs out of the current session.
+   */
+  async logout(): Promise<void> {
+    await requestApi<void>(
+      'https://api.twitter.com/1.1/account/logout.json',
+      this,
+    );
+    this.deleteToken();
+    this.jar = new CookieJar();
   }
 
   async installTo(
@@ -130,7 +188,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
   }
 
-  private async fetchFlowToken(data: Record<string, unknown>): Promise<string> {
+  private async executeFlowTask(
+    data: Record<string, unknown>,
+  ): Promise<FlowTokenResult> {
     const token = this.guestToken;
     if (token == null) {
       throw new Error('Authentication token is null or undefined.');
@@ -153,25 +213,51 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
 
     if (res.statusCode != 200) {
-      throw new Error(res.body);
+      return { status: 'error', err: new Error(res.body) };
     }
 
     const flow: TwitterUserAuthFlow = JSON.parse(res.body);
-    if (flow == null) {
-      throw new Error('flow_token not found.');
+    if (flow?.flow_token == null) {
+      return { status: 'error', err: new Error('flow_token not found.') };
     }
 
     if (flow.errors.length > 0) {
-      throw new Error(
-        `Authentication error (${flow.errors[0].code}): ${flow.errors[0].message}`,
-      );
+      return {
+        status: 'error',
+        err: new Error(
+          `Authentication error (${flow.errors[0].code}): ${flow.errors[0].message}`,
+        ),
+      };
     }
 
-    const newUserToken = flow.flow_token;
-    if (typeof newUserToken !== 'string') {
-      throw new Error('flow_token was not a string.');
+    if (typeof flow.flow_token !== 'string') {
+      return {
+        status: 'error',
+        err: new Error('flow_token was not a string.'),
+      };
     }
 
-    return newUserToken;
+    if (flow.subtasks?.length) {
+      if (
+        flow.subtasks[0].subtask_id === 'LoginEnterAlternateIdentifierSubtask'
+      ) {
+        return {
+          status: 'error',
+          err: new Error(
+            'Authentication error: LoginEnterAlternateIdentifierSubtask',
+          ),
+        };
+      } else if (flow.subtasks[0].subtask_id === 'LoginAcid') {
+        return {
+          status: 'acid',
+          flowToken: flow.flow_token,
+        };
+      }
+    }
+
+    return {
+      status: 'success',
+      flowToken: flow.flow_token,
+    };
   }
 }

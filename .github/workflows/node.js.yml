@@ -26,6 +26,10 @@ jobs:
       - name: Install
         run: yarn install
       - name: Test
+        env:
+          TWITTER_USERNAME: ${{ secrets.TWITTER_USERNAME }}
+          TWITTER_PASSWORD: ${{ secrets.TWITTER_PASSWORD }}
+          TWITTER_EMAIL: ${{ secrets.TWITTER_EMAIL }}
         run: yarn test
       - name: Build
         run: yarn build

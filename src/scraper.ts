@@ -225,23 +225,28 @@ export class Scraper {
    * searches.
    * @param username The username of the Twitter account to login with.
    * @param password The password of the Twitter account to login with.
+   * @param email The password to log in with, if you have email confirmation enabled.
    */
-  public async login(username: string, password: string) {
+  public async login(
+    username: string,
+    password: string,
+    email?: string,
+  ): Promise<void> {
     const authTrends = new TwitterUserAuth(bearerToken2);
-    await authTrends.login(username, password);
+    await authTrends.login(username, password, email);
     this.authTrends = authTrends;
   }
 
   /**
    * Logout of Twitter from a real Twitter account, if possible.
    */
-  public logout() {
+  public async logout(): Promise<void> {
     const authTrends = this.authTrends;
     if (!(authTrends instanceof TwitterUserAuth)) {
       return;
     }
 
-    this.authTrends = new TwitterGuestAuth(bearerToken2);
+    await authTrends.logout();
   }
 
   /**
