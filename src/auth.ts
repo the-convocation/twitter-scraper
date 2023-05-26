@@ -28,7 +28,6 @@ export interface TwitterAuth {
    * Installs the authentication information into a headers-like object. If needed, the
    * authentication token will be updated from the API automatically.
    * @param headers A key-value object representing a request's headers.
-   * @returns A Promise for the operation.
    */
   installTo(headers: { [key: string]: unknown }, url: string): Promise<void>;
 }

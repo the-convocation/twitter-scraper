@@ -1,3 +1,4 @@
+import { Cookie } from 'tough-cookie';
 import { bearerToken, bearerToken2, RequestApiResult } from './api';
 import { TwitterAuth, TwitterGuestAuth } from './auth';
 import { TwitterUserAuth } from './auth-user';
@@ -12,6 +13,8 @@ import {
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline';
 import { getTrends } from './trends';
 import { getTweet, getTweets, getLatestTweet, Tweet } from './tweets';
+
+const twUrl = 'https://twitter.com';
 
 /**
  * An interface to Twitter's undocumented API.
@@ -218,6 +221,24 @@ export class Scraper {
     }
 
     this.authTrends = new TwitterGuestAuth(bearerToken2);
+  }
+
+  /**
+   * Retrieves all cookies for the current session.
+   * @returns All cookies for the current session.
+   */
+  public async getCookies(): Promise<Cookie[]> {
+    return await this.authTrends.cookieJar().getCookies(twUrl);
+  }
+
+  /**
+   * Set cookies for the current session.
+   * @param cookies The cookies to set for the current session.
+   */
+  public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
+    for (const cookie of cookies) {
+      await this.authTrends.cookieJar().setCookie(cookie, twUrl);
+    }
   }
 
   /**

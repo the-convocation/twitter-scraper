@@ -26,6 +26,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     super(bearerToken);
   }
 
+  /**
+   * Returns if a user is logged-in to Twitter through this instance.
+   * @returns `true` if a user is logged-in; otherwise `false`.
+   */
   async isLoggedIn(): Promise<boolean> {
     const res = await requestApi<TwitterUserAuthVerifyCredentials>(
       'https://api.twitter.com/1.1/account/verify_credentials.json',
@@ -111,6 +115,19 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           },
         }),
       );
+  }
+
+  async installTo(
+    headers: { [key: string]: unknown },
+    url: string,
+  ): Promise<void> {
+    headers['Authorization'] = `Bearer ${this.bearerToken}`;
+
+    const cookies = await this.jar.getCookies(url);
+    const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
+    if (xCsrfToken) {
+      headers['X-CSRF-Token'] = xCsrfToken.value;
+    }
   }
 
   private async fetchFlowToken(data: Record<string, unknown>): Promise<string> {
