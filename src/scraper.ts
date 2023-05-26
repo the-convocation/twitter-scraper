@@ -1,5 +1,6 @@
 import { bearerToken, bearerToken2, RequestApiResult } from './api';
-import { TwitterAuth, TwitterGuestAuth, TwitterUserAuth } from './auth';
+import { TwitterAuth, TwitterGuestAuth } from './auth';
+import { TwitterUserAuth } from './auth-user';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
   fetchSearchProfiles,
@@ -186,13 +187,13 @@ export class Scraper {
    * Returns if the scraper is logged in as a real user.
    * @returns `true` if the scraper is logged in with a real user account; otherwise `false`.
    */
-  public isLoggedIn(): boolean {
+  public async isLoggedIn(): Promise<boolean> {
     const authTrends = this.authTrends;
     if (!(authTrends instanceof TwitterUserAuth)) {
       return false;
     }
 
-    return authTrends.isLoggedIn();
+    return await authTrends.isLoggedIn();
   }
 
   /**
