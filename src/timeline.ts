@@ -5,6 +5,12 @@ export interface Hashtag {
   text?: string;
 }
 
+export interface TimelineUserMentionBasicRaw {
+  id_str?: string;
+  name?: string;
+  screen_name?: string;
+}
+
 export interface TimelineMediaBasicRaw {
   media_url_https?: string;
   type?: string;
@@ -49,6 +55,7 @@ export interface TimelineTweetRaw {
     hashtags?: Hashtag[];
     media?: TimelineMediaBasicRaw[];
     urls?: TimelineUrlBasicRaw[];
+    user_mentions?: TimelineUserMentionBasicRaw[];
   };
   extended_entities?: {
     media?: TimelineMediaExtendedRaw[];
@@ -172,6 +179,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     id,
     hashtags: [],
     likes: tweet.favorite_count,
+    mentions: [],
     permanentUrl: `https://twitter.com/${username}/status/${id}`,
     photos: [],
     replies: tweet.reply_count,
@@ -228,6 +236,17 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   for (const hashtag of hashtags) {
     if (hashtag.text != null) {
       tw.hashtags.push(hashtag.text);
+    }
+  }
+
+  const mentions = tweet.entities?.user_mentions ?? [];
+  for (const mention of mentions) {
+    if (mention.id_str != null) {
+      tw.mentions.push({
+        id: mention.id_str,
+        username: mention.screen_name,
+        name: mention.name,
+      });
     }
   }
 

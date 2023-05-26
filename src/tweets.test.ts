@@ -1,11 +1,12 @@
 import { Scraper } from './scraper';
-import { Tweet } from './tweets';
+import { Mention, Tweet } from './tweets';
 
 test('scraper can get tweet', async () => {
   const expected: Tweet = {
     html: `That thing you didn’t Tweet but wanted to but didn’t but got so close but then were like nah. <br><br>We have a place for that now—Fleets! <br><br>Rolling out to everyone starting today. <br><a href=\"https://t.co/auQAHXZMfH\"><img src=\"https://pbs.twimg.com/amplify_video_thumb/1328684333599756289/img/cP5KwbIXbGunNSBy.jpg\"/></a>`,
     id: '1328684389388185600',
     hashtags: [],
+    mentions: [],
     permanentUrl: 'https://twitter.com/Twitter/status/1328684389388185600',
     photos: [],
     text: 'That thing you didn’t Tweet but wanted to but didn’t but got so close but then were like nah. \n\nWe have a place for that now—Fleets! \n\nRolling out to everyone starting today. https://t.co/auQAHXZMfH',
@@ -49,11 +50,26 @@ test('scraper can get latest tweet', async () => {
   expect(expected.permanentUrl).toEqual(latest?.permanentUrl);
 });
 
+test('scraper can get user mentions in tweets', async () => {
+  const expected: Mention[] = [
+    {
+      id: '7018222',
+      username: 'davidmcraney',
+      name: 'David McRaney',
+    },
+  ];
+
+  const scraper = new Scraper();
+  const tweet = await scraper.getTweet('1554522888904101890', false);
+  expect(expected).toEqual(tweet?.mentions);
+});
+
 test('scraper can get tweet quotes and replies', async () => {
   const expected: Tweet = {
     html: `The Easiest Problem Everyone Gets Wrong <br><br>[new video] --&gt; <a href=\"https://youtu.be/ytfCdqWhmdg\">https://t.co/YdaeDYmPAU</a> <br><a href=\"https://t.co/iKu4Xs6o2V\"><img src=\"https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg\"/></a>`,
     id: '1237110546383724547',
     hashtags: [],
+    mentions: [],
     permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
     photos: [
       {
@@ -94,6 +110,7 @@ test('scraper can get retweet', async () => {
     html: `We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.`,
     id: '1359151057872580612',
     hashtags: [],
+    mentions: [],
     permanentUrl:
       'https://twitter.com/TwitterTogether/status/1359151057872580612',
     photos: [],

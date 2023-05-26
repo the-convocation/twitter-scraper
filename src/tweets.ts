@@ -4,6 +4,12 @@ import { getUserIdByScreenName } from './profile';
 import { TimelineRaw, parseTweets, QueryTweetsResponse } from './timeline';
 import { getTweetTimeline } from './timeline-async';
 
+export interface Mention {
+  id: string;
+  username?: string;
+  name?: string;
+}
+
 export interface Photo {
   id: string;
   url: string;
@@ -41,6 +47,7 @@ export interface Tweet {
   isReply?: boolean;
   isRetweet?: boolean;
   likes?: number;
+  mentions: Mention[];
   permanentUrl?: string;
   photos: Photo[];
   place?: PlaceRaw;
