@@ -1,8 +1,8 @@
 import { addApiParams, requestApi } from './api';
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuth } from './auth';
 import { TimelineRaw } from './timeline';
 
-export async function getTrends(auth: TwitterGuestAuth): Promise<string[]> {
+export async function getTrends(auth: TwitterAuth): Promise<string[]> {
   const params = new URLSearchParams();
   addApiParams(params, false);
 

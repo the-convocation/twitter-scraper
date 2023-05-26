@@ -2,8 +2,22 @@ import { Scraper } from './scraper';
 import { SearchMode } from './search';
 import { QueryTweetsResponse } from './timeline';
 
-test('scraper can process search cursor', async () => {
+async function authSearchScraper() {
+  const username = process.env['TWITTER_USERNAME'];
+  const password = process.env['TWITTER_PASSWORD'];
+  if (!username || !password) {
+    throw new Error(
+      'TWITTER_USERNAME and TWITTER_PASSWORD variables must be defined.',
+    );
+  }
+
   const scraper = new Scraper();
+  await scraper.login(username, password);
+  return scraper;
+}
+
+test('scraper can process search cursor', async () => {
+  const scraper = await authSearchScraper();
 
   let cursor: string | undefined = undefined;
   const maxTweets = 150;
@@ -29,7 +43,7 @@ test('scraper can process search cursor', async () => {
 }, 120000);
 
 test('scraper can search profiles', async () => {
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
 
   const seenProfiles = new Map<string, boolean>();
   const maxProfiles = 150;
@@ -48,7 +62,7 @@ test('scraper can search profiles', async () => {
 }, 120000);
 
 test('scraper can search tweets', async () => {
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
 
   const seenTweets = new Map<string, boolean>();
   const maxTweets = 150;
