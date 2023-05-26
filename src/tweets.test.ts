@@ -7,9 +7,7 @@ test('scraper can get tweet', async () => {
     id: '1328684389388185600',
     hashtags: [],
     permanentUrl: 'https://twitter.com/Twitter/status/1328684389388185600',
-    photos: [
-      'https://pbs.twimg.com/amplify_video_thumb/1328684333599756289/img/cP5KwbIXbGunNSBy.jpg',
-    ],
+    photos: [],
     text: 'That thing you didn’t Tweet but wanted to but didn’t but got so close but then were like nah. \n\nWe have a place for that now—Fleets! \n\nRolling out to everyone starting today. https://t.co/auQAHXZMfH',
     timeParsed: new Date(Date.UTC(2020, 10, 17, 13, 0, 18, 0)),
     timestamp: 1605618018,
@@ -42,7 +40,11 @@ test('scraper can get latest tweet', async () => {
   const expected = (await tweets.next()).value;
 
   // NEW APPROACH
-  const latest = await scraper.getLatestTweet('elonmusk', false, expected.isRetweet);
+  const latest = await scraper.getLatestTweet(
+    'elonmusk',
+    false,
+    expected.isRetweet,
+  );
 
   expect(expected.permanentUrl).toEqual(latest?.permanentUrl);
 });
@@ -53,7 +55,12 @@ test('scraper can get tweet quotes and replies', async () => {
     id: '1237110546383724547',
     hashtags: [],
     permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
-    photos: ['https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg'],
+    photos: [
+      {
+        id: '1237110473486729218',
+        url: 'https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg',
+      },
+    ],
     text: 'The Easiest Problem Everyone Gets Wrong \n\n[new video] --&gt; https://t.co/YdaeDYmPAU https://t.co/iKu4Xs6o2V',
     timeParsed: new Date(Date.UTC(2020, 2, 9, 20, 18, 33, 0)),
     timestamp: 1583785113,

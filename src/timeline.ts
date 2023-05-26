@@ -233,13 +233,16 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
 
   const media = tweet.extended_entities?.media ?? [];
   for (const m of media) {
-    if (m.media_url_https == null) {
+    if (m.id_str == null || m.media_url_https == null) {
       continue;
     }
 
     if (m.type === 'photo') {
-      tw.photos.push(m.media_url_https);
-    } else if (m.type === 'video' && m.id_str != null) {
+      tw.photos.push({
+        id: m.id_str,
+        url: m.media_url_https,
+      });
+    } else if (m.type === 'video') {
       const video: Video = {
         id: m.id_str,
         preview: m.media_url_https,
@@ -262,7 +265,6 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
         }
       }
 
-      tw.photos.push(video.preview);
       tw.videos.push(video);
     }
 
@@ -317,7 +319,15 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     return tco;
   });
 
-  for (const url of tw.photos) {
+  for (const { url } of tw.photos) {
+    if (foundedMedia.indexOf(url) !== -1) {
+      continue;
+    }
+
+    html += `<br><img src="${url}"/>`;
+  }
+
+  for (const { preview: url } of tw.videos) {
     if (foundedMedia.indexOf(url) !== -1) {
       continue;
     }
