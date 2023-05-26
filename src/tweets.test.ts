@@ -34,6 +34,19 @@ test('scraper can get tweet', async () => {
   expect(expected).toEqual(actual);
 });
 
+test('scraper can get latest tweet', async () => {
+  const scraper = new Scraper();
+
+  // OLD APPROACH (without retweet filtering)
+  const tweets = scraper.getTweets('elonmusk', 1, false);
+  const expected = (await tweets.next()).value;
+
+  // NEW APPROACH
+  const latest = await scraper.getLatestTweet('elonmusk', false, expected.isRetweet);
+
+  expect(expected.permanentUrl).toEqual(latest?.permanentUrl);
+});
+
 test('scraper can get tweet quotes and replies', async () => {
   const expected: Tweet = {
     html: `The Easiest Problem Everyone Gets Wrong <br><br>[new video] --&gt; <a href=\"https://youtu.be/ytfCdqWhmdg\">https://t.co/YdaeDYmPAU</a> <br><a href=\"https://t.co/iKu4Xs6o2V\"><img src=\"https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg\"/></a>`,
