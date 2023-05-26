@@ -12,7 +12,13 @@ import {
 } from './search';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline';
 import { getTrends } from './trends';
-import { getTweet, getTweets, getLatestTweet, Tweet } from './tweets';
+import {
+  getTweet,
+  getTweets,
+  getLatestTweet,
+  Tweet,
+  getTweetsByUserId,
+} from './tweets';
 
 const twUrl = 'https://twitter.com';
 
@@ -154,6 +160,21 @@ export class Scraper {
   }
 
   /**
+   * Fetches tweets from a Twitter user using their ID.
+   * @param userId The user whose tweets should be returned.
+   * @param maxTweets The maximum number of tweets to return.
+   * @param includeReplies Whether or not to include tweet replies.
+   * @returns An async generator of tweets from the provided user.
+   */
+  public getTweetsByUserId(
+    userId: string,
+    maxTweets: number,
+    includeReplies: boolean,
+  ): AsyncGenerator<Tweet> {
+    return getTweetsByUserId(userId, maxTweets, includeReplies, this.auth);
+  }
+
+  /**
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
    * @param includeReplies Whether or not to include tweet replies.
@@ -250,7 +271,7 @@ export class Scraper {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public withCookie(_cookie: string): Scraper {
     console.warn(
-      'Warning: Scraper#withCookie is deprecated and will be removed in a later version.',
+      'Warning: Scraper#withCookie is deprecated and will be removed in a later version. Use Scraper#login or Scraper#setCookies instead.',
     );
     return this;
   }
