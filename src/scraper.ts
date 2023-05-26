@@ -10,7 +10,7 @@ import {
 } from './search';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline';
 import { getTrends } from './trends';
-import { getTweet, getTweets, Tweet } from './tweets';
+import { getTweet, getTweets, getLatestTweet, Tweet } from './tweets';
 
 /**
  * An interface to Twitter's undocumented API.
@@ -147,6 +147,21 @@ export class Scraper {
     includeReplies: boolean,
   ): AsyncGenerator<Tweet> {
     return getTweets(user, maxTweets, includeReplies, this.auth);
+  }
+
+  /**
+   * Fetches the most recent tweet from a Twitter user.
+   * @param user The user whose latest tweet should be returned.
+   * @param includeReplies Whether or not to include tweet replies.
+   * @param includeRetweets Whether or not to include retweets.
+   * @returns The {@link Tweet} object or `null` if it couldn't be fetched.
+   */
+  public getLatestTweet(
+    user: string,
+    includeReplies: boolean,
+    includeRetweets: boolean,
+  ): Promise<Tweet | null> {
+    return getLatestTweet(user, includeReplies, includeRetweets, this.auth);
   }
 
   /**

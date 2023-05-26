@@ -102,6 +102,28 @@ export function getTweets(
   });
 }
 
+export async function getLatestTweet(
+  user: string,
+  includeReplies: boolean,
+  includeRetweets: boolean,
+  auth: TwitterGuestAuth,
+): Promise<Tweet | null> {
+  const max = includeRetweets ? 1 : 200;
+  const timeline = await getTweets(user, max, includeReplies, auth);
+
+  if (max == 1) {
+    return (await timeline.next()).value;
+  }
+
+  for await (const tweet of timeline) {
+    if (!tweet.isRetweet) {
+      return tweet;
+    }
+  }
+
+  return null;
+}
+
 export async function getTweet(
   id: string,
   includeReplies: boolean,
