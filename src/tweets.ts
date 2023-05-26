@@ -47,6 +47,7 @@ export interface Tweet {
   isReply?: boolean;
   isRetweet?: boolean;
   likes?: number;
+  name?: string;
   mentions: Mention[];
   permanentUrl?: string;
   photos: Photo[];

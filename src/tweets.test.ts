@@ -7,6 +7,7 @@ test('scraper can get tweet', async () => {
     id: '1328684389388185600',
     hashtags: [],
     mentions: [],
+    name: 'Twitter',
     permanentUrl: 'https://twitter.com/Twitter/status/1328684389388185600',
     photos: [],
     text: 'That thing you didn’t Tweet but wanted to but didn’t but got so close but then were like nah. \n\nWe have a place for that now—Fleets! \n\nRolling out to everyone starting today. https://t.co/auQAHXZMfH',
@@ -70,6 +71,7 @@ test('scraper can get tweet quotes and replies', async () => {
     id: '1237110546383724547',
     hashtags: [],
     mentions: [],
+    name: 'Vsauce2',
     permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
     photos: [
       {
@@ -111,6 +113,7 @@ test('scraper can get retweet', async () => {
     id: '1359151057872580612',
     hashtags: [],
     mentions: [],
+    name: 'Twitter Together',
     permanentUrl:
       'https://twitter.com/TwitterTogether/status/1359151057872580612',
     photos: [],
