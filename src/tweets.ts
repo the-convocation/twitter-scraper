@@ -4,6 +4,11 @@ import { getUserIdByScreenName } from './profile';
 import { TimelineRaw, parseTweets, QueryTweetsResponse } from './timeline';
 import { getTweetTimeline } from './timeline-async';
 
+export interface Photo {
+  id: string;
+  url: string;
+}
+
 export interface Video {
   id: string;
   preview: string;
@@ -37,7 +42,7 @@ export interface Tweet {
   isRetweet?: boolean;
   likes?: number;
   permanentUrl?: string;
-  photos: string[];
+  photos: Photo[];
   place?: PlaceRaw;
   quotedStatus?: Tweet;
   replies?: number;
