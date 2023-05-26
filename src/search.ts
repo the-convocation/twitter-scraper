@@ -1,5 +1,6 @@
 import { addApiParams, requestApi } from './api';
-import { TwitterAuth, TwitterUserAuth } from './auth';
+import { TwitterAuth } from './auth';
+import { TwitterUserAuth } from './auth-user';
 import { Profile } from './profile';
 import {
   parseTweets,
