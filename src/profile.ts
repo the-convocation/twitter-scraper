@@ -1,5 +1,5 @@
 import { requestApi, RequestApiResult } from './api';
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuth } from './auth';
 
 export interface LegacyUserRaw {
   created_at?: string;
@@ -100,7 +100,7 @@ export function parseProfile(user: LegacyUserRaw): Profile {
 
 export async function getProfile(
   username: string,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): Promise<RequestApiResult<Profile>> {
   const res = await requestApi<UserRaw>(
     'https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?variables=%7B%22screen_name%22%3A%22' +
@@ -149,7 +149,7 @@ const idCache = new Map<string, string>();
 
 export async function getUserIdByScreenName(
   screenName: string,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): Promise<RequestApiResult<string>> {
   const cached = idCache.get(screenName);
   if (cached != null) {

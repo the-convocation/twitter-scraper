@@ -1,5 +1,5 @@
 import { addApiParams, requestApi } from './api';
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuth, TwitterUserAuth } from './auth';
 import { Profile } from './profile';
 import {
   parseTweets,
@@ -27,7 +27,7 @@ export function searchTweets(
   maxTweets: number,
   includeReplies: boolean,
   searchMode: SearchMode,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): AsyncGenerator<Tweet> {
   return getTweetTimeline(query, maxTweets, (q, mt, c) => {
     return fetchSearchTweets(q, mt, includeReplies, searchMode, auth, c);
@@ -37,7 +37,7 @@ export function searchTweets(
 export function searchProfiles(
   query: string,
   maxProfiles: number,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): AsyncGenerator<Profile> {
   return getUserTimeline(query, maxProfiles, (q, mt, c) => {
     return fetchSearchProfiles(q, mt, auth, c);
@@ -49,7 +49,7 @@ export async function fetchSearchTweets(
   maxTweets: number,
   includeReplies: boolean,
   searchMode: SearchMode,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
   cursor?: string,
 ): Promise<QueryTweetsResponse> {
   const timeline = await getSearchTimeline(
@@ -67,7 +67,7 @@ export async function fetchSearchTweets(
 export async function fetchSearchProfiles(
   query: string,
   maxProfiles: number,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
   cursor?: string,
 ): Promise<QueryProfilesResponse> {
   const timeline = await getSearchTimeline(
@@ -87,9 +87,13 @@ async function getSearchTimeline(
   maxItems: number,
   includeReplies: boolean,
   searchMode: SearchMode,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
   cursor?: string,
 ): Promise<TimelineRaw> {
+  if (!(auth instanceof TwitterUserAuth) || !auth.isLoggedIn()) {
+    throw new Error('Scraper is not logged-in for search.');
+  }
+
   if (maxItems > 50) {
     maxItems = 50;
   }

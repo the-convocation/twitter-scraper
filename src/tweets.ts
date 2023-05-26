@@ -1,5 +1,5 @@
 import { addApiParams, requestApi } from './api';
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
 import { TimelineRaw, parseTweets, QueryTweetsResponse } from './timeline';
 import { getTweetTimeline } from './timeline-async';
@@ -58,7 +58,7 @@ export async function fetchTweets(
   maxTweets: number,
   includeReplies: boolean,
   cursor: string | undefined,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): Promise<QueryTweetsResponse> {
   if (maxTweets > 200) {
     maxTweets = 200;
@@ -95,7 +95,7 @@ export function getTweets(
   user: string,
   maxTweets: number,
   includeReplies: boolean,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): AsyncGenerator<Tweet> {
   return getTweetTimeline(user, maxTweets, (q, mt, c) => {
     return fetchTweets(q, mt, includeReplies, c, auth);
@@ -106,7 +106,7 @@ export async function getLatestTweet(
   user: string,
   includeReplies: boolean,
   includeRetweets: boolean,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): Promise<Tweet | null> {
   const max = includeRetweets ? 1 : 200;
   const timeline = await getTweets(user, max, includeReplies, auth);
@@ -127,7 +127,7 @@ export async function getLatestTweet(
 export async function getTweet(
   id: string,
   includeReplies: boolean,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): Promise<Tweet | null> {
   const params = new URLSearchParams();
   addApiParams(params, includeReplies);

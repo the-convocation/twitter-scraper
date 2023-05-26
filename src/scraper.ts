@@ -1,5 +1,5 @@
 import { bearerToken, bearerToken2, RequestApiResult } from './api';
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuth, TwitterGuestAuth, TwitterUserAuth } from './auth';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
   fetchSearchProfiles,
@@ -17,8 +17,8 @@ import { getTweet, getTweets, getLatestTweet, Tweet } from './tweets';
  * Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
  */
 export class Scraper {
-  private auth: TwitterGuestAuth;
-  private authTrends: TwitterGuestAuth;
+  private auth: TwitterAuth;
+  private authTrends: TwitterAuth;
 
   /**
    * Creates a new Scraper object. Scrapers maintain their own guest tokens for Twitter's internal API.
@@ -183,24 +183,67 @@ export class Scraper {
   }
 
   /**
+   * Returns if the scraper is logged in as a real user.
+   * @returns `true` if the scraper is logged in with a real user account; otherwise `false`.
+   */
+  public isLoggedIn(): boolean {
+    const authTrends = this.authTrends;
+    if (!(authTrends instanceof TwitterUserAuth)) {
+      return false;
+    }
+
+    return authTrends.isLoggedIn();
+  }
+
+  /**
+   * Login to Twitter as a real Twitter account. This enables running
+   * searches.
+   * @param username The username of the Twitter account to login with.
+   * @param password The password of the Twitter account to login with.
+   */
+  public async login(username: string, password: string) {
+    const authTrends = new TwitterUserAuth(bearerToken2);
+    await authTrends.login(username, password);
+    this.authTrends = authTrends;
+  }
+
+  /**
+   * Logout of Twitter from a real Twitter account, if possible.
+   */
+  public logout() {
+    const authTrends = this.authTrends;
+    if (!(authTrends instanceof TwitterUserAuth)) {
+      return;
+    }
+
+    this.authTrends = new TwitterGuestAuth(bearerToken2);
+  }
+
+  /**
    * Sets the optional cookie to be used in requests.
-   * @param cookie The cookie to be used in requests.
+   * @param _cookie The cookie to be used in requests.
+   * @deprecated This function no longer represents any part of Twitter's auth flow.
    * @returns This scraper instance.
    */
-  public withCookie(cookie: string): Scraper {
-    this.auth.useCookie(cookie);
-    this.authTrends.useCookie(cookie);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public withCookie(_cookie: string): Scraper {
+    console.warn(
+      'Warning: Scraper#withCookie is deprecated and will be removed in a later version.',
+    );
     return this;
   }
 
   /**
    * Sets the optional CSRF token to be used in requests.
-   * @param token The CSRF token to be used in requests.
+   * @param _token The CSRF token to be used in requests.
+   * @deprecated This function no longer represents any part of Twitter's auth flow.
    * @returns This scraper instance.
    */
-  public withXCsrfToken(token: string): Scraper {
-    this.auth.useCsrfToken(token);
-    this.authTrends.useCsrfToken(token);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public withXCsrfToken(_token: string): Scraper {
+    console.warn(
+      'Warning: Scraper#withXCsrfToken is deprecated and will be removed in a later version.',
+    );
     return this;
   }
 

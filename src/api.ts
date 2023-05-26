@@ -1,5 +1,5 @@
 import { gotScraping, Headers, Response } from 'got-scraping';
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuth } from './auth';
 
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAPYXBAAAAAAACLXUNDekMxqa8h%2F40K4moUkGsoc%3DTYfbDKbT3jJPCEVnMYqilB28NHfOPqkca3qaAxGfsyKCs0wRbw';
@@ -15,16 +15,17 @@ export type RequestApiResult<T> =
 
 export async function requestApi<T>(
   url: string,
-  auth: TwitterGuestAuth,
+  auth: TwitterAuth,
 ): Promise<RequestApiResult<T>> {
   const headers: Headers = {};
-  await auth.installTo(headers);
+  await auth.installTo(headers, url);
 
   let res: Response<string>;
   try {
     res = await gotScraping.get({
       url,
       headers,
+      cookieJar: auth.cookieJar(),
     });
   } catch (err) {
     if (!(err instanceof Error)) {
