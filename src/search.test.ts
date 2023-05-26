@@ -1,20 +1,6 @@
-import { Scraper } from './scraper';
+import { authSearchScraper } from './auth.test';
 import { SearchMode } from './search';
 import { QueryTweetsResponse } from './timeline';
-
-async function authSearchScraper() {
-  const username = process.env['TWITTER_USERNAME'];
-  const password = process.env['TWITTER_PASSWORD'];
-  if (!username || !password) {
-    throw new Error(
-      'TWITTER_USERNAME and TWITTER_PASSWORD variables must be defined.',
-    );
-  }
-
-  const scraper = new Scraper();
-  await scraper.login(username, password);
-  return scraper;
-}
 
 test('scraper can process search cursor', async () => {
   const scraper = await authSearchScraper();
