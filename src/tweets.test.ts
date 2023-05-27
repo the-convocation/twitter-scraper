@@ -141,7 +141,7 @@ test('scraper can get retweet', async () => {
 
 test('scraper can get tweet views', async () => {
   const expected: Tweet = {
-    html: `Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.`,
+    html: `Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.<br><br><a href=\"https://help.twitter.com/using-twitter/view-counts\">https://t.co/hrlMQyXJfx</a>`,
     id: '1606055187348688896',
     hashtags: [],
     mentions: [],
@@ -149,10 +149,10 @@ test('scraper can get tweet views', async () => {
     permanentUrl:
       'https://twitter.com/TwitterSupport/status/1606055187348688896',
     photos: [],
-    text: 'Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.',
-    timeParsed: new Date(Date.UTC(2022, 12, 22, 22, 32, 50, 0)),
-    timestamp: 1612881838,
-    urls: [],
+    text: 'Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.\n\nhttps://t.co/hrlMQyXJfx',
+    timeParsed: new Date(Date.UTC(2022, 11, 22, 22, 32, 50, 0)),
+    timestamp: 1671748370,
+    urls: ['https://help.twitter.com/using-twitter/view-counts'],
     userId: '17874544',
     username: 'TwitterSupport',
     videos: [],
@@ -161,8 +161,9 @@ test('scraper can get tweet views', async () => {
   const scraper = new Scraper();
   const actual = await scraper.getTweet('1606055187348688896', false);
   expect(actual?.views).toBeTruthy();
-  delete actual?.retweetedStatus?.likes;
-  delete actual?.retweetedStatus?.replies;
-  delete actual?.retweetedStatus?.retweets;
-  expect(expected).toEqual(actual?.retweetedStatus);
+  delete actual?.likes;
+  delete actual?.replies;
+  delete actual?.retweets;
+  delete actual?.views;
+  expect(expected).toEqual(actual);
 });
