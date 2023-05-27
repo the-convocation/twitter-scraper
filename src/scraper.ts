@@ -212,12 +212,9 @@ export class Scraper {
    * @returns `true` if the scraper is logged in with a real user account; otherwise `false`.
    */
   public async isLoggedIn(): Promise<boolean> {
-    const authTrends = this.authTrends;
-    if (!(authTrends instanceof TwitterUserAuth)) {
-      return false;
-    }
-
-    return await authTrends.isLoggedIn();
+    return (
+      (await this.auth.isLoggedIn()) && (await this.authTrends.isLoggedIn())
+    );
   }
 
   /**
@@ -232,21 +229,23 @@ export class Scraper {
     password: string,
     email?: string,
   ): Promise<void> {
-    const authTrends = new TwitterUserAuth(bearerToken2);
-    await authTrends.login(username, password, email);
-    this.authTrends = authTrends;
+    // Swap in a real authorizer for all requests
+    const userAuth = new TwitterUserAuth(bearerToken2);
+    await userAuth.login(username, password, email);
+    this.auth = userAuth;
+    this.authTrends = userAuth;
   }
 
   /**
-   * Logout of Twitter from a real Twitter account, if possible.
+   * Log out of Twitter.
    */
   public async logout(): Promise<void> {
-    const authTrends = this.authTrends;
-    if (!(authTrends instanceof TwitterUserAuth)) {
-      return;
-    }
+    await this.auth.logout();
+    await this.authTrends.logout();
 
-    await authTrends.logout();
+    // Swap in guest authorizers for all requests
+    this.auth = new TwitterGuestAuth(bearerToken);
+    this.authTrends = new TwitterGuestAuth(bearerToken2);
   }
 
   /**
@@ -262,9 +261,13 @@ export class Scraper {
    * @param cookies The cookies to set for the current session.
    */
   public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
+    const userAuth = new TwitterUserAuth(bearerToken2);
     for (const cookie of cookies) {
-      await this.authTrends.cookieJar().setCookie(cookie, twUrl);
+      await userAuth.cookieJar().setCookie(cookie, twUrl);
     }
+
+    this.auth = userAuth;
+    this.authTrends = userAuth;
   }
 
   /**

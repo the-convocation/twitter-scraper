@@ -1,6 +1,5 @@
 import { addApiParams, requestApi } from './api';
 import { TwitterAuth } from './auth';
-import { TwitterUserAuth } from './auth-user';
 import { Profile } from './profile';
 import {
   parseTweets,
@@ -91,7 +90,7 @@ async function getSearchTimeline(
   auth: TwitterAuth,
   cursor?: string,
 ): Promise<TimelineRaw> {
-  if (!(auth instanceof TwitterUserAuth) || !auth.isLoggedIn()) {
+  if (!auth.isLoggedIn()) {
     throw new Error('Scraper is not logged-in for search.');
   }
 
