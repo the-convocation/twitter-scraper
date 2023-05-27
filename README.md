@@ -11,7 +11,7 @@ Note that some API operations, such as search, require logging in with a real us
 Refer to the [original README](https://github.com/n0madic/twitter-scraper) for details.
 
 ## Installation
-This package requires Node.js v15.10.0 or greater.
+This package requires Node.js v16.0.0 or greater.
 
 NPM:
 ```sh
