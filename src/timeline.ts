@@ -1,5 +1,5 @@
 import { LegacyUserRaw, parseProfile, Profile } from './profile';
-import { PlaceRaw, Tweet, Video } from './tweets';
+import { Photo, PlaceRaw, Tweet, Video } from './tweets';
 
 export interface Hashtag {
   text?: string;
@@ -164,6 +164,20 @@ const reHashtag = /\B(\#\S+\b)/g;
 const reTwitterUrl = /https:(\/\/t\.co\/([A-Za-z0-9]|[A-Za-z]){10})/g;
 const reUsername = /\B(\@\S{1,15}\b)/g;
 
+type NonNullableField<T, K extends keyof T> = {
+  [P in K]-?: T[P];
+} & T;
+
+function isFieldDefined<T, K extends keyof T>(key: K) {
+  return function (value: T): value is NonNullableField<T, K> {
+    return isDefined(value[key]);
+  };
+}
+
+function isDefined<T>(value: T | null | undefined): value is T {
+  return value != null;
+}
+
 type ParseTweetResult =
   | { success: true; tweet: Tweet }
   | { success: false; err: Error };
@@ -190,21 +204,38 @@ export function parseTweet(
     };
   }
 
+  const hashtags = tweet.entities?.hashtags ?? [];
+  const mentions = tweet.entities?.user_mentions ?? [];
+  const media = tweet.extended_entities?.media ?? [];
+  const pinnedTweets = new Set<string | undefined>(
+    user.pinned_tweet_ids_str ?? [],
+  );
+  const urls = tweet.entities?.urls ?? [];
+  const { photos, videos, sensitiveContent } = parseMediaGroups(media);
+
   const tw: Tweet = {
     id,
-    hashtags: [],
+    hashtags: hashtags
+      .filter(isFieldDefined('text'))
+      .map((hashtag) => hashtag.text),
     likes: tweet.favorite_count,
-    mentions: [],
+    mentions: mentions.filter(isFieldDefined('id_str')).map((mention) => ({
+      id: mention.id_str,
+      username: mention.screen_name,
+      name: mention.name,
+    })),
     name: user.name,
     permanentUrl: `https://twitter.com/${user.screen_name}/status/${id}`,
-    photos: [],
+    photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
     text: tweet.full_text,
-    urls: [],
+    urls: urls
+      .filter(isFieldDefined('expanded_url'))
+      .map((url) => url.expanded_url),
     userId: tweet.user_id_str,
     username: user.screen_name,
-    videos: [],
+    videos,
   };
 
   if (tweet.created_at != null) {
@@ -246,90 +277,19 @@ export function parseTweet(
     }
   }
 
-  if (tweet.ext_views?.count != null) {
-    const views = parseInt(tweet.ext_views.count);
-    if (!isNaN(views)) {
-      tw.views = views;
-    }
+  const views = parseInt(tweet.ext_views?.count ?? '');
+  if (!isNaN(views)) {
+    tw.views = views;
   }
 
-  const pinnedTweets = user.pinned_tweet_ids_str ?? [];
-  for (const pinned of pinnedTweets) {
-    if (tweet.conversation_id_str == pinned) {
-      tw.isPin = true;
-      break;
-    }
+  if (pinnedTweets.has(tweet.conversation_id_str)) {
+    // TODO: Update tests so this can be assigned at the tweet declaration
+    tw.isPin = true;
   }
 
-  const hashtags = tweet.entities?.hashtags ?? [];
-  for (const hashtag of hashtags) {
-    if (hashtag.text != null) {
-      tw.hashtags.push(hashtag.text);
-    }
-  }
-
-  const mentions = tweet.entities?.user_mentions ?? [];
-  for (const mention of mentions) {
-    if (mention.id_str != null) {
-      tw.mentions.push({
-        id: mention.id_str,
-        username: mention.screen_name,
-        name: mention.name,
-      });
-    }
-  }
-
-  const media = tweet.extended_entities?.media ?? [];
-  for (const m of media) {
-    if (m.id_str == null || m.media_url_https == null) {
-      continue;
-    }
-
-    if (m.type === 'photo') {
-      tw.photos.push({
-        id: m.id_str,
-        url: m.media_url_https,
-      });
-    } else if (m.type === 'video') {
-      const video: Video = {
-        id: m.id_str,
-        preview: m.media_url_https,
-      };
-
-      let maxBitrate = 0;
-      const variants = m.video_info?.variants ?? [];
-      for (const variant of variants) {
-        const bitrate = variant.bitrate;
-        if (bitrate != null && bitrate > maxBitrate && variant.url != null) {
-          let variantUrl = variant.url;
-          const stringStart = 0;
-          const tagSuffixIdx = variantUrl.indexOf('?tag=10');
-          if (tagSuffixIdx !== -1) {
-            variantUrl = variantUrl.substring(stringStart, tagSuffixIdx + 1);
-          }
-
-          video.url = variantUrl;
-          maxBitrate = bitrate;
-        }
-      }
-
-      tw.videos.push(video);
-    }
-
-    const sensitive = m.ext_sensitive_media_warning;
-    if (sensitive != null) {
-      tw.sensitiveContent =
-        sensitive.adult_content ||
-        sensitive.graphic_violence ||
-        sensitive.other;
-    }
-  }
-
-  const urls = tweet.entities?.urls ?? [];
-  for (const url of urls) {
-    if (url?.expanded_url != null) {
-      tw.urls.push(url.expanded_url);
-    }
+  if (sensitiveContent) {
+    // TODO: Update tests so this can be assigned at the tweet declaration
+    tw.sensitiveContent = true;
   }
 
   // HTML parsing with regex :)
@@ -361,6 +321,67 @@ export function parseTweet(
   tw.html = html;
 
   return { success: true, tweet: tw };
+}
+
+function parseMediaGroups(media: TimelineMediaExtendedRaw[]): {
+  sensitiveContent?: boolean;
+  photos: Photo[];
+  videos: Video[];
+} {
+  const photos: Photo[] = [];
+  const videos: Video[] = [];
+  let sensitiveContent: boolean | undefined = undefined;
+
+  for (const m of media
+    .filter(isFieldDefined('id_str'))
+    .filter(isFieldDefined('media_url_https'))) {
+    if (m.type === 'photo') {
+      photos.push({
+        id: m.id_str,
+        url: m.media_url_https,
+      });
+    } else if (m.type === 'video') {
+      videos.push(parseVideo(m));
+    }
+
+    const sensitive = m.ext_sensitive_media_warning;
+    if (sensitive != null) {
+      sensitiveContent =
+        sensitive.adult_content ||
+        sensitive.graphic_violence ||
+        sensitive.other;
+    }
+  }
+
+  return { sensitiveContent, photos, videos };
+}
+
+function parseVideo(
+  m: NonNullableField<TimelineMediaExtendedRaw, 'id_str' | 'media_url_https'>,
+): Video {
+  const video: Video = {
+    id: m.id_str,
+    preview: m.media_url_https,
+  };
+
+  let maxBitrate = 0;
+  const variants = m.video_info?.variants ?? [];
+  for (const variant of variants) {
+    const bitrate = variant.bitrate;
+    if (bitrate != null && bitrate > maxBitrate && variant.url != null) {
+      let variantUrl = variant.url;
+      const stringStart = 0;
+      const tagSuffixIdx = variantUrl.indexOf('?tag=10');
+      if (tagSuffixIdx !== -1) {
+        variantUrl = variantUrl.substring(stringStart, tagSuffixIdx + 1);
+      }
+
+      video.url = variantUrl;
+      maxBitrate = bitrate;
+    }
+  }
+
+  return video;
 }
 
 function linkHashtagHtml(hashtag: string) {
