@@ -1,6 +1,6 @@
 import { gotScraping, Headers, Response } from 'got-scraping';
 import { TwitterAuth } from './auth';
-import { APIError } from './errors';
+import { ApiError } from './errors';
 
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAPYXBAAAAAAACLXUNDekMxqa8h%2F40K4moUkGsoc%3DTYfbDKbT3jJPCEVnMYqilB28NHfOPqkca3qaAxGfsyKCs0wRbw';
@@ -45,7 +45,7 @@ export async function requestApi<T>(
   if (res.statusCode != 200) {
     return {
       success: false,
-      err: new APIError(res, `Response status: ${res.statusCode}`),
+      err: new ApiError(res, `Response status: ${res.statusCode}`),
     };
   }
 
