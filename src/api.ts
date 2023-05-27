@@ -41,7 +41,7 @@ export async function requestApi<T>(
   if (res.statusCode != 200) {
     return {
       success: false,
-      err: new Error(`Response status: ${res.statusCode}`),
+      err: new APIError(res, `Response status: ${res.statusCode}`),
     };
   }
 
