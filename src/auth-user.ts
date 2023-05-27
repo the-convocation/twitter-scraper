@@ -3,7 +3,23 @@ import { TwitterGuestAuth } from './auth';
 import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 
-interface TwitterUserAuthFlow {
+interface TwitterUserAuthFlowInitRequest {
+  flow_name: string;
+  input_flow_data: Record<string, unknown>;
+}
+
+interface TwitterUserAuthFlowSubtaskRequest {
+  flow_token: string;
+  subtask_inputs: ({
+    subtask_id: string;
+  } & Record<string, unknown>)[];
+}
+
+type TwitterUserAuthFlowRequest =
+  | TwitterUserAuthFlowInitRequest
+  | TwitterUserAuthFlowSubtaskRequest;
+
+interface TwitterUserAuthFlowResponse {
   errors?: {
     code?: number;
     message?: string;
@@ -86,7 +102,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     };
 
     // Executes a flow subtask and handles the result
-    const executeFlowSubtask = (data: Record<string, unknown>) =>
+    const executeFlowSubtask = (data: TwitterUserAuthFlowRequest) =>
       handleFlowTokenResult(this.executeFlowTask(data));
 
     await executeFlowSubtask({
@@ -192,7 +208,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   private async executeFlowTask(
-    data: Record<string, unknown>,
+    data: TwitterUserAuthFlowRequest,
   ): Promise<FlowTokenResult> {
     const token = this.guestToken;
     if (token == null) {
@@ -219,7 +235,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       return { status: 'error', err: new Error(res.body) };
     }
 
-    const flow: TwitterUserAuthFlow = JSON.parse(res.body);
+    const flow: TwitterUserAuthFlowResponse = JSON.parse(res.body);
     if (flow?.flow_token == null) {
       return { status: 'error', err: new Error('flow_token not found.') };
     }
