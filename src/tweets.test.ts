@@ -31,6 +31,7 @@ test('scraper can get tweet', async () => {
   delete actual?.likes;
   delete actual?.replies;
   delete actual?.retweets;
+  delete actual?.views;
   expect(expected).toEqual(actual);
 });
 
@@ -94,6 +95,7 @@ test('scraper can get tweet quotes and replies', async () => {
   delete quote?.quotedStatus?.likes;
   delete quote?.quotedStatus?.replies;
   delete quote?.quotedStatus?.retweets;
+  delete quote?.quotedStatus?.views;
   expect(expected).toEqual(quote?.quotedStatus);
 
   const reply = await scraper.getTweet('1237111868445134850', false);
@@ -104,6 +106,7 @@ test('scraper can get tweet quotes and replies', async () => {
   delete reply?.inReplyToStatus?.likes;
   delete reply?.inReplyToStatus?.replies;
   delete reply?.inReplyToStatus?.retweets;
+  delete reply?.inReplyToStatus?.views;
   expect(expected).toEqual(reply?.inReplyToStatus);
 });
 
@@ -132,5 +135,34 @@ test('scraper can get retweet', async () => {
   delete retweet?.retweetedStatus?.likes;
   delete retweet?.retweetedStatus?.replies;
   delete retweet?.retweetedStatus?.retweets;
+  delete retweet?.retweetedStatus?.views;
   expect(expected).toEqual(retweet?.retweetedStatus);
+});
+
+test('scraper can get tweet views', async () => {
+  const expected: Tweet = {
+    html: `Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.`,
+    id: '1606055187348688896',
+    hashtags: [],
+    mentions: [],
+    name: 'Twitter Support',
+    permanentUrl:
+      'https://twitter.com/TwitterSupport/status/1606055187348688896',
+    photos: [],
+    text: 'Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.',
+    timeParsed: new Date(Date.UTC(2022, 12, 22, 22, 32, 50, 0)),
+    timestamp: 1612881838,
+    urls: [],
+    userId: '17874544',
+    username: 'TwitterSupport',
+    videos: [],
+  };
+
+  const scraper = new Scraper();
+  const actual = await scraper.getTweet('1606055187348688896', false);
+  expect(actual?.views).toBeTruthy();
+  delete actual?.retweetedStatus?.likes;
+  delete actual?.retweetedStatus?.replies;
+  delete actual?.retweetedStatus?.retweets;
+  expect(expected).toEqual(actual?.retweetedStatus);
 });
