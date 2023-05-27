@@ -164,18 +164,30 @@ const reHashtag = /\B(\#\S+\b)/g;
 const reTwitterUrl = /https:(\/\/t\.co\/([A-Za-z0-9]|[A-Za-z]){10})/g;
 const reUsername = /\B(\@\S{1,15}\b)/g;
 
-export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
+type ParseTweetResult =
+  | { success: true; tweet: Tweet }
+  | { success: false; err: Error };
+
+export function parseTweet(
+  timeline: TimelineRaw,
+  id: string,
+): ParseTweetResult {
   const tweets = timeline.globalObjects?.tweets ?? {};
   const tweet = tweets[id];
-  if (tweet == null || tweet.user_id_str == null) {
-    return null;
+  if (tweet?.user_id_str == null) {
+    return {
+      success: false,
+      err: new Error(`Tweet "${id}" was not found in the timeline object.`),
+    };
   }
 
   const users = timeline.globalObjects?.users ?? {};
   const user = users[tweet.user_id_str];
   if (user?.screen_name == null) {
-    // TODO: change the return type to a result, and return an error; this shouldn't happen, but we don't know what data we're dealing with.
-    return null;
+    return {
+      success: false,
+      err: new Error(`User "${tweet.user_id_str}" has no username data.`),
+    };
   }
 
   const tw: Tweet = {
@@ -205,26 +217,32 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   }
 
   if (tweet.quoted_status_id_str != null) {
-    const quotedStatus = parseTweet(timeline, tweet.quoted_status_id_str);
-    if (quotedStatus != null) {
+    const quotedStatusResult = parseTweet(timeline, tweet.quoted_status_id_str);
+    if (quotedStatusResult.success) {
       tw.isQuoted = true;
-      tw.quotedStatus = quotedStatus;
+      tw.quotedStatus = quotedStatusResult.tweet;
     }
   }
 
   if (tweet.in_reply_to_status_id_str != null) {
-    const replyStatus = parseTweet(timeline, tweet.in_reply_to_status_id_str);
-    if (replyStatus != null) {
+    const replyStatusResult = parseTweet(
+      timeline,
+      tweet.in_reply_to_status_id_str,
+    );
+    if (replyStatusResult.success) {
       tw.isReply = true;
-      tw.inReplyToStatus = replyStatus;
+      tw.inReplyToStatus = replyStatusResult.tweet;
     }
   }
 
   if (tweet.retweeted_status_id_str != null) {
-    const retweetedStatus = parseTweet(timeline, tweet.retweeted_status_id_str);
-    if (retweetedStatus != null) {
+    const retweetedStatusResult = parseTweet(
+      timeline,
+      tweet.retweeted_status_id_str,
+    );
+    if (retweetedStatusResult.success) {
       tw.isRetweet = true;
-      tw.retweetedStatus = retweetedStatus;
+      tw.retweetedStatus = retweetedStatusResult.tweet;
     }
   }
 
@@ -368,7 +386,7 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
   html = html.replace(/\n/g, '<br>');
   tw.html = html;
 
-  return tw;
+  return { success: true, tweet: tw };
 }
 
 /**
@@ -387,18 +405,18 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
     const pinnedTweetId =
       instruction.pinEntry?.entry?.content?.item?.content?.tweet?.id;
     if (pinnedTweetId != null) {
-      const tweet = parseTweet(timeline, pinnedTweetId);
-      if (tweet != null) {
-        pinnedTweet = tweet;
+      const tweetResult = parseTweet(timeline, pinnedTweetId);
+      if (tweetResult.success) {
+        pinnedTweet = tweetResult.tweet;
       }
     }
 
     for (const entry of instruction.addEntries?.entries ?? []) {
       const tweetId = entry.content?.item?.content?.tweet?.id;
       if (tweetId != null) {
-        const tweet = parseTweet(timeline, tweetId);
-        if (tweet != null) {
-          orderedTweets.push(tweet);
+        const tweetResult = parseTweet(timeline, tweetId);
+        if (tweetResult.success) {
+          orderedTweets.push(tweetResult.tweet);
         }
       }
 
