@@ -109,7 +109,7 @@ export async function getProfile(
     auth,
   );
   if (!res.success) {
-    throw res.err;
+    return res;
   }
 
   const { value } = res;
