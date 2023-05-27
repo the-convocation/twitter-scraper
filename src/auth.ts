@@ -8,6 +8,25 @@ export interface TwitterAuth {
   cookieJar(): CookieJar;
 
   /**
+   * Returns if a user is logged-in to Twitter through this instance.
+   * @returns `true` if a user is logged-in; otherwise `false`.
+   */
+  isLoggedIn(): Promise<boolean>;
+
+  /**
+   * Logs into a Twitter account.
+   * @param username The username to log in with.
+   * @param password The password to log in with.
+   * @param email The password to log in with, if you have email confirmation enabled.
+   */
+  login(username: string, password: string, email?: string): Promise<void>;
+
+  /**
+   * Logs out of the current session.
+   */
+  logout(): Promise<void>;
+
+  /**
    * Deletes the current guest token token.
    */
   deleteToken(): void;
@@ -50,6 +69,21 @@ export class TwitterGuestAuth implements TwitterAuth {
     return this.jar;
   }
 
+  isLoggedIn(): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  login(_username: string, _password: string, _email?: string): Promise<void> {
+    return this.updateGuestToken();
+  }
+
+  logout(): Promise<void> {
+    this.deleteToken();
+    this.jar = new CookieJar();
+    return Promise.resolve();
+  }
+
   deleteToken() {
     delete this.guestToken;
     delete this.guestCreatedAt;
@@ -80,13 +114,13 @@ export class TwitterGuestAuth implements TwitterAuth {
       throw new Error('Authentication token is null or undefined.');
     }
 
-    headers['Authorization'] = `Bearer ${this.bearerToken}`;
-    headers['X-Guest-Token'] = token;
+    headers['authorization'] = `Bearer ${this.bearerToken}`;
+    headers['x-guest-token'] = token;
 
     const cookies = await this.jar.getCookies(url);
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
-      headers['X-CSRF-Token'] = xCsrfToken.value;
+      headers['x-csrf-token'] = xCsrfToken.value;
     }
   }
 

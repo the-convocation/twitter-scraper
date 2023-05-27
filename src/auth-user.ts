@@ -4,21 +4,21 @@ import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 
 interface TwitterUserAuthFlow {
-  errors: {
-    code: number;
-    message: string;
+  errors?: {
+    code?: number;
+    message?: string;
   }[];
-  flow_token: string;
-  status: string;
+  flow_token?: string;
+  status?: string;
   subtasks?: {
-    subtask_id: string;
+    subtask_id?: string;
   }[];
 }
 
 interface TwitterUserAuthVerifyCredentials {
-  errors: {
-    code: number;
-    message: string;
+  errors?: {
+    code?: number;
+    message?: string;
   }[];
 }
 
@@ -35,29 +35,19 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     super(bearerToken);
   }
 
-  /**
-   * Returns if a user is logged-in to Twitter through this instance.
-   * @returns `true` if a user is logged-in; otherwise `false`.
-   */
   async isLoggedIn(): Promise<boolean> {
     const res = await requestApi<TwitterUserAuthVerifyCredentials>(
       'https://api.twitter.com/1.1/account/verify_credentials.json',
       this,
     );
     if (!res.success) {
-      throw res.err;
+      return false;
     }
 
     const { value: verify } = res;
-    return verify && verify.errors.length === 0;
+    return verify && !verify.errors?.length;
   }
 
-  /**
-   * Logs into a Twitter account.
-   * @param username The username to log in with.
-   * @param password The password to log in with.
-   * @param email The password to log in with, if you have email confirmation enabled.
-   */
   async login(
     username: string,
     password: string,
@@ -69,13 +59,15 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     const executeFlowAcid = (ft: string) =>
       this.executeFlowTask({
         flow_token: ft,
-        subtask_inputs: {
-          subtask_id: 'LoginAcid',
-          enter_text: {
-            text: email,
-            link: 'next_link',
+        subtask_inputs: [
+          {
+            subtask_id: 'LoginAcid',
+            enter_text: {
+              text: email,
+              link: 'next_link',
+            },
           },
-        },
+        ],
       });
 
     // Handles the result of a flow task
@@ -111,65 +103,76 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       .then((ft) =>
         executeFlowSubtask({
           flow_token: ft,
-          subtask_inputs: {
-            subtask_id: 'LoginJsInstrumentationSubtask',
-            js_instrumentation: {
-              response: '{}',
-              link: 'next_link',
-            },
-          },
-        }),
-      )
-      .then((ft) =>
-        executeFlowSubtask({
-          flow_token: ft,
-          subtask_inputs: {
-            subtask_id: 'LoginEnterUserIdentifierSSO',
-            settings_list: {
-              setting_responses: {
-                key: 'user_identifier',
-                response_data: {
-                  text_data: {},
-                  result: username,
-                },
+          subtask_inputs: [
+            {
+              subtask_id: 'LoginJsInstrumentationSubtask',
+              js_instrumentation: {
+                response: '{}',
+                link: 'next_link',
               },
-              link: 'next_link',
             },
-          },
+          ],
         }),
       )
       .then((ft) =>
         executeFlowSubtask({
           flow_token: ft,
-          subtask_inputs: {
-            subtask_id: 'LoginEnterPassword',
-            enter_password: {
-              password,
-              link: 'next_link',
+          subtask_inputs: [
+            {
+              subtask_id: 'LoginEnterUserIdentifierSSO',
+              settings_list: {
+                setting_responses: [
+                  {
+                    key: 'user_identifier',
+                    response_data: {
+                      text_data: { result: username },
+                    },
+                  },
+                ],
+                link: 'next_link',
+              },
             },
-          },
+          ],
         }),
       )
       .then((ft) =>
         executeFlowSubtask({
           flow_token: ft,
-          subtask_inputs: {
-            subtask_id: 'AccountDuplicationCheck',
-            check_logged_in_account: {
-              link: 'AccountDuplicationCheck_false',
+          subtask_inputs: [
+            {
+              subtask_id: 'LoginEnterPassword',
+              enter_password: {
+                password,
+                link: 'next_link',
+              },
             },
-          },
+          ],
+        }),
+      )
+      .then((ft) =>
+        executeFlowSubtask({
+          flow_token: ft,
+          subtask_inputs: [
+            {
+              subtask_id: 'AccountDuplicationCheck',
+              check_logged_in_account: {
+                link: 'AccountDuplicationCheck_false',
+              },
+            },
+          ],
         }),
       );
   }
 
-  /**
-   * Logs out of the current session.
-   */
   async logout(): Promise<void> {
+    if (!this.isLoggedIn()) {
+      return;
+    }
+
     await requestApi<void>(
       'https://api.twitter.com/1.1/account/logout.json',
       this,
+      'post',
     );
     this.deleteToken();
     this.jar = new CookieJar();
@@ -179,12 +182,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     headers: { [key: string]: unknown },
     url: string,
   ): Promise<void> {
-    headers['Authorization'] = `Bearer ${this.bearerToken}`;
+    headers['authorization'] = `Bearer ${this.bearerToken}`;
 
     const cookies = await this.jar.getCookies(url);
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
-      headers['X-CSRF-Token'] = xCsrfToken.value;
+      headers['x-csrf-token'] = xCsrfToken.value;
     }
   }
 
@@ -199,14 +202,14 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     const res = await gotScraping.post({
       url: 'https://api.twitter.com/1.1/onboarding/task.json',
       headers: {
-        Authorization: `Bearer ${this.bearerToken}`,
-        'Content-Type': 'application/json',
+        authorization: `Bearer ${this.bearerToken}`,
+        'content-type': 'application/json',
         'User-Agent':
           'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
-        'X-Guest-Token': token,
-        'X-Twitter-Auth-Type': 'OAuth2Client',
-        'X-Twitter-Active-User': 'yes',
-        'X-Twitter-Client-Language': 'en',
+        'x-guest-token': token,
+        'x-twitter-auth-type': 'OAuth2Client',
+        'x-twitter-active-user': 'yes',
+        'x-twitter-client-language': 'en',
       },
       cookieJar: this.jar,
       json: data,
@@ -221,7 +224,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       return { status: 'error', err: new Error('flow_token not found.') };
     }
 
-    if (flow.errors.length > 0) {
+    if (flow.errors?.length) {
       return {
         status: 'error',
         err: new Error(
