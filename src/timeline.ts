@@ -335,37 +335,11 @@ export function parseTweet(
   // HTML parsing with regex :)
   let html = tweet.full_text ?? '';
 
-  html = html.replace(reHashtag, (hashtag) => {
-    return `<a href="https://twitter.com/hashtag/${hashtag.replace(
-      '#',
-      '',
-    )}">${hashtag}</a>`;
-  });
-
-  html = html.replace(reUsername, (username) => {
-    return `<a href="https://twitter.com/${username[0].replace('@', '')}">${
-      username[0]
-    }</a>`;
-  });
-
   const foundedMedia: string[] = [];
 
-  html = html.replace(reTwitterUrl, (tco) => {
-    for (const entity of tweet.entities?.urls ?? []) {
-      if (tco === entity.url && entity.expanded_url != null) {
-        return `<a href="${entity.expanded_url}">${tco}</a>`;
-      }
-    }
-
-    for (const entity of tweet.extended_entities?.media ?? []) {
-      if (tco === entity.url && entity.media_url_https != null) {
-        foundedMedia.push(entity.media_url_https);
-        return `<br><a href="${tco}"><img src="${entity.media_url_https}"/></a>`;
-      }
-    }
-
-    return tco;
-  });
+  html = html.replace(reHashtag, linkHashtagHtml);
+  html = html.replace(reUsername, linkUsernameHtml);
+  html = html.replace(reTwitterUrl, unwrapTcoUrlHtml(tweet, foundedMedia));
 
   for (const { url } of tw.photos) {
     if (foundedMedia.indexOf(url) !== -1) {
@@ -389,6 +363,38 @@ export function parseTweet(
   return { success: true, tweet: tw };
 }
 
+function linkHashtagHtml(hashtag: string) {
+  return `<a href="https://twitter.com/hashtag/${hashtag.replace(
+    '#',
+    '',
+  )}">${hashtag}</a>`;
+}
+
+function linkUsernameHtml(username: string) {
+  return `<a href="https://twitter.com/${username[0].replace('@', '')}">${
+    username[0]
+  }</a>`;
+}
+
+function unwrapTcoUrlHtml(tweet: TimelineTweetRaw, foundedMedia: string[]) {
+  return function (tco: string) {
+    for (const entity of tweet.entities?.urls ?? []) {
+      if (tco === entity.url && entity.expanded_url != null) {
+        return `<a href="${entity.expanded_url}">${tco}</a>`;
+      }
+    }
+
+    for (const entity of tweet.extended_entities?.media ?? []) {
+      if (tco === entity.url && entity.media_url_https != null) {
+        foundedMedia.push(entity.media_url_https);
+        return `<br><a href="${tco}"><img src="${entity.media_url_https}"/></a>`;
+      }
+    }
+
+    return tco;
+  };
+}
+
 /**
  * A paginated tweets API response. The `next` field can be used to fetch the next page of results.
  */
@@ -402,8 +408,10 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
   let pinnedTweet: Tweet | undefined;
   let orderedTweets: Tweet[] = [];
   for (const instruction of timeline.timeline?.instructions ?? []) {
-    const pinnedTweetId =
-      instruction.pinEntry?.entry?.content?.item?.content?.tweet?.id;
+    const { pinEntry, addEntries, replaceEntry } = instruction;
+
+    // Handle pin instruction
+    const pinnedTweetId = pinEntry?.entry?.content?.item?.content?.tweet?.id;
     if (pinnedTweetId != null) {
       const tweetResult = parseTweet(timeline, pinnedTweetId);
       if (tweetResult.success) {
@@ -411,8 +419,9 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
       }
     }
 
-    for (const entry of instruction.addEntries?.entries ?? []) {
-      const tweetId = entry.content?.item?.content?.tweet?.id;
+    // Handle add instructions
+    for (const { content } of addEntries?.entries ?? []) {
+      const tweetId = content?.item?.content?.tweet?.id;
       if (tweetId != null) {
         const tweetResult = parseTweet(timeline, tweetId);
         if (tweetResult.success) {
@@ -420,13 +429,14 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
         }
       }
 
-      const operation = entry.content?.operation;
+      const operation = content?.operation;
       if (operation?.cursor?.cursorType === 'Bottom') {
         cursor = operation?.cursor?.value;
       }
     }
 
-    const operation = instruction.replaceEntry?.entry?.content?.operation;
+    // Handle replace instruction
+    const operation = replaceEntry?.entry?.content?.operation;
     if (operation?.cursor?.cursorType === 'Bottom') {
       cursor = operation.cursor.value;
     }
