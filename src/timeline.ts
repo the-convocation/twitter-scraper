@@ -68,6 +68,10 @@ export interface TimelineTweetRaw {
   quoted_status_id_str?: string;
   time?: string;
   user_id_str?: string;
+  ext_views?: {
+    state?: string;
+    count?: string;
+  };
 }
 
 export interface TimelineGlobalObjectsRaw {
@@ -221,6 +225,13 @@ export function parseTweet(timeline: TimelineRaw, id: string): Tweet | null {
     if (retweetedStatus != null) {
       tw.isRetweet = true;
       tw.retweetedStatus = retweetedStatus;
+    }
+  }
+
+  if (tweet.ext_views?.count != null) {
+    const views = parseInt(tweet.ext_views.count);
+    if (!isNaN(views)) {
+      tw.views = views;
     }
   }
 

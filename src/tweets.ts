@@ -63,6 +63,7 @@ export interface Tweet {
   userId?: string;
   username?: string;
   videos: Video[];
+  views?: number;
   sensitiveContent?: boolean;
 }
 
