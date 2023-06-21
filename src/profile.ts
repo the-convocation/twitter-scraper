@@ -102,10 +102,16 @@ export async function getProfile(
   username: string,
   auth: TwitterAuth,
 ): Promise<RequestApiResult<Profile>> {
+  const params = new URLSearchParams();
+  params.set(
+    'variables',
+    JSON.stringify({
+      screen_name: username,
+      withHighlightedLabel: true,
+    }),
+  );
   const res = await requestApi<UserRaw>(
-    'https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?variables=%7B%22screen_name%22%3A%22' +
-      username +
-      '%22%2C%22withHighlightedLabel%22%3Atrue%7D',
+    `https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?${params}`,
     auth,
   );
   if (!res.success) {
