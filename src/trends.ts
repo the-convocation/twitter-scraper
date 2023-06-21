@@ -12,7 +12,7 @@ export async function getTrends(auth: TwitterAuth): Promise<string[]> {
   params.set('entity_tokens', 'false');
 
   const res = await requestApi<TimelineRaw>(
-    `https://twitter.com/i/api/2/guide.json?${params.toString()}`,
+    `https://api.twitter.com/2/guide.json?${params.toString()}`,
     auth,
   );
   if (!res.success) {
