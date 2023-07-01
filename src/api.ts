@@ -1,6 +1,8 @@
-import { gotScraping, Headers, Response } from 'got-scraping';
 import { TwitterAuth } from './auth';
 import { ApiError } from './errors';
+import { updateCookieJar } from './requests';
+import { Headers } from 'headers-polyfill';
+import fetch from 'cross-fetch';
 
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAPYXBAAAAAAACLXUNDekMxqa8h%2F40K4moUkGsoc%3DTYfbDKbT3jJPCEVnMYqilB28NHfOPqkca3qaAxGfsyKCs0wRbw';
@@ -14,22 +16,19 @@ export type RequestApiResult<T> =
   | { success: true; value: T }
   | { success: false; err: Error };
 
-type GotRequestMethod = 'get' | 'post';
-
 export async function requestApi<T>(
   url: string,
   auth: TwitterAuth,
-  method: GotRequestMethod = 'get',
+  method: 'GET' | 'POST' = 'GET',
 ): Promise<RequestApiResult<T>> {
-  const headers: Headers = {};
+  const headers = new Headers();
   await auth.installTo(headers, url);
 
-  let res: Response<string>;
+  let res: Response;
   try {
-    res = await gotScraping[method]({
-      url,
+    res = await fetch(url, {
+      method,
       headers,
-      cookieJar: auth.cookieJar(),
     });
   } catch (err) {
     if (!(err instanceof Error)) {
@@ -42,15 +41,17 @@ export async function requestApi<T>(
     };
   }
 
-  if (res.statusCode != 200) {
+  await updateCookieJar(auth.cookieJar(), res.headers);
+
+  if (!res.ok) {
     return {
       success: false,
-      err: new ApiError(res, `Response status: ${res.statusCode}`),
+      err: new ApiError(res, `Response status: ${res.status}`),
     };
   }
 
-  const value: T = JSON.parse(res.body);
-  if (res.headers['x-rate-limit-incoming'] == '0') {
+  const value: T = await res.json();
+  if (res.headers.get('x-rate-limit-incoming') == '0') {
     auth.deleteToken();
     return { success: true, value };
   } else {

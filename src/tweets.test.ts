@@ -36,7 +36,7 @@ test('scraper can get tweet', async () => {
 });
 
 // TODO: Debug missing isRetweet parameter
-test.skip('scraper can get latest tweet', async () => {
+test('scraper can get latest tweet', async () => {
   const scraper = new Scraper();
 
   // OLD APPROACH (without retweet filtering)

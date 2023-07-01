@@ -1,7 +1,9 @@
-import { gotScraping } from 'got-scraping';
 import { TwitterGuestAuth } from './auth';
 import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
+import { updateCookieJar } from './requests';
+import { Headers } from 'headers-polyfill';
+import fetch from 'cross-fetch';
 
 interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
@@ -188,54 +190,59 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     await requestApi<void>(
       'https://api.twitter.com/1.1/account/logout.json',
       this,
-      'post',
+      'POST',
     );
     this.deleteToken();
     this.jar = new CookieJar();
   }
 
-  async installTo(
-    headers: { [key: string]: unknown },
-    url: string,
-  ): Promise<void> {
-    headers['authorization'] = `Bearer ${this.bearerToken}`;
+  async installTo(headers: Headers, url: string): Promise<void> {
+    headers.set('authorization', `Bearer ${this.bearerToken}`);
+    headers.set('cookie', await this.jar.getCookieString(url));
 
     const cookies = await this.jar.getCookies(url);
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
-      headers['x-csrf-token'] = xCsrfToken.value;
+      headers.set('x-csrf-token', xCsrfToken.value);
     }
   }
 
   private async executeFlowTask(
     data: TwitterUserAuthFlowRequest,
   ): Promise<FlowTokenResult> {
+    const onboardingTaskUrl =
+      'https://api.twitter.com/1.1/onboarding/task.json';
+
     const token = this.guestToken;
     if (token == null) {
       throw new Error('Authentication token is null or undefined.');
     }
 
-    const res = await gotScraping.post({
-      url: 'https://api.twitter.com/1.1/onboarding/task.json',
-      headers: {
-        authorization: `Bearer ${this.bearerToken}`,
-        'content-type': 'application/json',
-        'User-Agent':
-          'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
-        'x-guest-token': token,
-        'x-twitter-auth-type': 'OAuth2Client',
-        'x-twitter-active-user': 'yes',
-        'x-twitter-client-language': 'en',
-      },
-      cookieJar: this.jar,
-      json: data,
+    const headers = new Headers({
+      authorization: `Bearer ${this.bearerToken}`,
+      cookie: await this.jar.getCookieString(onboardingTaskUrl),
+      'content-type': 'application/json',
+      'User-Agent':
+        'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
+      'x-guest-token': token,
+      'x-twitter-auth-type': 'OAuth2Client',
+      'x-twitter-active-user': 'yes',
+      'x-twitter-client-language': 'en',
     });
 
-    if (res.statusCode != 200) {
-      return { status: 'error', err: new Error(res.body) };
+    const res = await fetch(onboardingTaskUrl, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(data),
+    });
+
+    await updateCookieJar(this.jar, res.headers);
+
+    if (!res.ok) {
+      return { status: 'error', err: new Error(await res.text()) };
     }
 
-    const flow: TwitterUserAuthFlowResponse = JSON.parse(res.body);
+    const flow: TwitterUserAuthFlowResponse = await res.json();
     if (flow?.flow_token == null) {
       return { status: 'error', err: new Error('flow_token not found.') };
     }
