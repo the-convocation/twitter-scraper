@@ -1,5 +1,7 @@
-import { gotScraping } from 'got-scraping';
 import { CookieJar } from 'tough-cookie';
+import { updateCookieJar } from './requests';
+import { Headers } from 'headers-polyfill';
+import fetch from 'cross-fetch';
 
 export interface TwitterAuth {
   /**
@@ -46,9 +48,9 @@ export interface TwitterAuth {
   /**
    * Installs the authentication information into a headers-like object. If needed, the
    * authentication token will be updated from the API automatically.
-   * @param headers A key-value object representing a request's headers.
+   * @param headers A Headers instance representing a request's headers.
    */
-  installTo(headers: { [key: string]: unknown }, url: string): Promise<void>;
+  installTo(headers: Headers, url: string): Promise<void>;
 }
 
 /**
@@ -101,10 +103,7 @@ export class TwitterGuestAuth implements TwitterAuth {
     return new Date(this.guestCreatedAt);
   }
 
-  async installTo(
-    headers: { [key: string]: unknown },
-    url: string,
-  ): Promise<void> {
+  async installTo(headers: Headers, url: string): Promise<void> {
     if (this.shouldUpdate()) {
       await this.updateGuestToken();
     }
@@ -114,33 +113,41 @@ export class TwitterGuestAuth implements TwitterAuth {
       throw new Error('Authentication token is null or undefined.');
     }
 
-    headers['authorization'] = `Bearer ${this.bearerToken}`;
-    headers['x-guest-token'] = token;
+    headers.set('authorization', `Bearer ${this.bearerToken}`);
+    headers.set('x-guest-token', token);
 
     const cookies = await this.jar.getCookies(url);
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
-      headers['x-csrf-token'] = xCsrfToken.value;
+      headers.set('x-csrf-token', xCsrfToken.value);
     }
+
+    headers.set('cookie', await this.jar.getCookieString(url));
   }
 
   /**
    * Updates the authentication state with a new guest token from the Twitter API.
    */
   protected async updateGuestToken() {
-    const res = await gotScraping.post({
-      url: 'https://api.twitter.com/1.1/guest/activate.json',
-      headers: {
-        Authorization: `Bearer ${this.bearerToken}`,
-      },
-      cookieJar: this.jar,
+    const guestActivateUrl = 'https://api.twitter.com/1.1/guest/activate.json';
+
+    const headers = new Headers({
+      Authorization: `Bearer ${this.bearerToken}`,
+      Cookie: await this.jar.getCookieString(guestActivateUrl),
     });
 
-    if (res.statusCode != 200) {
-      throw new Error(res.body);
+    const res = await fetch(guestActivateUrl, {
+      method: 'POST',
+      headers: headers,
+    });
+
+    await updateCookieJar(this.jar, res.headers);
+
+    if (!res.ok) {
+      throw new Error(await res.text());
     }
 
-    const o = JSON.parse(res.body);
+    const o = await res.json();
     if (o == null || o['guest_token'] == null) {
       throw new Error('guest_token not found.');
     }
