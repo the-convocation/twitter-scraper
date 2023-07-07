@@ -181,7 +181,6 @@ export async function getTweet(
 ): Promise<Tweet | null> {
   const variables: Record<string, any> = {
     focalTweetId: id,
-    referrer: 'profile',
     with_rux_injections: false,
     includePromotedContent: true,
     withCommunity: true,
@@ -202,7 +201,7 @@ export async function getTweet(
   params.set('variables', stringify(variables));
 
   const res = await requestApi<ThreadedConversation>(
-    `https://twitter.com/i/api/graphql/wETHelmSuBQR5r-dgUlPxg/TweetDetail?${params.toString()}`,
+    `https://twitter.com/i/api/graphql/VWFGPVAGkZMGRKGe3GFFnA/TweetDetail?${params.toString()}`,
     auth,
   );
   if (!res.success) {
