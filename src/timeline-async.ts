@@ -27,7 +27,7 @@ export async function* getUserTimeline(
   query: string,
   maxProfiles: number,
   fetchFunc: FetchProfiles,
-): AsyncGenerator<Profile> {
+): AsyncGenerator<Profile, void> {
   let nProfiles = 0;
   let cursor: string | undefined = undefined;
   while (nProfiles < maxProfiles) {
@@ -60,7 +60,7 @@ export async function* getTweetTimeline(
   query: string,
   maxTweets: number,
   fetchFunc: FetchTweets,
-): AsyncGenerator<Tweet> {
+): AsyncGenerator<Tweet, void> {
   let nTweets = 0;
   let cursor: string | undefined = undefined;
   while (nTweets < maxTweets) {

@@ -330,7 +330,6 @@ export interface QueryTweetsResponse {
   next?: string;
 }
 
-// TODO: Remove this
 export function parseTimelineTweetsV1(
   timeline: TimelineV1,
 ): QueryTweetsResponse {

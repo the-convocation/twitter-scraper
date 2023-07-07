@@ -71,7 +71,7 @@ export class Scraper {
     query: string,
     maxTweets: number,
     searchMode: SearchMode = SearchMode.Top,
-  ): AsyncGenerator<Tweet> {
+  ): AsyncGenerator<Tweet, void> {
     return searchTweets(query, maxTweets, searchMode, this.auth);
   }
 
@@ -84,7 +84,7 @@ export class Scraper {
   public searchProfiles(
     query: string,
     maxProfiles: number,
-  ): AsyncGenerator<Profile> {
+  ): AsyncGenerator<Profile, void> {
     return searchProfiles(query, maxProfiles, this.auth);
   }
 
@@ -135,7 +135,10 @@ export class Scraper {
    * @param maxTweets The maximum number of tweets to return.
    * @returns An async generator of tweets from the provided user.
    */
-  public getTweets(user: string, maxTweets: number): AsyncGenerator<Tweet> {
+  public getTweets(
+    user: string,
+    maxTweets: number,
+  ): AsyncGenerator<Tweet, void> {
     return getTweets(user, maxTweets, this.auth);
   }
 
@@ -148,7 +151,7 @@ export class Scraper {
   public getTweetsByUserId(
     userId: string,
     maxTweets: number,
-  ): AsyncGenerator<Tweet> {
+  ): AsyncGenerator<Tweet, void> {
     return getTweetsByUserId(userId, maxTweets, this.auth);
   }
 
@@ -156,12 +159,12 @@ export class Scraper {
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
    * @param includeRetweets Whether or not to include retweets.
-   * @returns The {@link Tweet} object or `null` if it couldn't be fetched.
+   * @returns The {@link Tweet} object or `null`/`undefined` if it couldn't be fetched.
    */
   public getLatestTweet(
     user: string,
     includeRetweets: boolean,
-  ): Promise<Tweet | null> {
+  ): Promise<Tweet | null | void> {
     return getLatestTweet(user, includeRetweets, this.auth);
   }
 

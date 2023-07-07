@@ -1,4 +1,4 @@
-import { Scraper } from './scraper';
+import { authSearchScraper } from './auth.test';
 import { Mention, Tweet } from './tweets';
 
 test('scraper can get tweet', async () => {
@@ -28,7 +28,7 @@ test('scraper can get tweet', async () => {
     ],
   };
 
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
   const actual = await scraper.getTweet('1328684389388185600');
   delete actual?.likes;
   delete actual?.replies;
@@ -37,18 +37,20 @@ test('scraper can get tweet', async () => {
   expect(expected).toEqual(actual);
 });
 
-// TODO: Debug missing isRetweet parameter
 test('scraper can get latest tweet', async () => {
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
 
   // OLD APPROACH (without retweet filtering)
   const tweets = scraper.getTweets('elonmusk', 1);
   const expected = (await tweets.next()).value;
 
   // NEW APPROACH
-  const latest = await scraper.getLatestTweet('elonmusk', expected.isRetweet);
+  const latest = await scraper.getLatestTweet(
+    'elonmusk',
+    expected?.isRetweet ? true : false,
+  );
 
-  expect(expected.permanentUrl).toEqual(latest?.permanentUrl);
+  expect(expected?.permanentUrl).toEqual(latest?.permanentUrl);
 });
 
 test('scraper can get user mentions in tweets', async () => {
@@ -60,7 +62,7 @@ test('scraper can get user mentions in tweets', async () => {
     },
   ];
 
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
   const tweet = await scraper.getTweet('1554522888904101890');
   expect(expected).toEqual(tweet?.mentions);
 });
@@ -90,7 +92,7 @@ test('scraper can get tweet quotes and replies', async () => {
     videos: [],
   };
 
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
   const quote = await scraper.getTweet('1237110897597976576');
   expect(quote?.isQuoted).toBeTruthy();
   delete quote?.quotedStatus?.likes;
@@ -132,7 +134,7 @@ test('scraper can get retweet', async () => {
     videos: [],
   };
 
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
   const retweet = await scraper.getTweet('1362849141248974853');
   expect(retweet?.isRetweet).toBeTruthy();
   delete retweet?.retweetedStatus?.likes;
@@ -144,6 +146,7 @@ test('scraper can get retweet', async () => {
 
 test('scraper can get tweet views', async () => {
   const expected: Tweet = {
+    conversationId: '1606055187348688896',
     html: `Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.<br><br><a href=\"https://help.twitter.com/using-twitter/view-counts\">https://t.co/hrlMQyXJfx</a>`,
     id: '1606055187348688896',
     hashtags: [],
@@ -162,7 +165,7 @@ test('scraper can get tweet views', async () => {
     videos: [],
   };
 
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
   const actual = await scraper.getTweet('1606055187348688896');
   expect(actual?.views).toBeTruthy();
   delete actual?.likes;
@@ -173,7 +176,7 @@ test('scraper can get tweet views', async () => {
 });
 
 test('scraper can get tweet thread', async () => {
-  const scraper = new Scraper();
+  const scraper = await authSearchScraper();
   const tweet = await scraper.getTweet('1665602315745673217');
   expect(tweet).not.toBeNull();
   expect(tweet?.isSelfThread).toBeTruthy();

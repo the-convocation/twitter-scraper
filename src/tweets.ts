@@ -131,7 +131,7 @@ export function getTweets(
   user: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet> {
+): AsyncGenerator<Tweet, void> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const userIdRes = await getUserIdByScreenName(q, auth);
     if (!userIdRes.success) {
@@ -148,7 +148,7 @@ export function getTweetsByUserId(
   userId: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet> {
+): AsyncGenerator<Tweet, void> {
   return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
     return fetchTweets(q, mt, c, auth);
   });
@@ -158,7 +158,7 @@ export async function getLatestTweet(
   user: string,
   includeRetweets: boolean,
   auth: TwitterAuth,
-): Promise<Tweet | null> {
+): Promise<Tweet | null | void> {
   const max = includeRetweets ? 1 : 200;
   const timeline = getTweets(user, max, auth);
 
