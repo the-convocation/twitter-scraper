@@ -25,23 +25,29 @@ export async function requestApi<T>(
   await auth.installTo(headers, url);
 
   let res: Response;
-  try {
-    res = await fetch(url, {
-      method,
-      headers,
-    });
-  } catch (err) {
-    if (!(err instanceof Error)) {
-      throw err;
+  do {
+    try {
+      res = await fetch(url, {
+        method,
+        headers,
+      });
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+
+      return {
+        success: false,
+        err: new Error('Failed to perform request.'),
+      };
     }
 
-    return {
-      success: false,
-      err: new Error('Failed to perform request.'),
-    };
-  }
+    await updateCookieJar(auth.cookieJar(), res.headers);
 
-  await updateCookieJar(auth.cookieJar(), res.headers);
+    if (res.status === 429) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  } while (res.status === 429);
 
   if (!res.ok) {
     return {
