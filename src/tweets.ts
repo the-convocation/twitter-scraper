@@ -44,6 +44,7 @@ export interface PlaceRaw {
  * A parsed Tweet object.
  */
 export interface Tweet {
+  conversationId?: string;
   hashtags: string[];
   html?: string;
   id?: string;
@@ -53,6 +54,7 @@ export interface Tweet {
   isPin?: boolean;
   isReply?: boolean;
   isRetweet?: boolean;
+  isSelfThread?: boolean;
   likes?: number;
   name?: string;
   mentions: Mention[];
@@ -66,6 +68,7 @@ export interface Tweet {
   retweetedStatus?: Tweet;
   retweetedStatusId?: string;
   text?: string;
+  thread: Tweet[];
   timeParsed?: Date;
   timestamp?: number;
   urls: string[];
