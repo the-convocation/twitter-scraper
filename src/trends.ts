@@ -1,6 +1,6 @@
 import { addApiParams, requestApi } from './api';
 import { TwitterAuth } from './auth';
-import { TimelineRaw } from './timeline';
+import { TimelineV1 } from './timeline-v1';
 
 export async function getTrends(auth: TwitterAuth): Promise<string[]> {
   const params = new URLSearchParams();
@@ -11,7 +11,7 @@ export async function getTrends(auth: TwitterAuth): Promise<string[]> {
   params.set('include_page_configuration', 'false');
   params.set('entity_tokens', 'false');
 
-  const res = await requestApi<TimelineRaw>(
+  const res = await requestApi<TimelineV1>(
     `https://api.twitter.com/2/guide.json?${params.toString()}`,
     auth,
   );
