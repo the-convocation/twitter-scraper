@@ -129,30 +129,30 @@ export function parseLegacyTweet(
     videos,
   };
 
-  if (tweet.created_at != null) {
+  if (tweet.created_at) {
     tw.timeParsed = new Date(Date.parse(tweet.created_at));
     tw.timestamp = Math.floor(tw.timeParsed.valueOf() / 1000);
   }
 
-  if (tweet.place?.id != null) {
+  if (tweet.place?.id) {
     tw.place = tweet.place;
   }
 
-  if (tweet.quoted_status_id_str != null) {
+  if (tweet.quoted_status_id_str) {
     tw.isQuoted = true;
     tw.quotedStatusId = tweet.quoted_status_id_str;
   }
 
-  if (tweet.in_reply_to_status_id_str != null) {
+  if (tweet.in_reply_to_status_id_str) {
     tw.isReply = true;
     tw.inReplyToStatusId = tweet.in_reply_to_status_id_str;
   }
 
-  if (tweet.retweeted_status_id_str != null) {
+  if (tweet.retweeted_status_id_str || tweet.retweeted_status_result?.result) {
     tw.isRetweet = true;
     tw.retweetedStatusId = tweet.retweeted_status_id_str;
 
-    if (tweet.retweeted_status_result?.result != null) {
+    if (tweet.retweeted_status_result?.result) {
       const retweetedStatusResult = parseLegacyTweet(
         tweet.retweeted_status_result.result.core?.user_results?.result?.legacy,
         tweet.retweeted_status_result.result.legacy,
