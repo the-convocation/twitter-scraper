@@ -75,7 +75,7 @@ export interface TimelineResultRaw {
 }
 
 export interface LegacyTweetRaw {
-  id_str?: string;
+  conversation_id_str?: string;
   created_at?: string;
   favorite_count?: number;
   full_text?: string;
@@ -88,6 +88,7 @@ export interface LegacyTweetRaw {
   extended_entities?: {
     media?: TimelineMediaExtendedRaw[];
   };
+  id_str?: string;
   in_reply_to_status_id_str?: string;
   place?: PlaceRaw;
   reply_count?: number;
@@ -227,6 +228,7 @@ function parseTimelineTweet(
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
   const tw: Tweet = {
+    conversationId: tweet.conversation_id_str,
     id,
     hashtags: hashtags
       .filter(isFieldDefined('text'))
@@ -243,6 +245,7 @@ function parseTimelineTweet(
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
     text: tweet.full_text,
+    thread: [],
     urls: urls
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),

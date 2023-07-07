@@ -9,24 +9,23 @@ import {
 import { Tweet } from './tweets';
 import { isFieldDefined } from './type-util';
 
+export interface TimelineEntryItemContentRaw {
+  tweetDisplayType?: string;
+  tweet_results?: {
+    result: TimelineResultRaw;
+  };
+}
+
 export interface TimelineEntryRaw {
   content?: {
     cursorType?: string;
     value?: string;
     items?: {
       item?: {
-        itemContent?: {
-          tweet_results?: {
-            result: TimelineResultRaw;
-          };
-        };
+        itemContent?: TimelineEntryItemContentRaw;
       };
     }[];
-    itemContent?: {
-      tweet_results?: {
-        result: TimelineResultRaw;
-      };
-    };
+    itemContent?: TimelineEntryItemContentRaw;
   };
 }
 
@@ -95,6 +94,7 @@ function parseLegacyTweet(
   }
 
   const tw: Tweet = {
+    conversationId: tweet.conversation_id_str,
     id: tweet.id_str,
     hashtags: hashtags
       .filter(isFieldDefined('text'))
@@ -111,6 +111,7 @@ function parseLegacyTweet(
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
     text: tweet.full_text,
+    thread: [],
     urls: urls
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
@@ -249,6 +250,10 @@ export function parseThreadedConversation(
           entry.content.itemContent.tweet_results.result,
         );
         if (tweetResult.success) {
+          if (entry.content.itemContent.tweetDisplayType === 'SelfThread') {
+            tweetResult.tweet.isSelfThread = true;
+          }
+
           tweets.push(tweetResult.tweet);
         }
       }
@@ -261,6 +266,10 @@ export function parseThreadedConversation(
             item.item.itemContent.tweet_results.result,
           );
           if (tweetResult.success) {
+            if (item.item.itemContent.tweetDisplayType === 'SelfThread') {
+              tweetResult.tweet.isSelfThread = true;
+            }
+
             tweets.push(tweetResult.tweet);
           }
         }
@@ -275,6 +284,18 @@ export function parseThreadedConversation(
           tweet.inReplyToStatus = parentTweet;
           break;
         }
+      }
+    }
+
+    if (tweet.isSelfThread && tweet.conversationId === tweet.id) {
+      for (const childTweet of tweets) {
+        if (childTweet.isSelfThread && childTweet.id !== tweet.id) {
+          tweet.thread.push(childTweet);
+        }
+      }
+
+      if (tweet.thread.length === 0) {
+        tweet.isSelfThread = false;
       }
     }
   }
