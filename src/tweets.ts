@@ -9,6 +9,7 @@ import {
   ThreadedConversation,
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
+import stringify from 'json-stable-stringify';
 
 export interface Mention {
   id: string;
@@ -98,16 +99,22 @@ export async function fetchTweets(
     withV2Timeline: true,
   };
 
-  const features: Record<string, any> = {};
-  addApiFeatures(features);
+  const features = addApiFeatures({
+    interactive_text_enabled: true,
+    longform_notetweets_inline_media_enabled: false,
+    responsive_web_text_conversations_enabled: false,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      false,
+    vibe_api_enabled: true,
+  });
 
   if (cursor != null && cursor != '') {
     variables['cursor'] = cursor;
   }
 
   const params = new URLSearchParams();
-  params.set('variables', JSON.stringify(variables));
-  params.set('features', JSON.stringify(features));
+  params.set('variables', stringify(variables));
+  params.set('features', stringify(features));
 
   const res = await requestApi<TimelineV2>(
     `https://twitter.com/i/api/graphql/UGi7tjRPr-d_U3bCPIko5Q/UserTweets?${params.toString()}`,
@@ -184,12 +191,15 @@ export async function getTweet(
     withV2Timeline: true,
   };
 
-  const features: Record<string, any> = {};
-  addApiFeatures(features);
+  const features = addApiFeatures({
+    longform_notetweets_inline_media_enabled: true,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      false,
+  });
 
   const params = new URLSearchParams();
-  params.set('variables', JSON.stringify(variables));
-  params.set('features', JSON.stringify(features));
+  params.set('features', stringify(features));
+  params.set('variables', stringify(variables));
 
   const res = await requestApi<ThreadedConversation>(
     `https://twitter.com/i/api/graphql/wETHelmSuBQR5r-dgUlPxg/TweetDetail?${params.toString()}`,

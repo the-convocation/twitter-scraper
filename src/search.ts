@@ -9,6 +9,7 @@ import {
   parseSearchTimelineTweets,
   parseSearchTimelineUsers,
 } from './timeline-search';
+import stringify from 'json-stable-stringify';
 
 /**
  * The categories that can be used in Twitter searches.
@@ -99,10 +100,14 @@ async function getSearchTimeline(
     product: 'Top',
   };
 
-  const features: Record<string, any> = {
+  const features = addApiFeatures({
+    longform_notetweets_inline_media_enabled: true,
     responsive_web_enhance_cards_enabled: false,
-  };
-  addApiFeatures(features);
+    responsive_web_media_download_video_enabled: false,
+    responsive_web_twitter_article_tweet_consumption_enabled: false,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      true,
+  });
 
   const fieldToggles: Record<string, any> = {
     withArticleRichContentState: false,
@@ -130,9 +135,9 @@ async function getSearchTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('variables', JSON.stringify(variables));
-  params.set('features', JSON.stringify(features));
-  params.set('fieldToggles', JSON.stringify(fieldToggles));
+  params.set('features', stringify(features));
+  params.set('fieldToggles', stringify(fieldToggles));
+  params.set('variables', stringify(variables));
 
   const res = await requestApi<SearchTimeline>(
     `https://twitter.com/i/api/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline?${params.toString()}`,
