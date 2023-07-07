@@ -1,7 +1,13 @@
-import { addApiParams, requestApi } from './api';
+import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
-import { TimelineRaw, parseTweets, QueryTweetsResponse } from './timeline';
+import { QueryTweetsResponse } from './timeline-v1';
+import {
+  TimelineV2,
+  parseTimelineTweetsV2,
+  parseThreadedConversation,
+  ThreadedConversation,
+} from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
 
 export interface Mention {
@@ -42,6 +48,7 @@ export interface Tweet {
   html?: string;
   id?: string;
   inReplyToStatus?: Tweet;
+  inReplyToStatusId?: string;
   isQuoted?: boolean;
   isPin?: boolean;
   isReply?: boolean;
@@ -53,9 +60,11 @@ export interface Tweet {
   photos: Photo[];
   place?: PlaceRaw;
   quotedStatus?: Tweet;
+  quotedStatusId?: string;
   replies?: number;
   retweets?: number;
   retweetedStatus?: Tweet;
+  retweetedStatusId?: string;
   text?: string;
   timeParsed?: Date;
   timestamp?: number;
@@ -70,7 +79,6 @@ export interface Tweet {
 export async function fetchTweets(
   userId: string,
   maxTweets: number,
-  includeReplies: boolean,
   cursor: string | undefined,
   auth: TwitterAuth,
 ): Promise<QueryTweetsResponse> {
@@ -78,30 +86,40 @@ export async function fetchTweets(
     maxTweets = 200;
   }
 
-  const params = new URLSearchParams();
-  addApiParams(params, includeReplies);
+  const variables: Record<string, any> = {
+    userId,
+    count: maxTweets,
+    includePromotedContent: false,
+    withQuickPromoteEligibilityTweetFields: false,
+    withVoice: true,
+    withV2Timeline: true,
+  };
 
-  params.set('count', `${maxTweets}`);
-  params.set('userId', userId);
+  const features: Record<string, any> = {};
+  addApiFeatures(features);
+
   if (cursor != null && cursor != '') {
-    params.set('cursor', cursor);
+    variables['cursor'] = cursor;
   }
 
-  const res = await requestApi<TimelineRaw>(
-    `https://api.twitter.com/2/timeline/profile/${userId}.json?${params.toString()}`,
+  const params = new URLSearchParams();
+  params.set('variables', JSON.stringify(variables));
+  params.set('features', JSON.stringify(features));
+
+  const res = await requestApi<TimelineV2>(
+    `https://twitter.com/i/api/graphql/UGi7tjRPr-d_U3bCPIko5Q/UserTweets?${params.toString()}`,
     auth,
   );
   if (!res.success) {
     throw res.err;
   }
 
-  return parseTweets(res.value);
+  return parseTimelineTweetsV2(res.value);
 }
 
 export function getTweets(
   user: string,
   maxTweets: number,
-  includeReplies: boolean,
   auth: TwitterAuth,
 ): AsyncGenerator<Tweet> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
@@ -112,29 +130,27 @@ export function getTweets(
 
     const { value: userId } = userIdRes;
 
-    return fetchTweets(userId, mt, includeReplies, c, auth);
+    return fetchTweets(userId, mt, c, auth);
   });
 }
 
 export function getTweetsByUserId(
   userId: string,
   maxTweets: number,
-  includeReplies: boolean,
   auth: TwitterAuth,
 ): AsyncGenerator<Tweet> {
   return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
-    return fetchTweets(q, mt, includeReplies, c, auth);
+    return fetchTweets(q, mt, c, auth);
   });
 }
 
 export async function getLatestTweet(
   user: string,
-  includeReplies: boolean,
   includeRetweets: boolean,
   auth: TwitterAuth,
 ): Promise<Tweet | null> {
   const max = includeRetweets ? 1 : 200;
-  const timeline = await getTweets(user, max, includeReplies, auth);
+  const timeline = getTweets(user, max, auth);
 
   if (max == 1) {
     return (await timeline.next()).value;
@@ -151,21 +167,36 @@ export async function getLatestTweet(
 
 export async function getTweet(
   id: string,
-  includeReplies: boolean,
   auth: TwitterAuth,
 ): Promise<Tweet | null> {
-  const params = new URLSearchParams();
-  addApiParams(params, includeReplies);
+  const variables: Record<string, any> = {
+    focalTweetId: id,
+    referrer: 'profile',
+    with_rux_injections: false,
+    includePromotedContent: true,
+    withCommunity: true,
+    withQuickPromoteEligibilityTweetFields: true,
+    withBirdwatchNotes: true,
+    withVoice: true,
+    withV2Timeline: true,
+  };
 
-  const res = await requestApi<TimelineRaw>(
-    `https://twitter.com/i/api/2/timeline/conversation/${id}.json?${params.toString()}`,
+  const features: Record<string, any> = {};
+  addApiFeatures(features);
+
+  const params = new URLSearchParams();
+  params.set('variables', JSON.stringify(variables));
+  params.set('features', JSON.stringify(features));
+
+  const res = await requestApi<ThreadedConversation>(
+    `https://twitter.com/i/api/graphql/wETHelmSuBQR5r-dgUlPxg/TweetDetail?${params.toString()}`,
     auth,
   );
   if (!res.success) {
     throw res.err;
   }
 
-  const { tweets } = parseTweets(res.value);
+  const tweets = parseThreadedConversation(res.value);
   for (const tweet of tweets) {
     if (tweet.id === id) {
       return tweet;

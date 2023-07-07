@@ -1,5 +1,7 @@
 import { LegacyUserRaw, parseProfile, Profile } from './profile';
-import { Photo, PlaceRaw, Tweet, Video } from './tweets';
+import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
+import { PlaceRaw, Tweet } from './tweets';
+import { isFieldDefined } from './type-util';
 
 export interface Hashtag {
   text?: string;
@@ -46,8 +48,34 @@ export interface TimelineMediaExtendedRaw {
   video_info?: VideoInfo;
 }
 
-export interface TimelineTweetRaw {
-  conversation_id_str?: string;
+export interface TimelineResultRaw {
+  __typename?: string;
+  core?: {
+    user_results?: {
+      result?: {
+        is_blue_verified?: boolean;
+        legacy?: LegacyUserRaw;
+      };
+    };
+  };
+  views?: {
+    count?: string;
+  };
+  note_tweet?: {
+    note_tweet_results?: {
+      result?: {
+        text?: string;
+      };
+    };
+  };
+  quoted_status_result?: {
+    result?: TimelineResultRaw;
+  };
+  legacy?: LegacyTweetRaw;
+}
+
+export interface LegacyTweetRaw {
+  id_str?: string;
   created_at?: string;
   favorite_count?: number;
   full_text?: string;
@@ -65,6 +93,9 @@ export interface TimelineTweetRaw {
   reply_count?: number;
   retweet_count?: number;
   retweeted_status_id_str?: string;
+  retweeted_status_result?: {
+    result?: TimelineResultRaw;
+  };
   quoted_status_id_str?: string;
   time?: string;
   user_id_str?: string;
@@ -75,7 +106,7 @@ export interface TimelineTweetRaw {
 }
 
 export interface TimelineGlobalObjectsRaw {
-  tweets?: { [key: string]: TimelineTweetRaw | undefined };
+  tweets?: { [key: string]: LegacyTweetRaw | undefined };
   users?: { [key: string]: LegacyUserRaw | undefined };
 }
 
@@ -155,35 +186,17 @@ export interface TimelineDataRaw {
   instructions?: TimelineDataRawInstruction[];
 }
 
-export interface TimelineRaw {
+export interface TimelineV1 {
   globalObjects?: TimelineGlobalObjectsRaw;
   timeline?: TimelineDataRaw;
 }
 
-const reHashtag = /\B(\#\S+\b)/g;
-const reTwitterUrl = /https:(\/\/t\.co\/([A-Za-z0-9]|[A-Za-z]){10})/g;
-const reUsername = /\B(\@\S{1,15}\b)/g;
-
-type NonNullableField<T, K extends keyof T> = {
-  [P in K]-?: T[P];
-} & T;
-
-function isFieldDefined<T, K extends keyof T>(key: K) {
-  return function (value: T): value is NonNullableField<T, K> {
-    return isDefined(value[key]);
-  };
-}
-
-function isDefined<T>(value: T | null | undefined): value is T {
-  return value != null;
-}
-
-type ParseTweetResult =
+export type ParseTweetResult =
   | { success: true; tweet: Tweet }
   | { success: false; err: Error };
 
-export function parseTweet(
-  timeline: TimelineRaw,
+function parseTimelineTweet(
+  timeline: TimelineV1,
   id: string,
 ): ParseTweetResult {
   const tweets = timeline.globalObjects?.tweets ?? {};
@@ -248,31 +261,40 @@ export function parseTweet(
   }
 
   if (tweet.quoted_status_id_str != null) {
-    const quotedStatusResult = parseTweet(timeline, tweet.quoted_status_id_str);
+    tw.isQuoted = true;
+    tw.quotedStatusId = tweet.quoted_status_id_str;
+
+    const quotedStatusResult = parseTimelineTweet(
+      timeline,
+      tweet.quoted_status_id_str,
+    );
     if (quotedStatusResult.success) {
-      tw.isQuoted = true;
       tw.quotedStatus = quotedStatusResult.tweet;
     }
   }
 
   if (tweet.in_reply_to_status_id_str != null) {
-    const replyStatusResult = parseTweet(
+    tw.isReply = true;
+    tw.inReplyToStatusId = tweet.in_reply_to_status_id_str;
+
+    const replyStatusResult = parseTimelineTweet(
       timeline,
       tweet.in_reply_to_status_id_str,
     );
     if (replyStatusResult.success) {
-      tw.isReply = true;
       tw.inReplyToStatus = replyStatusResult.tweet;
     }
   }
 
   if (tweet.retweeted_status_id_str != null) {
-    const retweetedStatusResult = parseTweet(
+    tw.isRetweet = true;
+    tw.retweetedStatusId = tweet.retweeted_status_id_str;
+
+    const retweetedStatusResult = parseTimelineTweet(
       timeline,
       tweet.retweeted_status_id_str,
     );
     if (retweetedStatusResult.success) {
-      tw.isRetweet = true;
       tw.retweetedStatus = retweetedStatusResult.tweet;
     }
   }
@@ -282,7 +304,7 @@ export function parseTweet(
     tw.views = views;
   }
 
-  if (pinnedTweets.has(tweet.conversation_id_str)) {
+  if (pinnedTweets.has(tweet.id_str)) {
     // TODO: Update tests so this can be assigned at the tweet declaration
     tw.isPin = true;
   }
@@ -292,128 +314,9 @@ export function parseTweet(
     tw.sensitiveContent = true;
   }
 
-  // HTML parsing with regex :)
-  let html = tweet.full_text ?? '';
-
-  const foundedMedia: string[] = [];
-
-  html = html.replace(reHashtag, linkHashtagHtml);
-  html = html.replace(reUsername, linkUsernameHtml);
-  html = html.replace(reTwitterUrl, unwrapTcoUrlHtml(tweet, foundedMedia));
-
-  for (const { url } of tw.photos) {
-    if (foundedMedia.indexOf(url) !== -1) {
-      continue;
-    }
-
-    html += `<br><img src="${url}"/>`;
-  }
-
-  for (const { preview: url } of tw.videos) {
-    if (foundedMedia.indexOf(url) !== -1) {
-      continue;
-    }
-
-    html += `<br><img src="${url}"/>`;
-  }
-
-  html = html.replace(/\n/g, '<br>');
-  tw.html = html;
+  tw.html = reconstructTweetHtml(tweet, tw.photos, tw.videos);
 
   return { success: true, tweet: tw };
-}
-
-function parseMediaGroups(media: TimelineMediaExtendedRaw[]): {
-  sensitiveContent?: boolean;
-  photos: Photo[];
-  videos: Video[];
-} {
-  const photos: Photo[] = [];
-  const videos: Video[] = [];
-  let sensitiveContent: boolean | undefined = undefined;
-
-  for (const m of media
-    .filter(isFieldDefined('id_str'))
-    .filter(isFieldDefined('media_url_https'))) {
-    if (m.type === 'photo') {
-      photos.push({
-        id: m.id_str,
-        url: m.media_url_https,
-      });
-    } else if (m.type === 'video') {
-      videos.push(parseVideo(m));
-    }
-
-    const sensitive = m.ext_sensitive_media_warning;
-    if (sensitive != null) {
-      sensitiveContent =
-        sensitive.adult_content ||
-        sensitive.graphic_violence ||
-        sensitive.other;
-    }
-  }
-
-  return { sensitiveContent, photos, videos };
-}
-
-function parseVideo(
-  m: NonNullableField<TimelineMediaExtendedRaw, 'id_str' | 'media_url_https'>,
-): Video {
-  const video: Video = {
-    id: m.id_str,
-    preview: m.media_url_https,
-  };
-
-  let maxBitrate = 0;
-  const variants = m.video_info?.variants ?? [];
-  for (const variant of variants) {
-    const bitrate = variant.bitrate;
-    if (bitrate != null && bitrate > maxBitrate && variant.url != null) {
-      let variantUrl = variant.url;
-      const stringStart = 0;
-      const tagSuffixIdx = variantUrl.indexOf('?tag=10');
-      if (tagSuffixIdx !== -1) {
-        variantUrl = variantUrl.substring(stringStart, tagSuffixIdx + 1);
-      }
-
-      video.url = variantUrl;
-      maxBitrate = bitrate;
-    }
-  }
-
-  return video;
-}
-
-function linkHashtagHtml(hashtag: string) {
-  return `<a href="https://twitter.com/hashtag/${hashtag.replace(
-    '#',
-    '',
-  )}">${hashtag}</a>`;
-}
-
-function linkUsernameHtml(username: string) {
-  return `<a href="https://twitter.com/${username[0].replace('@', '')}">${
-    username[0]
-  }</a>`;
-}
-
-function unwrapTcoUrlHtml(tweet: TimelineTweetRaw, foundedMedia: string[]) {
-  return function (tco: string) {
-    for (const entity of tweet.entities?.urls ?? []) {
-      if (tco === entity.url && entity.expanded_url != null) {
-        return `<a href="${entity.expanded_url}">${tco}</a>`;
-      }
-    }
-
-    for (const entity of tweet.extended_entities?.media ?? []) {
-      if (tco === entity.url && entity.media_url_https != null) {
-        foundedMedia.push(entity.media_url_https);
-        return `<br><a href="${tco}"><img src="${entity.media_url_https}"/></a>`;
-      }
-    }
-
-    return tco;
-  };
 }
 
 /**
@@ -424,7 +327,9 @@ export interface QueryTweetsResponse {
   next?: string;
 }
 
-export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
+export function parseTimelineTweetsV1(
+  timeline: TimelineV1,
+): QueryTweetsResponse {
   let cursor: string | undefined;
   let pinnedTweet: Tweet | undefined;
   let orderedTweets: Tweet[] = [];
@@ -434,7 +339,7 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
     // Handle pin instruction
     const pinnedTweetId = pinEntry?.entry?.content?.item?.content?.tweet?.id;
     if (pinnedTweetId != null) {
-      const tweetResult = parseTweet(timeline, pinnedTweetId);
+      const tweetResult = parseTimelineTweet(timeline, pinnedTweetId);
       if (tweetResult.success) {
         pinnedTweet = tweetResult.tweet;
       }
@@ -444,7 +349,7 @@ export function parseTweets(timeline: TimelineRaw): QueryTweetsResponse {
     for (const { content } of addEntries?.entries ?? []) {
       const tweetId = content?.item?.content?.tweet?.id;
       if (tweetId != null) {
-        const tweetResult = parseTweet(timeline, tweetId);
+        const tweetResult = parseTimelineTweet(timeline, tweetId);
         if (tweetResult.success) {
           orderedTweets.push(tweetResult.tweet);
         }
@@ -481,7 +386,7 @@ export interface QueryProfilesResponse {
   next?: string;
 }
 
-export function parseUsers(timeline: TimelineRaw): QueryProfilesResponse {
+export function parseUsers(timeline: TimelineV1): QueryProfilesResponse {
   const users = new Map<string | undefined, Profile>();
 
   const userObjects = timeline.globalObjects?.users ?? {};

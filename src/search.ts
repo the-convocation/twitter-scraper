@@ -2,12 +2,12 @@ import { addApiParams, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { Profile } from './profile';
 import {
-  parseTweets,
+  parseTimelineTweetsV1,
   parseUsers,
   QueryProfilesResponse,
   QueryTweetsResponse,
-  TimelineRaw,
-} from './timeline';
+  TimelineV1,
+} from './timeline-v1';
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
 
@@ -61,7 +61,7 @@ export async function fetchSearchTweets(
     cursor,
   );
 
-  return parseTweets(timeline);
+  return parseTimelineTweetsV1(timeline);
 }
 
 export async function fetchSearchProfiles(
@@ -89,7 +89,7 @@ async function getSearchTimeline(
   searchMode: SearchMode,
   auth: TwitterAuth,
   cursor?: string,
-): Promise<TimelineRaw> {
+): Promise<TimelineV1> {
   if (!auth.isLoggedIn()) {
     throw new Error('Scraper is not logged-in for search.');
   }
@@ -129,7 +129,7 @@ async function getSearchTimeline(
       break;
   }
 
-  const res = await requestApi<TimelineRaw>(
+  const res = await requestApi<TimelineV1>(
     `https://twitter.com/i/api/2/search/adaptive.json?${params.toString()}`,
     auth,
   );

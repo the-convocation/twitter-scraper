@@ -10,7 +10,7 @@ import {
   searchProfiles,
   searchTweets,
 } from './search';
-import { QueryProfilesResponse, QueryTweetsResponse } from './timeline';
+import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
 import {
   getTweet,
@@ -148,55 +148,45 @@ export class Scraper {
    * Fetches tweets from a Twitter user.
    * @param user The user whose tweets should be returned.
    * @param maxTweets The maximum number of tweets to return.
-   * @param includeReplies Whether or not to include tweet replies.
    * @returns An async generator of tweets from the provided user.
    */
-  public getTweets(
-    user: string,
-    maxTweets: number,
-    includeReplies: boolean,
-  ): AsyncGenerator<Tweet> {
-    return getTweets(user, maxTweets, includeReplies, this.auth);
+  public getTweets(user: string, maxTweets: number): AsyncGenerator<Tweet> {
+    return getTweets(user, maxTweets, this.auth);
   }
 
   /**
    * Fetches tweets from a Twitter user using their ID.
    * @param userId The user whose tweets should be returned.
    * @param maxTweets The maximum number of tweets to return.
-   * @param includeReplies Whether or not to include tweet replies.
    * @returns An async generator of tweets from the provided user.
    */
   public getTweetsByUserId(
     userId: string,
     maxTweets: number,
-    includeReplies: boolean,
   ): AsyncGenerator<Tweet> {
-    return getTweetsByUserId(userId, maxTweets, includeReplies, this.auth);
+    return getTweetsByUserId(userId, maxTweets, this.auth);
   }
 
   /**
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
-   * @param includeReplies Whether or not to include tweet replies.
    * @param includeRetweets Whether or not to include retweets.
    * @returns The {@link Tweet} object or `null` if it couldn't be fetched.
    */
   public getLatestTweet(
     user: string,
-    includeReplies: boolean,
     includeRetweets: boolean,
   ): Promise<Tweet | null> {
-    return getLatestTweet(user, includeReplies, includeRetweets, this.auth);
+    return getLatestTweet(user, includeRetweets, this.auth);
   }
 
   /**
    * Fetches a single tweet.
    * @param id The ID of the tweet to fetch.
-   * @param includeReplies Whether or not to include tweet replies.
    * @returns The request tweet, or `null` if it couldn't be fetched.
    */
-  public getTweet(id: string, includeReplies: boolean): Promise<Tweet | null> {
-    return getTweet(id, includeReplies, this.auth);
+  public getTweet(id: string): Promise<Tweet | null> {
+    return getTweet(id, this.auth);
   }
 
   /**
