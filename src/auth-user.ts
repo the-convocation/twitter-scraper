@@ -278,6 +278,18 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           status: 'acid',
           flowToken: flow.flow_token,
         };
+      } else if (
+        flow.subtasks[0].subtask_id === 'LoginTwoFactorAuthChallenge'
+      ) {
+        return {
+          status: 'error',
+          err: new Error('Authentication error: LoginTwoFactorAuthChallenge'),
+        };
+      } else if (flow.subtasks[0].subtask_id === 'DenyLoginSubtask') {
+        return {
+          status: 'error',
+          err: new Error('Authentication error: DenyLoginSubtask'),
+        };
       }
     }
 
