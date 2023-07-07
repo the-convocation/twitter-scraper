@@ -70,16 +70,9 @@ export class Scraper {
   public searchTweets(
     query: string,
     maxTweets: number,
-    includeReplies: boolean,
     searchMode: SearchMode = SearchMode.Top,
   ): AsyncGenerator<Tweet> {
-    return searchTweets(
-      query,
-      maxTweets,
-      includeReplies,
-      searchMode,
-      this.auth,
-    );
+    return searchTweets(query, maxTweets, searchMode, this.auth);
   }
 
   /**
@@ -107,18 +100,10 @@ export class Scraper {
   public fetchSearchTweets(
     query: string,
     maxTweets: number,
-    includeReplies: boolean,
     searchMode: SearchMode,
     cursor?: string,
   ): Promise<QueryTweetsResponse> {
-    return fetchSearchTweets(
-      query,
-      maxTweets,
-      includeReplies,
-      searchMode,
-      this.auth,
-      cursor,
-    );
+    return fetchSearchTweets(query, maxTweets, searchMode, this.auth, cursor);
   }
 
   /**
