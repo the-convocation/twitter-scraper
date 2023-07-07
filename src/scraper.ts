@@ -261,6 +261,14 @@ export class Scraper {
   }
 
   /**
+   * Clear all cookies for the current session.
+   */
+  public async clearCookies(): Promise<void> {
+    await this.auth.cookieJar().removeAllCookies();
+    await this.authTrends.cookieJar().removeAllCookies();
+  }
+
+  /**
    * Sets the optional cookie to be used in requests.
    * @param _cookie The cookie to be used in requests.
    * @deprecated This function no longer represents any part of Twitter's auth flow.
