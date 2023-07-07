@@ -1,15 +1,14 @@
-import { addApiParams, requestApi } from './api';
+import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { Profile } from './profile';
-import {
-  parseTimelineTweetsV1,
-  parseUsers,
-  QueryProfilesResponse,
-  QueryTweetsResponse,
-  TimelineV1,
-} from './timeline-v1';
+import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
+import {
+  SearchTimeline,
+  parseSearchTimelineTweets,
+  parseSearchTimelineUsers,
+} from './timeline-search';
 
 /**
  * The categories that can be used in Twitter searches.
@@ -25,12 +24,11 @@ export enum SearchMode {
 export function searchTweets(
   query: string,
   maxTweets: number,
-  includeReplies: boolean,
   searchMode: SearchMode,
   auth: TwitterAuth,
 ): AsyncGenerator<Tweet> {
   return getTweetTimeline(query, maxTweets, (q, mt, c) => {
-    return fetchSearchTweets(q, mt, includeReplies, searchMode, auth, c);
+    return fetchSearchTweets(q, mt, searchMode, auth, c);
   });
 }
 
@@ -47,7 +45,6 @@ export function searchProfiles(
 export async function fetchSearchTweets(
   query: string,
   maxTweets: number,
-  includeReplies: boolean,
   searchMode: SearchMode,
   auth: TwitterAuth,
   cursor?: string,
@@ -55,13 +52,12 @@ export async function fetchSearchTweets(
   const timeline = await getSearchTimeline(
     query,
     maxTweets,
-    includeReplies,
     searchMode,
     auth,
     cursor,
   );
 
-  return parseTimelineTweetsV1(timeline);
+  return parseSearchTimelineTweets(timeline);
 }
 
 export async function fetchSearchProfiles(
@@ -73,23 +69,21 @@ export async function fetchSearchProfiles(
   const timeline = await getSearchTimeline(
     query,
     maxProfiles,
-    false,
     SearchMode.Users,
     auth,
     cursor,
   );
 
-  return parseUsers(timeline);
+  return parseSearchTimelineUsers(timeline);
 }
 
 async function getSearchTimeline(
   query: string,
   maxItems: number,
-  includeReplies: boolean,
   searchMode: SearchMode,
   auth: TwitterAuth,
   cursor?: string,
-): Promise<TimelineV1> {
+): Promise<SearchTimeline> {
   if (!auth.isLoggedIn()) {
     throw new Error('Scraper is not logged-in for search.');
   }
@@ -98,39 +92,50 @@ async function getSearchTimeline(
     maxItems = 50;
   }
 
-  const params = new URLSearchParams();
-  addApiParams(params, includeReplies);
+  const variables: Record<string, any> = {
+    rawQuery: query,
+    count: maxItems,
+    querySource: 'typed_query',
+    product: 'Top',
+  };
 
-  params.set('q', query);
-  params.set('count', `${maxItems}`);
-  params.set('query_source', 'typed_query');
-  params.set('pc', '1');
-  params.set('requestContext', 'launch');
-  params.set('spelling_corrections', '1');
-  params.set('include_ext_edit_control', 'true');
+  const features: Record<string, any> = {
+    responsive_web_enhance_cards_enabled: false,
+  };
+  addApiFeatures(features);
+
+  const fieldToggles: Record<string, any> = {
+    withArticleRichContentState: false,
+  };
+
   if (cursor != null && cursor != '') {
-    params.set('cursor', cursor);
+    variables['cursor'] = cursor;
   }
 
   switch (searchMode) {
     case SearchMode.Latest:
-      params.set('tweet_search_mode', 'live');
+      variables.product = 'Latest';
       break;
     case SearchMode.Photos:
-      params.set('result_filter', 'image');
+      variables.product = 'Photos';
       break;
     case SearchMode.Videos:
-      params.set('result_filter', 'video');
+      variables.product = 'Videos';
       break;
     case SearchMode.Users:
-      params.set('result_filter', 'user');
+      variables.product = 'People';
       break;
     default:
       break;
   }
 
-  const res = await requestApi<TimelineV1>(
-    `https://twitter.com/i/api/2/search/adaptive.json?${params.toString()}`,
+  const params = new URLSearchParams();
+  params.set('variables', JSON.stringify(variables));
+  params.set('features', JSON.stringify(features));
+  params.set('fieldToggles', JSON.stringify(fieldToggles));
+
+  const res = await requestApi<SearchTimeline>(
+    `https://twitter.com/i/api/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline?${params.toString()}`,
     auth,
   );
   if (!res.success) {

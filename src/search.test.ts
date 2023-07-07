@@ -1,6 +1,6 @@
 import { authSearchScraper } from './auth.test';
 import { SearchMode } from './search';
-import { QueryTweetsResponse } from './timeline';
+import { QueryTweetsResponse } from './timeline-v1';
 
 test('scraper can process search cursor', async () => {
   const scraper = await authSearchScraper();
@@ -12,7 +12,6 @@ test('scraper can process search cursor', async () => {
     const res: QueryTweetsResponse = await scraper.fetchSearchTweets(
       'twitter',
       maxTweets,
-      false,
       SearchMode.Top,
       cursor,
     );
@@ -52,7 +51,6 @@ test('scraper can search tweets', async () => {
   for await (const tweet of scraper.searchTweets(
     'twitter',
     maxTweets,
-    false,
     SearchMode.Latest,
   )) {
     nTweets++;

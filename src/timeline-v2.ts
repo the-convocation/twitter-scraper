@@ -9,10 +9,19 @@ import {
 import { Tweet } from './tweets';
 import { isFieldDefined } from './type-util';
 
+export interface TimelineUserResultRaw {
+  rest_id?: string;
+  legacy?: LegacyUserRaw;
+}
+
 export interface TimelineEntryItemContentRaw {
   tweetDisplayType?: string;
   tweet_results?: {
-    result: TimelineResultRaw;
+    result?: TimelineResultRaw;
+  };
+  userDisplayType?: string;
+  user_results?: {
+    result?: TimelineUserResultRaw;
   };
 }
 
@@ -59,7 +68,7 @@ export interface ThreadedConversation {
   };
 }
 
-function parseLegacyTweet(
+export function parseLegacyTweet(
   user?: LegacyUserRaw,
   tweet?: LegacyTweetRaw,
 ): ParseTweetResult {
@@ -219,7 +228,8 @@ export function parseTimelineTweetsV2(
       }
 
       if (
-        entry.content?.itemContent?.tweet_results?.result.__typename === 'Tweet'
+        entry.content?.itemContent?.tweet_results?.result?.__typename ===
+        'Tweet'
       ) {
         const tweetResult = parseResult(
           entry.content.itemContent.tweet_results.result,
@@ -244,7 +254,8 @@ export function parseThreadedConversation(
   for (const instruction of instructions) {
     for (const entry of instruction.entries ?? []) {
       if (
-        entry.content?.itemContent?.tweet_results?.result.__typename === 'Tweet'
+        entry.content?.itemContent?.tweet_results?.result?.__typename ===
+        'Tweet'
       ) {
         const tweetResult = parseResult(
           entry.content.itemContent.tweet_results.result,
@@ -260,7 +271,7 @@ export function parseThreadedConversation(
 
       for (const item of entry.content?.items ?? []) {
         if (
-          item.item?.itemContent?.tweet_results?.result.__typename === 'Tweet'
+          item.item?.itemContent?.tweet_results?.result?.__typename === 'Tweet'
         ) {
           const tweetResult = parseResult(
             item.item.itemContent.tweet_results.result,
