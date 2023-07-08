@@ -7,8 +7,10 @@ A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper) 
 >
 > You can use this library to get the text of any user's Tweets trivially.
 
-Note that some API operations, such as search, require logging in with a real user account.
-Refer to the [original README](https://github.com/n0madic/twitter-scraper) for details.
+Known limitations:
+
+* All operations now require logging in with a real user account (see [original README](https://github.com/n0madic/twitter-scraper#authentication))
+* Twitter's frontend API does in fact have rate limits ([#11](https://github.com/the-convocation/twitter-scraper/issues/11))
 
 ## Installation
 This package requires Node.js v16.0.0 or greater.
