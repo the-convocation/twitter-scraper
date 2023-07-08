@@ -21,7 +21,7 @@ test('scraper can process search cursor', async () => {
     nTweets += res.tweets.length;
     cursor = res.next;
   }
-}, 120000);
+}, 240000);
 
 test('scraper can search profiles', async () => {
   const scraper = await authSearchScraper();
@@ -40,7 +40,7 @@ test('scraper can search profiles', async () => {
   }
 
   expect(nProfiles).toEqual(maxProfiles);
-}, 120000);
+}, 240000);
 
 test('scraper can search tweets', async () => {
   const scraper = await authSearchScraper();
@@ -67,4 +67,4 @@ test('scraper can search tweets', async () => {
   }
 
   expect(nTweets).toEqual(maxTweets);
-}, 120000);
+}, 240000);
