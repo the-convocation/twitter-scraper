@@ -18,8 +18,11 @@
 <p>Twitter&#39;s API is annoying to work with, and has lots of limitations — luckily their frontend (JavaScript) has it&#39;s own API, which I reverse-engineered. No API rate limits. No tokens needed. No restrictions. Extremely fast.</p>
 <p>You can use this library to get the text of any user&#39;s Tweets trivially.</p>
 </blockquote>
-<p>Note that some API operations, such as search, require logging in with a real user account.
-Refer to the <a href="https://github.com/n0madic/twitter-scraper">original README</a> for details.</p>
+<p>Known limitations:</p>
+<ul>
+<li>All operations now require logging in with a real user account (see <a href="https://github.com/n0madic/twitter-scraper#authentication">original README</a>)</li>
+<li>Twitter&#39;s frontend API does in fact have rate limits (<a href="https://github.com/the-convocation/twitter-scraper/issues/11">#11</a>)</li>
+</ul>
 <a id="md:installation" class="tsd-anchor"></a><h2><a href="#md:installation">Installation</a></h2><p>This package requires Node.js v16.0.0 or greater.</p>
 <p>NPM:</p>
 <pre><code class="language-sh"><span class="hl-0">npm </span><span class="hl-1">install</span><span class="hl-0"> </span><span class="hl-1">@the-convocation/twitter-scraper</span>
