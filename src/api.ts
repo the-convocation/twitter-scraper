@@ -16,6 +16,14 @@ export type RequestApiResult<T> =
   | { success: true; value: T }
   | { success: false; err: Error };
 
+/**
+ * Used internally to send HTTP requests to the Twitter API.
+ * @internal
+ * 
+ * @param url - The URL to send the request to.
+ * @param auth - The instance of {@link TwitterAuth} that will be used to authorize this request.
+ * @param method - The HTTP method used when sending this request.
+ */
 export async function requestApi<T>(
   url: string,
   auth: TwitterAuth,

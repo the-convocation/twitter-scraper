@@ -24,15 +24,16 @@ const twUrl = 'https://twitter.com';
 
 /**
  * An interface to Twitter's undocumented API.
- * Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
+ * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
  */
 export class Scraper {
   private auth: TwitterAuth;
   private authTrends: TwitterAuth;
 
   /**
-   * Creates a new Scraper object. Scrapers maintain their own guest tokens for Twitter's internal API.
-   * Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
+   * Creates a new Scraper object. 
+   * - Scrapers maintain their own guest tokens for Twitter's internal API.
+   * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
    */
   constructor() {
     this.auth = new TwitterGuestAuth(bearerToken);
@@ -42,7 +43,7 @@ export class Scraper {
   /**
    * Fetches a Twitter profile.
    * @param username The Twitter username of the profile to fetch, without an `@` at the beginning.
-   * @returns The requested profile.
+   * @returns The requested {@link Profile}. 
    */
   public async getProfile(username: string): Promise<Profile> {
     const res = await getProfile(username, this.auth);
@@ -65,7 +66,7 @@ export class Scraper {
    * @param maxTweets The maximum number of tweets to return.
    * @param includeReplies Whether or not replies should be included in the response.
    * @param searchMode The category filter to apply to the search. Defaults to `Top`.
-   * @returns An async generator of tweets matching the provided filters.
+   * @returns An {@link AsyncGenerator} of tweets matching the provided filters.
    */
   public searchTweets(
     query: string,
@@ -79,7 +80,7 @@ export class Scraper {
    * Fetches profiles from Twitter.
    * @param query The search query. Any Twitter-compatible query format can be used.
    * @param maxProfiles The maximum number of profiles to return.
-   * @returns An async generator of tweets matching the provided filters.
+   * @returns An {@link AsyncGenerator} of tweets matching the provided filter(s).
    */
   public searchProfiles(
     query: string,
@@ -132,25 +133,22 @@ export class Scraper {
   /**
    * Fetches tweets from a Twitter user.
    * @param user The user whose tweets should be returned.
-   * @param maxTweets The maximum number of tweets to return.
-   * @returns An async generator of tweets from the provided user.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of tweets from the provided user.
    */
-  public getTweets(
-    user: string,
-    maxTweets: number,
-  ): AsyncGenerator<Tweet, void> {
+  public getTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
     return getTweets(user, maxTweets, this.auth);
   }
 
   /**
    * Fetches tweets from a Twitter user using their ID.
    * @param userId The user whose tweets should be returned.
-   * @param maxTweets The maximum number of tweets to return.
-   * @returns An async generator of tweets from the provided user.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of tweets from the provided user.
    */
   public getTweetsByUserId(
     userId: string,
-    maxTweets: number,
+    maxTweets = 200,
   ): AsyncGenerator<Tweet, void> {
     return getTweetsByUserId(userId, maxTweets, this.auth);
   }
@@ -158,12 +156,12 @@ export class Scraper {
   /**
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
-   * @param includeRetweets Whether or not to include retweets.
+   * @param includeRetweets Whether or not to include retweets. Defaults to `false`.
    * @returns The {@link Tweet} object or `null`/`undefined` if it couldn't be fetched.
    */
   public getLatestTweet(
     user: string,
-    includeRetweets: boolean,
+    includeRetweets = false,
   ): Promise<Tweet | null | void> {
     return getLatestTweet(user, includeRetweets, this.auth);
   }
@@ -171,7 +169,7 @@ export class Scraper {
   /**
    * Fetches a single tweet.
    * @param id The ID of the tweet to fetch.
-   * @returns The request tweet, or `null` if it couldn't be fetched.
+   * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
    */
   public getTweet(id: string): Promise<Tweet | null> {
     return getTweet(id, this.auth);
