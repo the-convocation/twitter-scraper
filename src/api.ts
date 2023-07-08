@@ -55,7 +55,7 @@ export async function requestApi<T>(
 
     if (res.status === 429) {
       await new Promise((resolve) => setTimeout(resolve, delay));
-      delay *= 2;
+      delay += 100;
     }
   } while (res.status === 429);
 
