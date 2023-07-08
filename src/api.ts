@@ -32,7 +32,7 @@ export async function requestApi<T>(
   const headers = new Headers();
   await auth.installTo(headers, url);
 
-  let delay = 100;
+  let delay = 500;
   let res: Response;
   do {
     try {
@@ -55,7 +55,7 @@ export async function requestApi<T>(
 
     if (res.status === 429) {
       await new Promise((resolve) => setTimeout(resolve, delay));
-      delay += 100;
+      delay += 500;
     }
   } while (res.status === 429);
 
