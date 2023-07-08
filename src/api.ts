@@ -32,7 +32,6 @@ export async function requestApi<T>(
   const headers = new Headers();
   await auth.installTo(headers, url);
 
-  let delay = 500;
   let res: Response;
   do {
     try {
@@ -54,8 +53,18 @@ export async function requestApi<T>(
     await updateCookieJar(auth.cookieJar(), res.headers);
 
     if (res.status === 429) {
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      delay += 500;
+      /*
+      Known headers at this point:
+      - x-rate-limit-limit: Maximum number of requests per time period?
+      - x-rate-limit-reset: UNIX timestamp when the current rate limit will be reset.
+      - x-rate-limit-remaining: Number of requests remaining in current time period?
+      */
+      const xRateLimitReset = res.headers.get('x-rate-limit-reset');
+      const currentTime = new Date().valueOf() / 1000;
+      if (xRateLimitReset) {
+        const timeDeltaMs = 1000 * (parseInt(xRateLimitReset) - currentTime);
+        await new Promise((resolve) => setTimeout(resolve, timeDeltaMs));
+      }
     }
   } while (res.status === 429);
 
