@@ -31,7 +31,7 @@ export class Scraper {
   private authTrends: TwitterAuth;
 
   /**
-   * Creates a new Scraper object. 
+   * Creates a new Scraper object.
    * - Scrapers maintain their own guest tokens for Twitter's internal API.
    * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
    */
@@ -43,7 +43,7 @@ export class Scraper {
   /**
    * Fetches a Twitter profile.
    * @param username The Twitter username of the profile to fetch, without an `@` at the beginning.
-   * @returns The requested {@link Profile}. 
+   * @returns The requested {@link Profile}.
    */
   public async getProfile(username: string): Promise<Profile> {
     const res = await getProfile(username, this.auth);

@@ -19,7 +19,7 @@ export type RequestApiResult<T> =
 /**
  * Used internally to send HTTP requests to the Twitter API.
  * @internal
- * 
+ *
  * @param url - The URL to send the request to.
  * @param auth - The instance of {@link TwitterAuth} that will be used to authorize this request.
  * @param method - The HTTP method used when sending this request.
@@ -32,6 +32,7 @@ export async function requestApi<T>(
   const headers = new Headers();
   await auth.installTo(headers, url);
 
+  let delay = 100;
   let res: Response;
   do {
     try {
@@ -53,7 +54,8 @@ export async function requestApi<T>(
     await updateCookieJar(auth.cookieJar(), res.headers);
 
     if (res.status === 429) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2;
     }
   } while (res.status === 429);
 
