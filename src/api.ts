@@ -59,10 +59,13 @@ export async function requestApi<T>(
       - x-rate-limit-reset: UNIX timestamp when the current rate limit will be reset.
       - x-rate-limit-remaining: Number of requests remaining in current time period?
       */
+      const xRateLimitRemaining = res.headers.get('x-rate-limit-remaining');
       const xRateLimitReset = res.headers.get('x-rate-limit-reset');
-      const currentTime = new Date().valueOf() / 1000;
-      if (xRateLimitReset) {
+      if (xRateLimitRemaining == '0' && xRateLimitReset) {
+        const currentTime = new Date().valueOf() / 1000;
         const timeDeltaMs = 1000 * (parseInt(xRateLimitReset) - currentTime);
+
+        // I have seen this block for 800s (~13 *minutes*)
         await new Promise((resolve) => setTimeout(resolve, timeDeltaMs));
       }
     }
