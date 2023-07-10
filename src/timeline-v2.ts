@@ -241,7 +241,7 @@ export function parseTimelineTweetsV2(
     }
   }
 
-  return { tweets: [], next: cursor };
+  return { tweets, next: cursor };
 }
 
 export function parseThreadedConversation(
