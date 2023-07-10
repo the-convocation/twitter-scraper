@@ -4,9 +4,9 @@ export async function authSearchScraper() {
   const username = process.env['TWITTER_USERNAME'];
   const password = process.env['TWITTER_PASSWORD'];
   const email = process.env['TWITTER_EMAIL'];
-  if (!username || !password || !email) {
+  if (!username || !password) {
     throw new Error(
-      'TWITTER_USERNAME, TWITTER_PASSWORD, and TWITTER_EMAIL variables must be defined.',
+      'TWITTER_USERNAME and TWITTER_PASSWORD variables must be defined.',
     );
   }
 
