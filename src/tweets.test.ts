@@ -38,7 +38,7 @@ test('scraper can get tweet', async () => {
   expect(expected).toEqual(actual);
 });
 
-test('scraper can tweets without logging in', async () => {
+test('scraper can get tweets without logging in', async () => {
   const scraper = new Scraper();
 
   const sampleSize = 5;

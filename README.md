@@ -9,7 +9,7 @@ A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper) 
 
 Known limitations:
 
-* All operations now require logging in with a real user account (see [original README](https://github.com/n0madic/twitter-scraper#authentication))
+* Search operations require logging in with a real user account via `scraper.login()`.
 * Twitter's frontend API does in fact have rate limits ([#11](https://github.com/the-convocation/twitter-scraper/issues/11))
 
 ## Installation
