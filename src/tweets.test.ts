@@ -1,4 +1,3 @@
-import { authSearchScraper } from './auth.test';
 import { Scraper } from './scraper';
 import { Mention, Tweet } from './tweets';
 
@@ -29,7 +28,7 @@ test('scraper can get tweet', async () => {
     ],
   };
 
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
   const actual = await scraper.getTweet('1328684389388185600');
   delete actual?.likes;
   delete actual?.replies;
@@ -76,7 +75,7 @@ test('scraper can get user mentions in tweets', async () => {
     },
   ];
 
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
   const tweet = await scraper.getTweet('1554522888904101890');
   expect(expected).toEqual(tweet?.mentions);
 });
@@ -106,7 +105,7 @@ test('scraper can get tweet quotes and replies', async () => {
     videos: [],
   };
 
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
   const quote = await scraper.getTweet('1237110897597976576');
   expect(quote?.isQuoted).toBeTruthy();
   delete quote?.quotedStatus?.likes;
@@ -148,7 +147,7 @@ test('scraper can get retweet', async () => {
     videos: [],
   };
 
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
   const retweet = await scraper.getTweet('1362849141248974853');
   expect(retweet?.isRetweet).toBeTruthy();
   delete retweet?.retweetedStatus?.likes;
@@ -179,7 +178,7 @@ test('scraper can get tweet views', async () => {
     videos: [],
   };
 
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
   const actual = await scraper.getTweet('1606055187348688896');
   expect(actual?.views).toBeTruthy();
   delete actual?.likes;
@@ -190,7 +189,7 @@ test('scraper can get tweet views', async () => {
 });
 
 test('scraper can get tweet thread', async () => {
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
   const tweet = await scraper.getTweet('1665602315745673217');
   expect(tweet).not.toBeNull();
   expect(tweet?.isSelfThread).toBeTruthy();
