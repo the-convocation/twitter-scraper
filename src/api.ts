@@ -5,9 +5,7 @@ import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
 
 export const bearerToken =
-  'AAAAAAAAAAAAAAAAAAAAAPYXBAAAAAAACLXUNDekMxqa8h%2F40K4moUkGsoc%3DTYfbDKbT3jJPCEVnMYqilB28NHfOPqkca3qaAxGfsyKCs0wRbw';
-export const bearerToken2 =
-  'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+  'AAAAAAAAAAAAAAAAAAAAAFQODgEAAAAAVHTp76lzh3rFzcHbmHVvQxYYpTw%3DckAlMINMjmCwxUcaXbAN4XqJVdgMJaHqNOFgPMK0zN1qLqLQCF';
 
 /**
  * An API result container.
@@ -87,6 +85,9 @@ export async function requestApi<T>(
   }
 }
 
+/**
+ * @internal
+ */
 export function addApiFeatures(o: object) {
   return {
     ...o,

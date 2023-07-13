@@ -1,5 +1,5 @@
 import { Cookie } from 'tough-cookie';
-import { bearerToken, bearerToken2, RequestApiResult } from './api';
+import { bearerToken, RequestApiResult } from './api';
 import { TwitterAuth, TwitterGuestAuth } from './auth';
 import { TwitterUserAuth } from './auth-user';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
@@ -27,8 +27,9 @@ const twUrl = 'https://twitter.com';
  * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
  */
 export class Scraper {
-  private auth: TwitterAuth;
-  private authTrends: TwitterAuth;
+  private auth!: TwitterAuth;
+  private authTrends!: TwitterAuth;
+  private token: string;
 
   /**
    * Creates a new Scraper object.
@@ -36,8 +37,18 @@ export class Scraper {
    * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
    */
   constructor() {
-    this.auth = new TwitterGuestAuth(bearerToken);
-    this.authTrends = new TwitterGuestAuth(bearerToken2);
+    this.token = bearerToken;
+    this.useGuestAuth();
+  }
+
+  /**
+   * Initializes auth properties using a guest token.
+   * Used when creating a new instance of this class, and when logging out.
+   * @internal
+   */
+  private useGuestAuth() {
+    this.auth = new TwitterGuestAuth(this.token);
+    this.authTrends = new TwitterGuestAuth(this.token);
   }
 
   /**
@@ -206,7 +217,7 @@ export class Scraper {
     email?: string,
   ): Promise<void> {
     // Swap in a real authorizer for all requests
-    const userAuth = new TwitterUserAuth(bearerToken2);
+    const userAuth = new TwitterUserAuth(this.token);
     await userAuth.login(username, password, email);
     this.auth = userAuth;
     this.authTrends = userAuth;
@@ -220,8 +231,7 @@ export class Scraper {
     await this.authTrends.logout();
 
     // Swap in guest authorizers for all requests
-    this.auth = new TwitterGuestAuth(bearerToken);
-    this.authTrends = new TwitterGuestAuth(bearerToken2);
+    this.useGuestAuth();
   }
 
   /**
@@ -237,7 +247,7 @@ export class Scraper {
    * @param cookies The cookies to set for the current session.
    */
   public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
-    const userAuth = new TwitterUserAuth(bearerToken2);
+    const userAuth = new TwitterUserAuth(this.token);
     for (const cookie of cookies) {
       await userAuth.cookieJar().setCookie(cookie, twUrl);
     }

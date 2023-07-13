@@ -1,4 +1,5 @@
 import { authSearchScraper } from './auth.test';
+import { Scraper } from './scraper';
 import { Mention, Tweet } from './tweets';
 
 test('scraper can get tweet', async () => {
@@ -37,19 +38,32 @@ test('scraper can get tweet', async () => {
   expect(expected).toEqual(actual);
 });
 
+test('scraper can get tweets without logging in', async () => {
+  const scraper = new Scraper();
+
+  const sampleSize = 5;
+  const tweets = scraper.getTweets('elonmusk', sampleSize);
+
+  let counter = 0;
+  for await (const tweet of tweets) {
+    if (tweet?.permanentUrl) {
+      counter++;
+    }
+  }
+
+  expect(counter).toBe(sampleSize);
+});
+
 test('scraper can get latest tweet', async () => {
-  const scraper = await authSearchScraper();
+  const scraper = new Scraper();
 
   // OLD APPROACH (without retweet filtering)
   const tweets = scraper.getTweets('elonmusk', 1);
   const expected = (await tweets.next()).value;
 
   // NEW APPROACH
-  const latest = await scraper.getLatestTweet(
-    'elonmusk',
-    expected?.isRetweet ? true : false,
-  );
-
+  const includeRts = expected?.isRetweet || false;
+  const latest = await scraper.getLatestTweet('elonmusk', includeRts);
   expect(expected?.permanentUrl).toEqual(latest?.permanentUrl);
 });
 
