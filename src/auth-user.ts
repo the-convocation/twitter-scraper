@@ -1,9 +1,8 @@
-import { TwitterGuestAuth } from './auth';
+import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import fetch from 'cross-fetch';
 
 interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
@@ -49,8 +48,8 @@ type FlowTokenResult =
  * A user authentication token manager.
  */
 export class TwitterUserAuth extends TwitterGuestAuth {
-  constructor(bearerToken: string) {
-    super(bearerToken);
+  constructor(bearerToken: string, options?: Partial<TwitterAuthOptions>) {
+    super(bearerToken, options);
   }
 
   async isLoggedIn(): Promise<boolean> {
@@ -230,7 +229,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'x-twitter-client-language': 'en',
     });
 
-    const res = await fetch(onboardingTaskUrl, {
+    const res = await this.fetch(onboardingTaskUrl, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(data),

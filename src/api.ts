@@ -2,7 +2,6 @@ import { TwitterAuth } from './auth';
 import { ApiError } from './errors';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import fetch from 'cross-fetch';
 
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAFQODgEAAAAAVHTp76lzh3rFzcHbmHVvQxYYpTw%3DckAlMINMjmCwxUcaXbAN4XqJVdgMJaHqNOFgPMK0zN1qLqLQCF';
@@ -33,7 +32,7 @@ export async function requestApi<T>(
   let res: Response;
   do {
     try {
-      res = await fetch(url, {
+      res = await auth.fetch(url, {
         method,
         headers,
       });

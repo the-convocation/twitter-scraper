@@ -1,6 +1,6 @@
 import { Cookie } from 'tough-cookie';
 import { bearerToken, RequestApiResult } from './api';
-import { TwitterAuth, TwitterGuestAuth } from './auth';
+import { TwitterAuth, TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { TwitterUserAuth } from './auth-user';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
@@ -19,8 +19,13 @@ import {
   Tweet,
   getTweetsByUserId,
 } from './tweets';
+import fetch from 'cross-fetch';
 
 const twUrl = 'https://twitter.com';
+
+export interface ScraperOptions {
+  fetch: typeof fetch;
+}
 
 /**
  * An interface to Twitter's undocumented API.
@@ -36,7 +41,7 @@ export class Scraper {
    * - Scrapers maintain their own guest tokens for Twitter's internal API.
    * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
    */
-  constructor() {
+  constructor(private readonly options?: Partial<ScraperOptions>) {
     this.token = bearerToken;
     this.useGuestAuth();
   }
@@ -47,8 +52,8 @@ export class Scraper {
    * @internal
    */
   private useGuestAuth() {
-    this.auth = new TwitterGuestAuth(this.token);
-    this.authTrends = new TwitterGuestAuth(this.token);
+    this.auth = new TwitterGuestAuth(this.token, this.getAuthOptions());
+    this.authTrends = new TwitterGuestAuth(this.token, this.getAuthOptions());
   }
 
   /**
@@ -217,7 +222,7 @@ export class Scraper {
     email?: string,
   ): Promise<void> {
     // Swap in a real authorizer for all requests
-    const userAuth = new TwitterUserAuth(this.token);
+    const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
     await userAuth.login(username, password, email);
     this.auth = userAuth;
     this.authTrends = userAuth;
@@ -247,7 +252,7 @@ export class Scraper {
    * @param cookies The cookies to set for the current session.
    */
   public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
-    const userAuth = new TwitterUserAuth(this.token);
+    const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
     for (const cookie of cookies) {
       await userAuth.cookieJar().setCookie(cookie, twUrl);
     }
@@ -290,6 +295,12 @@ export class Scraper {
       'Warning: Scraper#withXCsrfToken is deprecated and will be removed in a later version.',
     );
     return this;
+  }
+
+  private getAuthOptions(): Partial<TwitterAuthOptions> {
+    return {
+      fetch: this.options?.fetch,
+    };
   }
 
   private handleResponse<T>(res: RequestApiResult<T>): T {

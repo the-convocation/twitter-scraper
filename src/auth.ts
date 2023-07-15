@@ -3,7 +3,13 @@ import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
 
+export interface TwitterAuthOptions {
+  fetch: typeof fetch;
+}
+
 export interface TwitterAuth {
+  fetch: typeof fetch;
+
   /**
    * Returns the current cookie jar.
    */
@@ -62,7 +68,13 @@ export class TwitterGuestAuth implements TwitterAuth {
   protected guestToken?: string;
   protected guestCreatedAt?: Date;
 
-  constructor(bearerToken: string) {
+  fetch: typeof fetch;
+
+  constructor(
+    bearerToken: string,
+    protected readonly options?: Partial<TwitterAuthOptions>,
+  ) {
+    this.fetch = options?.fetch ?? fetch;
     this.bearerToken = bearerToken;
     this.jar = new CookieJar();
   }
@@ -136,7 +148,7 @@ export class TwitterGuestAuth implements TwitterAuth {
       Cookie: await this.jar.getCookieString(guestActivateUrl),
     });
 
-    const res = await fetch(guestActivateUrl, {
+    const res = await this.fetch(guestActivateUrl, {
       method: 'POST',
       headers: headers,
     });
