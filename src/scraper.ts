@@ -24,6 +24,10 @@ import fetch from 'cross-fetch';
 const twUrl = 'https://twitter.com';
 
 export interface ScraperOptions {
+  /**
+   * An alternative fetch function to use instead of the default fetch function. This may be useful
+   * in nonstandard runtime environments, such as edge workers.
+   */
   fetch: typeof fetch;
 }
 
