@@ -14,7 +14,7 @@ export interface FetchTransformOptions {
    * @param args The request options.
    * @returns The transformed request options.
    */
-  request: (args: FetchParameters) => FetchParameters;
+  request: (...args: FetchParameters) => FetchParameters;
 
   /**
    * Transforms the response after a request completes. This executes immediately after the request

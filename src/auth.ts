@@ -72,7 +72,7 @@ function withTransform(
   transform?: Partial<FetchTransformOptions>,
 ): typeof fetch {
   return async (input, init) => {
-    const fetchArgs = transform?.request?.([input, init]) ?? [input, init];
+    const fetchArgs = transform?.request?.(input, init) ?? [input, init];
     const res = await fetchFn(...fetchArgs);
     return transform?.response?.(res) ?? res;
   };
