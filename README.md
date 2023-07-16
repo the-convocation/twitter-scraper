@@ -27,5 +27,126 @@ yarn add @the-convocation/twitter-scraper
 
 TypeScript types have been bundled with the distribution.
 
+## Usage
+Most use cases are exactly the same as in [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper).
+Channel iterators have been translated into [AsyncGenerator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator)
+instances, and can be consumed with the corresponding `for await (const x of y) { ... }` syntax.
+
+### Browser usage
+This package directly invokes the Twitter API, which does not have permissive CORS headers. With the default
+settings, requests will fail unless you disable CORS checks, which is not advised. Instead, applications must
+provide a CORS proxy and configure it in the `Scraper` options.
+
+Proxies (and other request mutations) can be configured with the request interceptor transform:
+
+```ts
+const scraper = new Scraper({
+  transform: {
+    request(input: RequestInfo | URL, init?: RequestInit) {
+      // The arguments here are the same as the parameters to fetch(), and
+      // are kept as-is for flexibility of both the library and applications.
+      if (input instanceof URL) {
+        const proxy =
+          "https://corsproxy.io/?" +
+          encodeURIComponent(input.toString());
+        return [proxy, init];
+      } else if (typeof input === "string") {
+        const proxy =
+          "https://corsproxy.io/?" + encodeURIComponent(input);
+        return [proxy, init];
+      } else {
+        // Omitting handling for example
+        throw new Error("Unexpected request input type");
+      }
+    },
+  },
+});
+```
+
+[corsproxy.io](https://corsproxy.io) is a public CORS proxy that works correctly with this package.
+
+The public CORS proxy [corsproxy.org](https://corsproxy.org) *does not work* at the time of writing (at least
+not using their recommended integration on the front page).
+
+#### Next.js 13.x example:
+```tsx
+"use client";
+
+import { Scraper, Tweet } from "@the-convocation/twitter-scraper";
+import { useEffect, useMemo, useState } from "react";
+
+export default function Home() {
+  const scraper = useMemo(
+    () =>
+      new Scraper({
+        transform: {
+          request(input: RequestInfo | URL, init?: RequestInit) {
+            if (input instanceof URL) {
+              const proxy =
+                "https://corsproxy.io/?" +
+                encodeURIComponent(input.toString());
+              return [proxy, init];
+            } else if (typeof input === "string") {
+              const proxy =
+                "https://corsproxy.io/?" + encodeURIComponent(input);
+              return [proxy, init];
+            } else {
+              throw new Error("Unexpected request input type");
+            }
+          },
+        },
+      }),
+    [],
+  );
+  const [tweet, setTweet] = useState<Tweet | null>(null);
+
+  useEffect(() => {
+    async function getTweet() {
+      const latestTweet = await scraper.getLatestTweet("twitter");
+      if (latestTweet) {
+        setTweet(latestTweet);
+      }
+    }
+
+    getTweet();
+  }, [scraper]);
+
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      {tweet?.text}
+    </main>
+  );
+}
+```
+
+### Edge runtimes
+This package currently uses [`cross-fetch`](https://www.npmjs.com/package/cross-fetch) as a portable `fetch`.
+Edge runtimes such as CloudFlare Workers sometimes have `fetch` functions that behave differently from the web
+standard, so you may need to override the `fetch` function the scraper uses. If so, a custom `fetch` can be
+provided in the options:
+
+```ts
+const scraper = new Scraper({
+  fetch: fetch
+});
+```
+
+Note that this does not change the arguments passed to the function, or the expected return type. If the custom
+`fetch` function produces runtime errors related to incorrect types, be sure to wrap it in a shim (not currently
+supported directly by interceptors):
+
+```ts
+const scraper = new Scraper({
+  fetch: (input, init) => {
+    // Transform input and init into your function's expected types...
+    return fetch(input, init)
+      .then((res) => {
+        // Transform res into a web-compliant response...
+        return res;
+      });
+  },
+});
+```
+
 ## Contributing
 We use [Conventional Commits](https://www.conventionalcommits.org), and enforce this with precommit checks.

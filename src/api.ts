@@ -5,10 +5,7 @@ import { Headers } from 'headers-polyfill';
 
 // For some reason using Parameters<typeof fetch> reduces the request transform function to
 // `(url: string) => string` in tests.
-type FetchParameters = [
-  input: RequestInfo | URL,
-  init?: RequestInit | undefined,
-];
+type FetchParameters = [input: RequestInfo | URL, init?: RequestInit];
 
 export interface FetchTransformOptions {
   /**
