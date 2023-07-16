@@ -2,8 +2,16 @@ import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
+import { FetchTransformOptions } from './api';
+
+export interface TwitterAuthOptions {
+  fetch: typeof fetch;
+  transform: Partial<FetchTransformOptions>;
+}
 
 export interface TwitterAuth {
+  fetch: typeof fetch;
+
   /**
    * Returns the current cookie jar.
    */
@@ -54,6 +62,26 @@ export interface TwitterAuth {
 }
 
 /**
+ * Wraps the provided fetch function with transforms.
+ * @param fetchFn The fetch function.
+ * @param transform The transform options.
+ * @returns The input fetch function, wrapped with the provided transforms.
+ */
+function withTransform(
+  fetchFn: typeof fetch,
+  transform?: Partial<FetchTransformOptions>,
+): typeof fetch {
+  return async (input, init) => {
+    const fetchArgs = (await transform?.request?.(input, init)) ?? [
+      input,
+      init,
+    ];
+    const res = await fetchFn(...fetchArgs);
+    return (await transform?.response?.(res)) ?? res;
+  };
+}
+
+/**
  * A guest authentication token manager. Automatically handles token refreshes.
  */
 export class TwitterGuestAuth implements TwitterAuth {
@@ -62,7 +90,13 @@ export class TwitterGuestAuth implements TwitterAuth {
   protected guestToken?: string;
   protected guestCreatedAt?: Date;
 
-  constructor(bearerToken: string) {
+  fetch: typeof fetch;
+
+  constructor(
+    bearerToken: string,
+    protected readonly options?: Partial<TwitterAuthOptions>,
+  ) {
+    this.fetch = withTransform(options?.fetch ?? fetch, options?.transform);
     this.bearerToken = bearerToken;
     this.jar = new CookieJar();
   }
@@ -136,7 +170,7 @@ export class TwitterGuestAuth implements TwitterAuth {
       Cookie: await this.jar.getCookieString(guestActivateUrl),
     });
 
-    const res = await fetch(guestActivateUrl, {
+    const res = await this.fetch(guestActivateUrl, {
       method: 'POST',
       headers: headers,
     });
