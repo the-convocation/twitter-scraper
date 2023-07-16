@@ -2,9 +2,13 @@ import { TwitterAuth } from './auth';
 import { ApiError } from './errors';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import fetch from 'cross-fetch';
 
-type FetchParameters = Parameters<typeof fetch>;
+// For some reason using Parameters<typeof fetch> reduces the request transform function to
+// `(url: string) => string` in tests.
+type FetchParameters = [
+  input: RequestInfo | URL,
+  init?: RequestInit | undefined,
+];
 
 export interface FetchTransformOptions {
   /**
@@ -14,7 +18,9 @@ export interface FetchTransformOptions {
    * @param args The request options.
    * @returns The transformed request options.
    */
-  request: (...args: FetchParameters) => FetchParameters;
+  request: (
+    ...args: FetchParameters
+  ) => FetchParameters | Promise<FetchParameters>;
 
   /**
    * Transforms the response after a request completes. This executes immediately after the request
@@ -22,7 +28,7 @@ export interface FetchTransformOptions {
    * @param response The response object.
    * @returns The transformed response object.
    */
-  response: (response: Response) => Response;
+  response: (response: Response) => Response | Promise<Response>;
 }
 
 export const bearerToken =
