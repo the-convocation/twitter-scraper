@@ -1,5 +1,5 @@
 import { Cookie } from 'tough-cookie';
-import { bearerToken, RequestApiResult } from './api';
+import { bearerToken, FetchTransformOptions, RequestApiResult } from './api';
 import { TwitterAuth, TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { TwitterUserAuth } from './auth-user';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
@@ -29,6 +29,12 @@ export interface ScraperOptions {
    * in nonstandard runtime environments, such as edge workers.
    */
   fetch: typeof fetch;
+
+  /**
+   * Additional options that control how requests and responses are processed. This can be used to
+   * proxy requests through other hosts, for example.
+   */
+  transform: Partial<FetchTransformOptions>;
 }
 
 /**
@@ -304,6 +310,7 @@ export class Scraper {
   private getAuthOptions(): Partial<TwitterAuthOptions> {
     return {
       fetch: this.options?.fetch,
+      transform: this.options?.transform,
     };
   }
 
