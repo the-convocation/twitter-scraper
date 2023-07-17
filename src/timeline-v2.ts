@@ -127,6 +127,11 @@ export function parseLegacyTweet(
     userId: tweet.user_id_str,
     username: user.screen_name,
     videos,
+    isQuoted: false,
+    isReply: false,
+    isRetweet: false,
+    isPin: false,
+    sensitiveContent: false,
   };
 
   if (tweet.created_at) {
@@ -138,27 +143,33 @@ export function parseLegacyTweet(
     tw.place = tweet.place;
   }
 
-  if (tweet.quoted_status_id_str) {
+  const quotedStatusIdStr = tweet.quoted_status_id_str;
+  const inReplyToStatusIdStr = tweet.in_reply_to_status_id_str;
+  const retweetedStatusIdStr = tweet.retweeted_status_id_str;
+  const retweetedStatusResult = tweet.retweeted_status_result?.result;
+
+  if (quotedStatusIdStr) {
     tw.isQuoted = true;
-    tw.quotedStatusId = tweet.quoted_status_id_str;
+    tw.quotedStatusId = quotedStatusIdStr;
   }
 
-  if (tweet.in_reply_to_status_id_str) {
+  if (inReplyToStatusIdStr) {
     tw.isReply = true;
-    tw.inReplyToStatusId = tweet.in_reply_to_status_id_str;
+    tw.inReplyToStatusId = inReplyToStatusIdStr;
   }
 
-  if (tweet.retweeted_status_id_str || tweet.retweeted_status_result?.result) {
+  if (retweetedStatusIdStr || retweetedStatusResult) {
     tw.isRetweet = true;
-    tw.retweetedStatusId = tweet.retweeted_status_id_str;
+    tw.retweetedStatusId = retweetedStatusIdStr;
 
-    if (tweet.retweeted_status_result?.result) {
-      const retweetedStatusResult = parseLegacyTweet(
-        tweet.retweeted_status_result.result.core?.user_results?.result?.legacy,
-        tweet.retweeted_status_result.result.legacy,
+    if (retweetedStatusResult) {
+      const parsedResult = parseLegacyTweet(
+        retweetedStatusResult?.core?.user_results?.result?.legacy,
+        retweetedStatusResult?.legacy,
       );
-      if (retweetedStatusResult.success) {
-        tw.retweetedStatus = retweetedStatusResult.tweet;
+
+      if (parsedResult.success) {
+        tw.retweetedStatus = parsedResult.tweet;
       }
     }
   }
