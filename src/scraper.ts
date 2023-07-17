@@ -16,6 +16,7 @@ import {
   getTweet,
   getTweets,
   getLatestTweet,
+  getTweetWhere,
   Tweet,
   getTweetsByUserId,
 } from './tweets';
@@ -180,6 +181,26 @@ export class Scraper {
   }
 
   /**
+   * Utility function for fetching the first tweet where `key` matches `value`.
+   *
+   * Example:
+   * ```js
+   * const timeline = getTweets("user", 200)
+   * const tweet = await getTweetWhere('isQuoted', true, timeline);
+   * ```
+   * @param key An existing key on the {@link Tweet} interface.
+   * @param value The value that the key is expected to match.
+   * @param tweets The {@link AsyncGenerator} of tweets to search through.
+   */
+  public getTweetWhere(
+    key: string,
+    value: any,
+    tweets: AsyncGenerator<Tweet, void>,
+  ): Promise<Tweet | null> {
+    return getTweetWhere(key, value, tweets);
+  }
+
+  /**
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
    * @param includeRetweets Whether or not to include retweets. Defaults to `false`.
@@ -188,8 +209,9 @@ export class Scraper {
   public getLatestTweet(
     user: string,
     includeRetweets = false,
+    max = 200,
   ): Promise<Tweet | null | void> {
-    return getLatestTweet(user, includeRetweets, this.auth);
+    return getLatestTweet(user, includeRetweets, max, this.auth);
   }
 
   /**

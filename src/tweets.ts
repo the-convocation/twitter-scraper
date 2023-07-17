@@ -154,25 +154,32 @@ export function getTweetsByUserId(
   });
 }
 
-export async function getLatestTweet(
-  user: string,
-  includeRetweets: boolean,
-  auth: TwitterAuth,
-): Promise<Tweet | null | void> {
-  const max = includeRetweets ? 1 : 200;
-  const timeline = getTweets(user, max, auth);
-
-  if (max == 1) {
-    return (await timeline.next()).value;
-  }
-
-  for await (const tweet of timeline) {
-    if (!tweet.isRetweet) {
+export async function getTweetWhere(
+  key: string,
+  val: boolean,
+  tweets: AsyncGenerator<Tweet>,
+) {
+  for await (const tweet of tweets) {
+    if (tweet[key as keyof Tweet] == val) {
       return tweet;
     }
   }
 
   return null;
+}
+
+export async function getLatestTweet(
+  user: string,
+  includeRetweets: boolean,
+  max: number,
+  auth: TwitterAuth,
+): Promise<Tweet | null | void> {
+  const timeline = getTweets(user, max, auth);
+
+  // No point looping if max is 1, just use first entry.
+  return max === 1
+    ? (await timeline.next()).value
+    : await getTweetWhere('isRetweet', includeRetweets, timeline);
 }
 
 export async function getTweet(
