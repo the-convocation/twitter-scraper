@@ -26,6 +26,11 @@ test('scraper can get tweet', async () => {
         url: 'https://video.twimg.com/amplify_video/1328684333599756289/vid/960x720/PcL8yv8KhgQ48Qpt.mp4?tag=13',
       },
     ],
+    isQuoted: false,
+    isReply: false,
+    isRetweet: false,
+    isPin: false,
+    sensitiveContent: false,
   };
 
   const scraper = new Scraper();
@@ -61,10 +66,13 @@ test('scraper can get latest tweet', async () => {
   const expected = (await tweets.next()).value;
 
   // NEW APPROACH
-  const includeRts = expected?.isRetweet || false;
-  const latest = await scraper.getLatestTweet('elonmusk', includeRts);
+  const latest = (await scraper.getLatestTweet(
+    'elonmusk',
+    expected?.isRetweet || false,
+  )) as Tweet;
+
   expect(expected?.permanentUrl).toEqual(latest?.permanentUrl);
-});
+}, 30000);
 
 test('scraper can get user mentions in tweets', async () => {
   const expected: Mention[] = [
@@ -103,6 +111,11 @@ test('scraper can get tweet quotes and replies', async () => {
     userId: '978944851',
     username: 'VsauceTwo',
     videos: [],
+    isQuoted: false,
+    isReply: false,
+    isRetweet: false,
+    isPin: false,
+    sensitiveContent: false,
   };
 
   const scraper = new Scraper();
@@ -145,6 +158,11 @@ test('scraper can get retweet', async () => {
     userId: '773578328498372608',
     username: 'TwitterTogether',
     videos: [],
+    isQuoted: false,
+    isReply: false,
+    isRetweet: false,
+    isPin: false,
+    sensitiveContent: false,
   };
 
   const scraper = new Scraper();
@@ -176,6 +194,11 @@ test('scraper can get tweet views', async () => {
     userId: '17874544',
     username: 'TwitterSupport',
     videos: [],
+    isQuoted: false,
+    isReply: false,
+    isRetweet: false,
+    isPin: false,
+    sensitiveContent: false,
   };
 
   const scraper = new Scraper();
