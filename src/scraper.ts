@@ -196,8 +196,8 @@ export class Scraper {
    * @param tweets The {@link AsyncGenerator} of tweets to search through.
    */
   public getTweetWhere(
-    query: TweetQuery,
     tweets: AsyncIterable<Tweet>,
+    query: TweetQuery,
   ): Promise<Tweet | null> {
     return getTweetWhere(query, tweets);
   }
@@ -216,8 +216,8 @@ export class Scraper {
    * @param tweets The {@link AsyncGenerator} of tweets to search through.
    */
   public getTweetsWhere(
-    query: TweetQuery,
     tweets: AsyncIterable<Tweet>,
+    query: TweetQuery,
   ): Promise<Tweet[]> {
     return getTweetsWhere(query, tweets);
   }

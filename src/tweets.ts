@@ -159,8 +159,8 @@ export function getTweetsByUserId(
 }
 
 export async function getTweetWhere(
-  query: TweetQuery,
   tweets: AsyncIterable<Tweet>,
+  query: TweetQuery,
 ): Promise<Tweet | null> {
   const isCallback = typeof query === 'function';
 
@@ -176,8 +176,8 @@ export async function getTweetWhere(
 }
 
 export async function getTweetsWhere(
-  query: TweetQuery,
   tweets: AsyncIterable<Tweet>,
+  query: TweetQuery,
 ): Promise<Tweet[]> {
   const isCallback = typeof query === 'function';
   const filtered = [];

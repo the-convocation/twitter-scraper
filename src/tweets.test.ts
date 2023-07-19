@@ -62,7 +62,7 @@ test('scraper can get first tweet matching query', async () => {
   const scraper = new Scraper();
 
   const timeline = scraper.getTweets('elonmusk');
-  const latestQuote = await scraper.getTweetWhere({ isQuoted: true }, timeline);
+  const latestQuote = await scraper.getTweetWhere(timeline, { isQuoted: true });
 
   expect(latestQuote?.isQuoted).toBeTruthy();
 });
@@ -73,8 +73,8 @@ test('scraper can get all tweets matching query', async () => {
   // Sample size of 20 should be enough without taking long.
   const timeline = scraper.getTweets('elonmusk', 20);
   const retweets = await scraper.getTweetsWhere(
-    (tweet) => tweet.isRetweet === true,
     timeline,
+    (tweet) => tweet.isRetweet === true,
   );
 
   expect(retweets).toBeTruthy();
