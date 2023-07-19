@@ -197,7 +197,7 @@ export class Scraper {
    */
   public getTweetWhere(
     query: TweetMatchOptions,
-    tweets: AsyncGenerator<Tweet, void>,
+    tweets: AsyncGenerator<Tweet, void> | Tweet[],
   ): Promise<Tweet | null> {
     return getTweetWhere(query, tweets);
   }
@@ -217,7 +217,7 @@ export class Scraper {
    */
   public getTweetsWhere(
     query: TweetMatchOptions,
-    tweets: AsyncGenerator<Tweet, void>,
+    tweets: AsyncGenerator<Tweet, void> | Tweet[],
   ): Promise<Tweet[]> {
     return getTweetsWhere(query, tweets);
   }

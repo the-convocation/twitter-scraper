@@ -158,7 +158,7 @@ export function getTweetsByUserId(
 
 export async function getTweetWhere(
   options: TweetMatchOptions,
-  tweets: AsyncGenerator<Tweet>,
+  tweets: AsyncGenerator<Tweet> | Tweet[],
 ): Promise<Tweet | null> {
   for await (const tweet of tweets) {
     const matches = Object.keys(options).every((k) => {
@@ -176,7 +176,7 @@ export async function getTweetWhere(
 
 export async function getTweetsWhere(
   options: TweetMatchOptions,
-  tweets: AsyncGenerator<Tweet>,
+  tweets: AsyncGenerator<Tweet> | Tweet[],
 ): Promise<Tweet[]> {
   const filtered = [];
 

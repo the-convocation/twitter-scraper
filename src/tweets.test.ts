@@ -58,10 +58,20 @@ test('scraper can get tweets without logging in', async () => {
   expect(counter).toBe(sampleSize);
 });
 
-test('scraper can get only matching tweets', async () => {
+test('scraper can get first tweet matching query', async () => {
   const scraper = new Scraper();
-  const timeline = scraper.getTweets('elonmusk', 20);
 
+  const timeline = scraper.getTweets('elonmusk');
+  const latestQuote = await scraper.getTweetWhere({ isQuoted: true }, timeline);
+
+  expect(latestQuote?.isQuoted).toBeTruthy();
+});
+
+test('scraper can get all tweets matching query', async () => {
+  const scraper = new Scraper();
+
+  // Sample size of 20 should be enough without taking long.
+  const timeline = scraper.getTweets('elonmusk', 20);
   const retweets = await scraper.getTweetsWhere({ isRetweet: true }, timeline);
   expect(retweets).toBeTruthy();
 
