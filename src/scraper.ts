@@ -199,7 +199,7 @@ export class Scraper {
     tweets: AsyncIterable<Tweet>,
     query: TweetQuery,
   ): Promise<Tweet | null> {
-    return getTweetWhere(query, tweets);
+    return getTweetWhere(tweets, query);
   }
 
   /**
@@ -219,7 +219,7 @@ export class Scraper {
     tweets: AsyncIterable<Tweet>,
     query: TweetQuery,
   ): Promise<Tweet[]> {
-    return getTweetsWhere(query, tweets);
+    return getTweetsWhere(tweets, query);
   }
 
   /**
