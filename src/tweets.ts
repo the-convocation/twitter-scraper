@@ -80,7 +80,9 @@ export interface Tweet {
   sensitiveContent?: boolean;
 }
 
-export type TweetMatchOptions = Partial<Tweet>;
+export type TweetQuery =
+  | Partial<Tweet>
+  | ((tweet: Tweet) => boolean | Promise<boolean>);
 
 export async function fetchTweets(
   userId: string,
@@ -157,14 +159,13 @@ export function getTweetsByUserId(
 }
 
 export async function getTweetWhere(
-  options: TweetMatchOptions,
-  tweets: AsyncGenerator<Tweet> | Tweet[],
+  query: TweetQuery,
+  tweets: AsyncIterable<Tweet>,
 ): Promise<Tweet | null> {
+  const isCallback = typeof query === 'function';
+
   for await (const tweet of tweets) {
-    const matches = Object.keys(options).every((k) => {
-      const key = k as keyof Tweet;
-      return tweet[key] == options[key];
-    });
+    const matches = isCallback ? query(tweet) : checkTweetMatches(tweet, query);
 
     if (matches) {
       return tweet;
@@ -175,22 +176,27 @@ export async function getTweetWhere(
 }
 
 export async function getTweetsWhere(
-  options: TweetMatchOptions,
-  tweets: AsyncGenerator<Tweet> | Tweet[],
+  query: TweetQuery,
+  tweets: AsyncIterable<Tweet>,
 ): Promise<Tweet[]> {
+  const isCallback = typeof query === 'function';
   const filtered = [];
 
   for await (const tweet of tweets) {
-    const matches = Object.keys(options).every((k) => {
-      const key = k as keyof Tweet;
-      return tweet[key] == options[key];
-    });
+    const matches = isCallback ? query(tweet) : checkTweetMatches(tweet, query);
 
     if (!matches) continue;
     filtered.push(tweet);
   }
 
   return filtered;
+}
+
+function checkTweetMatches(tweet: Tweet, options: Partial<Tweet>): boolean {
+  return Object.keys(options).every((k) => {
+    const key = k as keyof Tweet;
+    return tweet[key] === options[key];
+  });
 }
 
 export async function getLatestTweet(

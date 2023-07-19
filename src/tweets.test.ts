@@ -72,7 +72,11 @@ test('scraper can get all tweets matching query', async () => {
 
   // Sample size of 20 should be enough without taking long.
   const timeline = scraper.getTweets('elonmusk', 20);
-  const retweets = await scraper.getTweetsWhere({ isRetweet: true }, timeline);
+  const retweets = await scraper.getTweetsWhere(
+    (tweet) => tweet.isRetweet === true,
+    timeline,
+  );
+
   expect(retweets).toBeTruthy();
 
   for (const tweet of retweets) {

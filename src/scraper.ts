@@ -19,8 +19,8 @@ import {
   getLatestTweet,
   getTweetWhere,
   getTweetsWhere,
-  TweetMatchOptions,
   getTweetsByUserId,
+  TweetQuery,
 } from './tweets';
 import fetch from 'cross-fetch';
 
@@ -196,8 +196,8 @@ export class Scraper {
    * @param tweets The {@link AsyncGenerator} of tweets to search through.
    */
   public getTweetWhere(
-    query: TweetMatchOptions,
-    tweets: AsyncGenerator<Tweet, void> | Tweet[],
+    query: TweetQuery,
+    tweets: AsyncIterable<Tweet>,
   ): Promise<Tweet | null> {
     return getTweetWhere(query, tweets);
   }
@@ -216,8 +216,8 @@ export class Scraper {
    * @param tweets The {@link AsyncGenerator} of tweets to search through.
    */
   public getTweetsWhere(
-    query: TweetMatchOptions,
-    tweets: AsyncGenerator<Tweet, void> | Tweet[],
+    query: TweetQuery,
+    tweets: AsyncIterable<Tweet>,
   ): Promise<Tweet[]> {
     return getTweetsWhere(query, tweets);
   }
