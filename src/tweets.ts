@@ -156,6 +156,24 @@ export function getTweetsByUserId(
   });
 }
 
+export async function getTweetWhere(
+  options: TweetMatchOptions,
+  tweets: AsyncGenerator<Tweet>,
+): Promise<Tweet | null> {
+  for await (const tweet of tweets) {
+    const matches = Object.keys(options).every((k) => {
+      const key = k as keyof Tweet;
+      return tweet[key] == options[key];
+    });
+
+    if (matches) {
+      return tweet;
+    }
+  }
+
+  return null;
+}
+
 export async function getTweetsWhere(
   options: TweetMatchOptions,
   tweets: AsyncGenerator<Tweet>,
@@ -186,7 +204,7 @@ export async function getLatestTweet(
   // No point looping if max is 1, just use first entry.
   return max === 1
     ? (await timeline.next()).value
-    : await getTweetWhere('isRetweet', includeRetweets, timeline);
+    : await getTweetWhere({ isRetweet: includeRetweets }, timeline);
 }
 
 export async function getTweet(

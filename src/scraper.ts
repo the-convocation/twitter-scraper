@@ -17,6 +17,7 @@ import {
   getTweet,
   getTweets,
   getLatestTweet,
+  getTweetWhere,
   getTweetsWhere,
   TweetMatchOptions,
   getTweetsByUserId,
@@ -182,15 +183,36 @@ export class Scraper {
   }
 
   /**
-   * Utility function for fetching the all tweets matching the given query.
+   * Fetches the first tweet matching the given query.
    *
    * Example:
    * ```js
    * const timeline = getTweets("user", 200)
    * const retweets = await getTweetsWhere({ isRetweet: true }, timeline);
    * ```
-   * @param key An existing key on the {@link Tweet} interface.
-   * @param value The value that the key is expected to match.
+   * @param query A set of key/value pairs to test **all** tweets against.
+   * - All keys are optional.
+   * - If specified, the key must be implemented by that of {@link Tweet}.
+   * @param tweets The {@link AsyncGenerator} of tweets to search through.
+   */
+  public getTweetWhere(
+    query: TweetMatchOptions,
+    tweets: AsyncGenerator<Tweet, void>,
+  ): Promise<Tweet | null> {
+    return getTweetWhere(query, tweets);
+  }
+
+  /**
+   * Fetches all tweets matching the given query.
+   *
+   * Example:
+   * ```js
+   * const timeline = getTweets("user", 200)
+   * const retweets = await getTweetsWhere({ isRetweet: true }, timeline);
+   * ```
+   * @param query A set of key/value pairs to test **all** tweets against.
+   * - All keys are optional.
+   * - If specified, the key must be implemented by that of {@link Tweet}.
    * @param tweets The {@link AsyncGenerator} of tweets to search through.
    */
   public getTweetsWhere(
