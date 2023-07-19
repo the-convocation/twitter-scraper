@@ -58,6 +58,18 @@ test('scraper can get tweets without logging in', async () => {
   expect(counter).toBe(sampleSize);
 });
 
+test('scraper can get only matching tweets', async () => {
+  const scraper = new Scraper();
+  const timeline = scraper.getTweets('elonmusk', 20);
+
+  const retweets = await scraper.getTweetsWhere({ isRetweet: true }, timeline);
+  expect(retweets).toBeTruthy();
+
+  for (const tweet of retweets) {
+    expect(tweet.isRetweet).toBe(true);
+  }
+}, 20000);
+
 test('scraper can get latest tweet', async () => {
   const scraper = new Scraper();
 

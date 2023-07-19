@@ -80,6 +80,8 @@ export interface Tweet {
   sensitiveContent?: boolean;
 }
 
+export type TweetMatchOptions = Partial<Tweet>;
+
 export async function fetchTweets(
   userId: string,
   maxTweets: number,
@@ -154,18 +156,23 @@ export function getTweetsByUserId(
   });
 }
 
-export async function getTweetWhere(
-  key: string,
-  val: boolean,
+export async function getTweetsWhere(
+  options: TweetMatchOptions,
   tweets: AsyncGenerator<Tweet>,
-) {
+): Promise<Tweet[]> {
+  const filtered = [];
+
   for await (const tweet of tweets) {
-    if (tweet[key as keyof Tweet] == val) {
-      return tweet;
-    }
+    const matches = Object.keys(options).every((k) => {
+      const key = k as keyof Tweet;
+      return tweet[key] == options[key];
+    });
+
+    if (!matches) continue;
+    filtered.push(tweet);
   }
 
-  return null;
+  return filtered;
 }
 
 export async function getLatestTweet(

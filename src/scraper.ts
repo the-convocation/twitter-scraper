@@ -13,11 +13,12 @@ import {
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
 import {
+  Tweet,
   getTweet,
   getTweets,
   getLatestTweet,
-  getTweetWhere,
-  Tweet,
+  getTweetsWhere,
+  TweetMatchOptions,
   getTweetsByUserId,
 } from './tweets';
 import fetch from 'cross-fetch';
@@ -181,23 +182,22 @@ export class Scraper {
   }
 
   /**
-   * Utility function for fetching the first tweet where `key` matches `value`.
+   * Utility function for fetching the all tweets matching the given query.
    *
    * Example:
    * ```js
    * const timeline = getTweets("user", 200)
-   * const tweet = await getTweetWhere('isQuoted', true, timeline);
+   * const retweets = await getTweetsWhere({ isRetweet: true }, timeline);
    * ```
    * @param key An existing key on the {@link Tweet} interface.
    * @param value The value that the key is expected to match.
    * @param tweets The {@link AsyncGenerator} of tweets to search through.
    */
-  public getTweetWhere(
-    key: string,
-    value: any,
+  public getTweetsWhere(
+    query: TweetMatchOptions,
     tweets: AsyncGenerator<Tweet, void>,
-  ): Promise<Tweet | null> {
-    return getTweetWhere(key, value, tweets);
+  ): Promise<Tweet[]> {
+    return getTweetsWhere(query, tweets);
   }
 
   /**
