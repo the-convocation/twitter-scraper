@@ -210,7 +210,7 @@ export async function getLatestTweet(
   // No point looping if max is 1, just use first entry.
   return max === 1
     ? (await timeline.next()).value
-    : await getTweetWhere({ isRetweet: includeRetweets }, timeline);
+    : await getTweetWhere(timeline, { isRetweet: includeRetweets });
 }
 
 export async function getTweet(
