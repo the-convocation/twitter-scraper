@@ -195,8 +195,11 @@ export function parseLegacyTweet(
 }
 
 function parseResult(result?: TimelineResultRaw): ParseTweetResult {
-  if (result?.legacy && result.note_tweet?.note_tweet_results?.result?.text) {
-    result.legacy.full_text = result.note_tweet.note_tweet_results.result.text;
+  const noteTweetResultText =
+    result?.note_tweet?.note_tweet_results?.result?.text;
+
+  if (result?.legacy && noteTweetResultText) {
+    result.legacy.full_text = noteTweetResultText;
   }
 
   const tweetResult = parseLegacyTweet(

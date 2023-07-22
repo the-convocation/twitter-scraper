@@ -91,12 +91,13 @@ export async function fetchTweets(
   }
 
   const variables: Record<string, any> = {
-    userId,
+    includeHasBirdwatchNotes: false,
+    rest_id: userId,
     count: maxTweets,
-    includePromotedContent: false,
-    withQuickPromoteEligibilityTweetFields: false,
-    withVoice: true,
-    withV2Timeline: true,
+    // includePromotedContent: false,
+    // withQuickPromoteEligibilityTweetFields: false,
+    // withVoice: true,
+    // withV2Timeline: true,
   };
 
   const features = addApiFeatures({
@@ -116,10 +117,11 @@ export async function fetchTweets(
   params.set('variables', stringify(variables));
   params.set('features', stringify(features));
 
-  const res = await requestApi<TimelineV2>(
-    `https://twitter.com/i/api/graphql/UGi7tjRPr-d_U3bCPIko5Q/UserTweets?${params.toString()}`,
+  const res = await requestApi<any>(
+    `https://api.twitter.com/graphql/3JNH4e9dq1BifLxAa3UMWg/UserWithProfileTweetsQueryV2?${params.toString()}`,
     auth,
   );
+
   if (!res.success) {
     throw res.err;
   }
@@ -134,6 +136,7 @@ export function getTweets(
 ): AsyncGenerator<Tweet, void> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const userIdRes = await getUserIdByScreenName(q, auth);
+
     if (!userIdRes.success) {
       throw userIdRes.err;
     }
@@ -188,6 +191,7 @@ export async function getTweet(
     withBirdwatchNotes: true,
     withVoice: true,
     withV2Timeline: true,
+    includeHasBirdwatchNotes: false,
   };
 
   const features = addApiFeatures({
@@ -201,7 +205,7 @@ export async function getTweet(
   params.set('variables', stringify(variables));
 
   const res = await requestApi<ThreadedConversation>(
-    `https://twitter.com/i/api/graphql/VWFGPVAGkZMGRKGe3GFFnA/TweetDetail?${params.toString()}`,
+    `https://api.twitter.com/graphql/83h5UyHZ9wEKBVzALX8R_g/ConversationTimelineV2?${params.toString()}`,
     auth,
   );
   if (!res.success) {

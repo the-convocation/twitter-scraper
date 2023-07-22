@@ -131,6 +131,18 @@ export function addApiFeatures(o: object) {
     standardized_nudges_misinfo: true,
     longform_notetweets_rich_text_read_enabled: true,
     responsive_web_enhance_cards_enabled: false,
+    subscriptions_verification_info_enabled: true,
+    subscriptions_verification_info_reason_enabled: true,
+    subscriptions_verification_info_verified_since_enabled: true,
+    super_follow_badge_privacy_enabled: false,
+    super_follow_exclusive_tweet_notifications_enabled: false,
+    super_follow_tweet_api_enabled: false,
+    super_follow_user_api_enabled: false,
+    android_graphql_skip_api_media_color_palette: false,
+    creator_subscriptions_subscription_count_enabled: false,
+    blue_business_profile_image_shape_enabled: false,
+    unified_cards_ad_metadata_container_dynamic_card_content_query_enabled:
+      false,
   };
 }
 

@@ -111,7 +111,7 @@ export async function getProfile(
     }),
   );
   const res = await requestApi<UserRaw>(
-    `https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?${params}`,
+    `https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserResultByScreenNameQuery?${params}`,
     auth,
   );
   if (!res.success) {
