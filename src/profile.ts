@@ -1,4 +1,5 @@
-import { requestApi, RequestApiResult } from './api';
+import stringify from 'json-stable-stringify'
+import { addApiFeatures, requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 
 export interface LegacyUserRaw {
@@ -55,9 +56,11 @@ export interface Profile {
 
 export interface UserRaw {
   data: {
-    user: {
-      rest_id?: string;
-      legacy: LegacyUserRaw;
+    user_result: {
+      result: {
+        rest_id?: string;
+        legacy: LegacyUserRaw;
+      };
     };
   };
   errors?: {
@@ -105,13 +108,25 @@ export async function getProfile(
   const params = new URLSearchParams();
   params.set(
     'variables',
-    JSON.stringify({
+    stringify({
       screen_name: username,
       withHighlightedLabel: true,
     }),
   );
+
+  const features = addApiFeatures({
+    interactive_text_enabled: true,
+    longform_notetweets_inline_media_enabled: false,
+    responsive_web_text_conversations_enabled: false,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      false,
+    vibe_api_enabled: false,
+  });
+
+  params.set('features', stringify(features));
+
   const res = await requestApi<UserRaw>(
-    `https://api.twitter.com/graphql/u7wQyGi6oExe8_TRWGMq4Q/UserResultByScreenNameQuery?${params}`,
+    `https://api.twitter.com/graphql/u7wQyGi6oExe8_TRWGMq4Q/UserResultByScreenNameQuery?${params.toString()}`,
     auth,
   );
   if (!res.success) {
@@ -127,7 +142,7 @@ export async function getProfile(
     };
   }
 
-  const { user } = value.data;
+  const { result: user } = value.data.user_result;
   const { legacy } = user;
   if (user.rest_id == null || user.rest_id.length === 0) {
     return {

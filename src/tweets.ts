@@ -106,7 +106,7 @@ export async function fetchTweets(
     responsive_web_text_conversations_enabled: false,
     tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
       false,
-    vibe_api_enabled: true,
+    vibe_api_enabled: false,
   });
 
   if (cursor != null && cursor != '') {
