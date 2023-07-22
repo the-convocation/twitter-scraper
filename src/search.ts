@@ -140,7 +140,7 @@ async function getSearchTimeline(
   params.set('variables', stringify(variables));
 
   const res = await requestApi<SearchTimeline>(
-    `https://twitter.com/i/api/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline?${params.toString()}`,
+    `https://api.twitter.com/graphql/gkjsKepM6gl_HmFWoWKfgg/SearchTimeline?${params.toString()}`,
     auth,
   );
   if (!res.success) {
