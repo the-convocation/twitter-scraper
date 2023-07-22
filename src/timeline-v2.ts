@@ -40,12 +40,12 @@ export interface TimelineEntryRaw {
 
 export interface TimelineV2 {
   data?: {
-    user?: {
+    user_result?: {
       result?: {
-        timeline_v2?: {
+        timeline_response?: {
           timeline?: {
-            instructions?: {
-              entries?: TimelineEntryRaw[];
+            instructions: {
+              entries: TimelineEntryRaw[];
               entry?: TimelineEntryRaw;
               type?: string;
             }[];
@@ -233,7 +233,8 @@ export function parseTimelineTweetsV2(
   let cursor: string | undefined;
   const tweets: Tweet[] = [];
   const instructions =
-    timeline.data?.user?.result?.timeline_v2?.timeline?.instructions ?? [];
+    timeline.data?.user_result?.result?.timeline_response?.timeline
+      ?.instructions ?? [];
   for (const instruction of instructions) {
     for (const entry of instruction.entries ?? []) {
       if (entry.content?.cursorType === 'Bottom') {

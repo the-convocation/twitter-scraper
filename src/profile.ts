@@ -15,17 +15,23 @@ export interface LegacyUserRaw {
   favourites_count?: number;
   followers_count?: number;
   friends_count?: number;
+  media_count?: number;
+  statuses_count?: number;
   id_str?: string;
   listed_count?: number;
   name?: string;
   location: string;
+  geo_enabled?: boolean;
   pinned_tweet_ids_str?: string[];
+  profile_background_color?: string;
   profile_banner_url?: string;
   profile_image_url_https?: string;
   protected?: boolean;
   screen_name?: string;
-  statuses_count?: number;
   verified?: boolean;
+  has_custom_timelines?: boolean;
+  has_extended_profile?: boolean;
+  url?: string;
 }
 
 /**
@@ -39,8 +45,12 @@ export interface Profile {
   followersCount?: number;
   followingCount?: number;
   friendsCount?: number;
+  mediaCount?: number;
+  statusesCount?: number;
   isPrivate?: boolean;
   isVerified?: boolean;
+  isBlueVerified?: boolean;
+  hasNftAvatar?: boolean;
   joined?: Date;
   likesCount?: number;
   listedCount?: number;
@@ -59,6 +69,8 @@ export interface UserRaw {
     user_result: {
       result: {
         rest_id?: string;
+        isBlueVerified: boolean;
+        hasNftAvatar: boolean;
         legacy: LegacyUserRaw;
       };
     };
@@ -76,6 +88,7 @@ export function parseProfile(user: LegacyUserRaw): Profile {
     followersCount: user.followers_count,
     followingCount: user.favourites_count,
     friendsCount: user.friends_count,
+    mediaCount: user.media_count,
     isPrivate: user.protected,
     isVerified: user.verified,
     likesCount: user.favourites_count,
@@ -144,6 +157,7 @@ export async function getProfile(
 
   const { result: user } = value.data.user_result;
   const { legacy } = user;
+
   if (user.rest_id == null || user.rest_id.length === 0) {
     return {
       success: false,
