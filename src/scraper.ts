@@ -13,11 +13,14 @@ import {
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
 import {
+  Tweet,
   getTweet,
   getTweets,
   getLatestTweet,
-  Tweet,
+  getTweetWhere,
+  getTweetsWhere,
   getTweetsByUserId,
+  TweetQuery,
 } from './tweets';
 import fetch from 'cross-fetch';
 
@@ -180,6 +183,46 @@ export class Scraper {
   }
 
   /**
+   * Fetches the first tweet matching the given query.
+   *
+   * Example:
+   * ```js
+   * const timeline = getTweets("user", 200)
+   * const retweets = await getTweetsWhere({ isRetweet: true }, timeline);
+   * ```
+   * @param query A set of key/value pairs to test **all** tweets against.
+   * - All keys are optional.
+   * - If specified, the key must be implemented by that of {@link Tweet}.
+   * @param tweets The {@link AsyncGenerator} of tweets to search through.
+   */
+  public getTweetWhere(
+    tweets: AsyncIterable<Tweet>,
+    query: TweetQuery,
+  ): Promise<Tweet | null> {
+    return getTweetWhere(tweets, query);
+  }
+
+  /**
+   * Fetches all tweets matching the given query.
+   *
+   * Example:
+   * ```js
+   * const timeline = getTweets("user", 200)
+   * const retweets = await getTweetsWhere({ isRetweet: true }, timeline);
+   * ```
+   * @param query A set of key/value pairs to test **all** tweets against.
+   * - All keys are optional.
+   * - If specified, the key must be implemented by that of {@link Tweet}.
+   * @param tweets The {@link AsyncGenerator} of tweets to search through.
+   */
+  public getTweetsWhere(
+    tweets: AsyncIterable<Tweet>,
+    query: TweetQuery,
+  ): Promise<Tweet[]> {
+    return getTweetsWhere(tweets, query);
+  }
+
+  /**
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
    * @param includeRetweets Whether or not to include retweets. Defaults to `false`.
@@ -188,8 +231,9 @@ export class Scraper {
   public getLatestTweet(
     user: string,
     includeRetweets = false,
+    max = 200,
   ): Promise<Tweet | null | void> {
-    return getLatestTweet(user, includeRetweets, this.auth);
+    return getLatestTweet(user, includeRetweets, max, this.auth);
   }
 
   /**

@@ -80,6 +80,10 @@ export interface Tweet {
   sensitiveContent?: boolean;
 }
 
+export type TweetQuery =
+  | Partial<Tweet>
+  | ((tweet: Tweet) => boolean | Promise<boolean>);
+
 export async function fetchTweets(
   userId: string,
   maxTweets: number,
@@ -154,25 +158,59 @@ export function getTweetsByUserId(
   });
 }
 
-export async function getLatestTweet(
-  user: string,
-  includeRetweets: boolean,
-  auth: TwitterAuth,
-): Promise<Tweet | null | void> {
-  const max = includeRetweets ? 1 : 200;
-  const timeline = getTweets(user, max, auth);
+export async function getTweetWhere(
+  tweets: AsyncIterable<Tweet>,
+  query: TweetQuery,
+): Promise<Tweet | null> {
+  const isCallback = typeof query === 'function';
 
-  if (max == 1) {
-    return (await timeline.next()).value;
-  }
+  for await (const tweet of tweets) {
+    const matches = isCallback ? query(tweet) : checkTweetMatches(tweet, query);
 
-  for await (const tweet of timeline) {
-    if (!tweet.isRetweet) {
+    if (matches) {
       return tweet;
     }
   }
 
   return null;
+}
+
+export async function getTweetsWhere(
+  tweets: AsyncIterable<Tweet>,
+  query: TweetQuery,
+): Promise<Tweet[]> {
+  const isCallback = typeof query === 'function';
+  const filtered = [];
+
+  for await (const tweet of tweets) {
+    const matches = isCallback ? query(tweet) : checkTweetMatches(tweet, query);
+
+    if (!matches) continue;
+    filtered.push(tweet);
+  }
+
+  return filtered;
+}
+
+function checkTweetMatches(tweet: Tweet, options: Partial<Tweet>): boolean {
+  return Object.keys(options).every((k) => {
+    const key = k as keyof Tweet;
+    return tweet[key] === options[key];
+  });
+}
+
+export async function getLatestTweet(
+  user: string,
+  includeRetweets: boolean,
+  max: number,
+  auth: TwitterAuth,
+): Promise<Tweet | null | void> {
+  const timeline = getTweets(user, max, auth);
+
+  // No point looping if max is 1, just use first entry.
+  return max === 1
+    ? (await timeline.next()).value
+    : await getTweetWhere(timeline, { isRetweet: includeRetweets });
 }
 
 export async function getTweet(
