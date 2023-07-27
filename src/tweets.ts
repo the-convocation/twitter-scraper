@@ -165,7 +165,9 @@ export async function getTweetWhere(
   const isCallback = typeof query === 'function';
 
   for await (const tweet of tweets) {
-    const matches = isCallback ? query(tweet) : checkTweetMatches(tweet, query);
+    const matches = isCallback
+      ? await query(tweet)
+      : checkTweetMatches(tweet, query);
 
     if (matches) {
       return tweet;
