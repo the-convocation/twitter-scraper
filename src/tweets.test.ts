@@ -3,29 +3,24 @@ import { Mention, Tweet } from './tweets';
 
 test('scraper can get tweet', async () => {
   const expected: Tweet = {
-    conversationId: '1328684389388185600',
-    html: `That thing you didn’t Tweet but wanted to but didn’t but got so close but then were like nah. <br><br>We have a place for that now—Fleets! <br><br>Rolling out to everyone starting today. <br><a href=\"https://t.co/auQAHXZMfH\"><img src=\"https://pbs.twimg.com/amplify_video_thumb/1328684333599756289/img/cP5KwbIXbGunNSBy.jpg\"/></a>`,
-    id: '1328684389388185600',
+    conversationId: '1585338303800578049',
+    html: `We’re updating Twitter’s sounds to help make them pleasing to more people, including those with sensory sensitivities. Here’s more on how we did it:<br><a href=\"https://blog.twitter.com/en_us/topics/product/2022/designing-accessible-sounds-story-behind-our-new-chirps\">https://t.co/7FKWk7NzHM</a>`,
+    id: '1585338303800578049',
     hashtags: [],
     mentions: [],
-    name: 'Twitter',
-    permanentUrl: 'https://twitter.com/Twitter/status/1328684389388185600',
+    name: 'A11y',
+    permanentUrl: 'https://twitter.com/XA11y/status/1585338303800578049',
     photos: [],
-    text: 'That thing you didn’t Tweet but wanted to but didn’t but got so close but then were like nah. \n\nWe have a place for that now—Fleets! \n\nRolling out to everyone starting today. https://t.co/auQAHXZMfH',
+    text: 'We’re updating Twitter’s sounds to help make them pleasing to more people, including those with sensory sensitivities. Here’s more on how we did it:\nhttps://t.co/7FKWk7NzHM',
     thread: [],
-    timeParsed: new Date(Date.UTC(2020, 10, 17, 13, 0, 18, 0)),
-    timestamp: 1605618018,
-    urls: [],
-    userId: '783214',
-    username: 'Twitter',
-    videos: [
-      {
-        id: '1328684333599756289',
-        preview:
-          'https://pbs.twimg.com/amplify_video_thumb/1328684333599756289/img/cP5KwbIXbGunNSBy.jpg',
-        url: 'https://video.twimg.com/amplify_video/1328684333599756289/vid/960x720/PcL8yv8KhgQ48Qpt.mp4?tag=13',
-      },
+    timeParsed: new Date(Date.UTC(2022, 9, 26, 18, 31, 20, 0)),
+    timestamp: 1666809080,
+    urls: [
+      'https://blog.twitter.com/en_us/topics/product/2022/designing-accessible-sounds-story-behind-our-new-chirps',
     ],
+    userId: '1631299117',
+    username: 'XA11y',
+    videos: [],
     isQuoted: false,
     isReply: false,
     isRetweet: false,
@@ -34,12 +29,12 @@ test('scraper can get tweet', async () => {
   };
 
   const scraper = new Scraper();
-  const actual = await scraper.getTweet('1328684389388185600');
+  const actual = await scraper.getTweet('1585338303800578049');
   delete actual?.likes;
   delete actual?.replies;
   delete actual?.retweets;
   delete actual?.views;
-  expect(expected).toEqual(actual);
+  expect(actual).toEqual(expected);
 });
 
 test('scraper can get tweets without logging in', async () => {
@@ -192,7 +187,7 @@ test('scraper can get retweet', async () => {
   };
 
   const scraper = new Scraper();
-  const retweet = await scraper.getTweet('1362849141248974853');
+  const retweet = await scraper.getTweet('1685032881872330754');
   expect(retweet?.isRetweet).toBeTruthy();
   delete retweet?.retweetedStatus?.likes;
   delete retweet?.retweetedStatus?.replies;
