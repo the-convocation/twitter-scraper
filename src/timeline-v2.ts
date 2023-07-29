@@ -85,6 +85,13 @@ export function parseLegacyTweet(
     };
   }
 
+  if (tweet.id_str == null) {
+    return {
+      success: false,
+      err: new Error('Tweet ID was not found in object.'),
+    };
+  }
+
   const hashtags = tweet.entities?.hashtags ?? [];
   const mentions = tweet.entities?.user_mentions ?? [];
   const media = tweet.extended_entities?.media ?? [];
@@ -93,13 +100,6 @@ export function parseLegacyTweet(
   );
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
-
-  if (tweet.id_str == null) {
-    return {
-      success: false,
-      err: new Error('Tweet ID was not found in object.'),
-    };
-  }
 
   const tw: Tweet = {
     conversationId: tweet.conversation_id_str,
@@ -216,8 +216,13 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
     }
   }
 
-  if (result?.quoted_status_result?.result) {
-    const quotedTweetResult = parseResult(result.quoted_status_result.result);
+  const quotedResult = result?.quoted_status_result?.result;
+  if (quotedResult) {
+    if (quotedResult.legacy && quotedResult.rest_id) {
+      quotedResult.legacy.id_str = quotedResult.rest_id;
+    }
+
+    const quotedTweetResult = parseResult(quotedResult);
     if (quotedTweetResult.success) {
       tweetResult.tweet.quotedStatus = quotedTweetResult.tweet;
     }
@@ -268,7 +273,8 @@ function parseAndPush(
   const result = content.tweetResult?.result;
   if (result?.__typename === 'Tweet') {
     if (result.legacy) {
-      result.legacy.id_str = entryId.replace('tweet-', '');
+      const toReplace = isConversation ? 'tweet-' : 'conversation-';
+      result.legacy.id_str = entryId.replace(toReplace, '');
     }
 
     const tweetResult = parseResult(result);

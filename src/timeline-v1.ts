@@ -49,6 +49,7 @@ export interface TimelineMediaExtendedRaw {
 }
 
 export interface TimelineResultRaw {
+  rest_id?: string;
   __typename?: string;
   core?: {
     user_result?: {
