@@ -13,11 +13,14 @@ import {
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
 import {
+  Tweet,
   getTweet,
   getTweets,
   getLatestTweet,
-  Tweet,
+  getTweetWhere,
+  getTweetsWhere,
   getTweetsByUserId,
+  TweetQuery,
 } from './tweets';
 import fetch from 'cross-fetch';
 
@@ -180,6 +183,52 @@ export class Scraper {
   }
 
   /**
+   * Fetches the first tweet matching the given query.
+   *
+   * Example:
+   * ```js
+   * const timeline = scraper.getTweets('user', 200);
+   * const retweet = await scraper.getTweetWhere(timeline, { isRetweet: true });
+   * ```
+   * @param tweets The {@link AsyncIterable} of tweets to search through.
+   * @param query A query to test **all** tweets against. This may be either an
+   * object of key/value pairs or a predicate. If this query is an object, all
+   * key/value pairs must match a {@link Tweet} for it to be returned. If this query
+   * is a predicate, it must resolve to `true` for a {@link Tweet} to be returned.
+   * - All keys are optional.
+   * - If specified, the key must be implemented by that of {@link Tweet}.
+   */
+  public getTweetWhere(
+    tweets: AsyncIterable<Tweet>,
+    query: TweetQuery,
+  ): Promise<Tweet | null> {
+    return getTweetWhere(tweets, query);
+  }
+
+  /**
+   * Fetches all tweets matching the given query.
+   *
+   * Example:
+   * ```js
+   * const timeline = scraper.getTweets('user', 200);
+   * const retweets = await scraper.getTweetsWhere(timeline, { isRetweet: true });
+   * ```
+   * @param tweets The {@link AsyncIterable} of tweets to search through.
+   * @param query A query to test **all** tweets against. This may be either an
+   * object of key/value pairs or a predicate. If this query is an object, all
+   * key/value pairs must match a {@link Tweet} for it to be returned. If this query
+   * is a predicate, it must resolve to `true` for a {@link Tweet} to be returned.
+   * - All keys are optional.
+   * - If specified, the key must be implemented by that of {@link Tweet}.
+   */
+  public getTweetsWhere(
+    tweets: AsyncIterable<Tweet>,
+    query: TweetQuery,
+  ): Promise<Tweet[]> {
+    return getTweetsWhere(tweets, query);
+  }
+
+  /**
    * Fetches the most recent tweet from a Twitter user.
    * @param user The user whose latest tweet should be returned.
    * @param includeRetweets Whether or not to include retweets. Defaults to `false`.
@@ -188,8 +237,9 @@ export class Scraper {
   public getLatestTweet(
     user: string,
     includeRetweets = false,
+    max = 200,
   ): Promise<Tweet | null | void> {
-    return getLatestTweet(user, includeRetweets, this.auth);
+    return getLatestTweet(user, includeRetweets, max, this.auth);
   }
 
   /**
