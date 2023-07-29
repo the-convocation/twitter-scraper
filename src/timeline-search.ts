@@ -38,11 +38,11 @@ export function parseSearchTimelineTweets(
       }
 
       for (const entry of instruction.entries ?? []) {
-        const itemContent = entry.content?.itemContent;
+        const itemContent = entry.content?.content;
         if (itemContent?.tweetDisplayType === 'Tweet') {
-          const tweetResultRaw = itemContent.tweet_results?.result;
+          const tweetResultRaw = itemContent.tweetResult?.result;
           const tweetResult = parseLegacyTweet(
-            tweetResultRaw?.core?.user_results?.result?.legacy,
+            tweetResultRaw?.core?.user_result?.result?.legacy,
             tweetResultRaw?.legacy,
           );
           if (tweetResult.success) {
@@ -84,7 +84,7 @@ export function parseSearchTimelineUsers(
       }
 
       for (const entry of instruction.entries ?? []) {
-        const itemContent = entry.content?.itemContent;
+        const itemContent = entry.content?.content;
         if (itemContent?.userDisplayType === 'User') {
           const userResultRaw = itemContent.user_results?.result;
           if (userResultRaw?.legacy) {

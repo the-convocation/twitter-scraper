@@ -51,7 +51,7 @@ export interface TimelineMediaExtendedRaw {
 export interface TimelineResultRaw {
   __typename?: string;
   core?: {
-    user_results?: {
+    user_result?: {
       result?: {
         is_blue_verified?: boolean;
         legacy?: LegacyUserRaw;

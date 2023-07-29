@@ -16,7 +16,7 @@ export interface TimelineUserResultRaw {
 
 export interface TimelineEntryItemContentRaw {
   tweetDisplayType?: string;
-  tweet_results?: {
+  tweetResult?: {
     result?: TimelineResultRaw;
   };
   userDisplayType?: string;
@@ -26,6 +26,7 @@ export interface TimelineEntryItemContentRaw {
 }
 
 export interface TimelineEntryRaw {
+  entryId: string;
   content?: {
     cursorType?: string;
     value?: string;
@@ -34,8 +35,14 @@ export interface TimelineEntryRaw {
         itemContent?: TimelineEntryItemContentRaw;
       };
     }[];
-    itemContent?: TimelineEntryItemContentRaw;
+    content?: TimelineEntryItemContentRaw;
   };
+}
+
+export interface TimelineInstruction {
+  entries: TimelineEntryRaw[];
+  entry?: TimelineEntryRaw;
+  type?: string;
 }
 
 export interface TimelineV2 {
@@ -44,11 +51,7 @@ export interface TimelineV2 {
       result?: {
         timeline_response?: {
           timeline?: {
-            instructions: {
-              entries: TimelineEntryRaw[];
-              entry?: TimelineEntryRaw;
-              type?: string;
-            }[];
+            instructions: TimelineInstruction[];
           };
         };
       };
@@ -59,11 +62,7 @@ export interface TimelineV2 {
 export interface ThreadedConversation {
   data?: {
     threaded_conversation_with_injections_v2?: {
-      instructions?: {
-        entries?: TimelineEntryRaw[];
-        entry?: TimelineEntryRaw;
-        type?: string;
-      }[];
+      instructions?: TimelineInstruction[];
     };
   };
 }
@@ -164,7 +163,7 @@ export function parseLegacyTweet(
 
     if (retweetedStatusResult) {
       const parsedResult = parseLegacyTweet(
-        retweetedStatusResult?.core?.user_results?.result?.legacy,
+        retweetedStatusResult?.core?.user_result?.result?.legacy,
         retweetedStatusResult?.legacy,
       );
 
@@ -203,7 +202,7 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   }
 
   const tweetResult = parseLegacyTweet(
-    result?.core?.user_results?.result?.legacy,
+    result?.core?.user_result?.result?.legacy,
     result?.legacy,
   );
   if (!tweetResult.success) {
@@ -237,19 +236,22 @@ export function parseTimelineTweetsV2(
       ?.instructions ?? [];
   for (const instruction of instructions) {
     for (const entry of instruction.entries ?? []) {
+      if (!entry.entryId.startsWith('tweet')) {
+        continue;
+      }
+
       if (entry.content?.cursorType === 'Bottom') {
         cursor = entry.content.value;
         continue;
       }
 
-      if (
-        entry.content?.itemContent?.tweet_results?.result?.__typename ===
-        'Tweet'
-      ) {
-        const tweetResult = parseResult(
-          entry.content.itemContent.tweet_results.result,
-        );
+      const result = entry.content?.content?.tweetResult?.result;
+      console.log(result?.core?.user_result?.result);
+
+      if (result?.__typename === 'Tweet') {
+        const tweetResult = parseResult(result);
         if (tweetResult.success) {
+          //console.log(tweetResult);
           tweets.push(tweetResult.tweet);
         }
       }
@@ -268,15 +270,11 @@ export function parseThreadedConversation(
     [];
   for (const instruction of instructions) {
     for (const entry of instruction.entries ?? []) {
-      if (
-        entry.content?.itemContent?.tweet_results?.result?.__typename ===
-        'Tweet'
-      ) {
-        const tweetResult = parseResult(
-          entry.content.itemContent.tweet_results.result,
-        );
+      const result = entry.content?.content?.tweetResult?.result;
+      if (result?.__typename === 'Tweet') {
+        const tweetResult = parseResult(result);
         if (tweetResult.success) {
-          if (entry.content.itemContent.tweetDisplayType === 'SelfThread') {
+          if (entry.content?.content?.tweetDisplayType === 'SelfThread') {
             tweetResult.tweet.isSelfThread = true;
           }
 
@@ -286,10 +284,10 @@ export function parseThreadedConversation(
 
       for (const item of entry.content?.items ?? []) {
         if (
-          item.item?.itemContent?.tweet_results?.result?.__typename === 'Tweet'
+          item.item?.itemContent?.tweetResult?.result?.__typename === 'Tweet'
         ) {
           const tweetResult = parseResult(
-            item.item.itemContent.tweet_results.result,
+            item.item.itemContent.tweetResult.result,
           );
           if (tweetResult.success) {
             if (item.item.itemContent.tweetDisplayType === 'SelfThread') {

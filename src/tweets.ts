@@ -122,7 +122,7 @@ export async function fetchTweets(
   params.set('features', stringify(features));
 
   const res = await requestApi<any>(
-    `https://api.twitter.com/graphql/3JNH4e9dq1BifLxAa3UMWg/UserWithProfileTweetsQueryV2?${params.toString()}`,
+    `https://api.twitter.com/graphql/8IS8MaO-2EN6GZZZb8jF0g/UserWithProfileTweetsAndRepliesQueryV2?${params.toString()}`,
     auth,
   );
 
@@ -248,16 +248,11 @@ export async function getTweet(
     `https://api.twitter.com/graphql/83h5UyHZ9wEKBVzALX8R_g/ConversationTimelineV2?${params.toString()}`,
     auth,
   );
+
   if (!res.success) {
     throw res.err;
   }
 
   const tweets = parseThreadedConversation(res.value);
-  for (const tweet of tweets) {
-    if (tweet.id === id) {
-      return tweet;
-    }
-  }
-
-  return null;
+  return tweets.find((t) => t.id === id) ?? null;
 }
