@@ -83,6 +83,15 @@ export type TweetQuery =
   | Partial<Tweet>
   | ((tweet: Tweet) => boolean | Promise<boolean>);
 
+export const features = addApiFeatures({
+  interactive_text_enabled: true,
+  longform_notetweets_inline_media_enabled: false,
+  responsive_web_text_conversations_enabled: false,
+  tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+    false,
+  vibe_api_enabled: false,
+});
+
 export async function fetchTweets(
   userId: string,
   maxTweets: number,
@@ -98,15 +107,6 @@ export async function fetchTweets(
     rest_id: userId,
     count: maxTweets,
   };
-
-  const features = addApiFeatures({
-    interactive_text_enabled: true,
-    longform_notetweets_inline_media_enabled: false,
-    responsive_web_text_conversations_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      false,
-    vibe_api_enabled: false,
-  });
 
   if (cursor != null && cursor != '') {
     variables['cursor'] = cursor;
@@ -219,21 +219,8 @@ export async function getTweet(
 ): Promise<Tweet | null> {
   const variables: Record<string, any> = {
     focalTweetId: id,
-    with_rux_injections: false,
-    includePromotedContent: true,
-    withCommunity: true,
-    withQuickPromoteEligibilityTweetFields: true,
-    withBirdwatchNotes: true,
-    withVoice: true,
-    withV2Timeline: true,
     includeHasBirdwatchNotes: false,
   };
-
-  const features = addApiFeatures({
-    longform_notetweets_inline_media_enabled: true,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      false,
-  });
 
   const params = new URLSearchParams();
   params.set('features', stringify(features));

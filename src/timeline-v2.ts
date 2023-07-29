@@ -32,7 +32,7 @@ export interface TimelineEntryRaw {
     value?: string;
     items?: {
       item?: {
-        itemContent?: TimelineEntryItemContentRaw;
+        content?: TimelineEntryItemContentRaw;
       };
     }[];
     content?: TimelineEntryItemContentRaw;
@@ -61,7 +61,7 @@ export interface TimelineV2 {
 
 export interface ThreadedConversation {
   data?: {
-    threaded_conversation_with_injections_v2?: {
+    timeline_response?: {
       instructions?: TimelineInstruction[];
     };
   };
@@ -246,58 +246,54 @@ export function parseTimelineTweetsV2(
         continue;
       }
 
-      const result = entry.content?.content?.tweetResult?.result;
-      if (result?.__typename === 'Tweet') {
-        if (result.legacy) {
-          result.legacy.id_str = idStr.replace('tweet-', '');
-        }
-
-        const tweetResult = parseResult(result);
-        if (tweetResult.success) {
-          tweets.push(tweetResult.tweet);
-        }
-      }
+      parseAndPush(tweets, entry.content?.content, idStr);
     }
   }
 
   return { tweets, next: cursor };
 }
 
+function parseAndPush(
+  tweets: Tweet[],
+  content: any,
+  entryId: string,
+  isConversation = false,
+) {
+  const result = content.tweetResult?.result;
+  if (result?.__typename === 'Tweet') {
+    if (result.legacy) {
+      result.legacy.id_str = entryId.replace('tweet-', '');
+    }
+
+    const tweetResult = parseResult(result);
+    if (tweetResult.success) {
+      if (isConversation) {
+        if (content?.tweetDisplayType === 'SelfThread') {
+          tweetResult.tweet.isSelfThread = true;
+        }
+      }
+
+      tweets.push(tweetResult.tweet);
+    }
+  }
+}
+
 export function parseThreadedConversation(
   conversation: ThreadedConversation,
 ): Tweet[] {
   const tweets: Tweet[] = [];
-  const instructions =
-    conversation.data?.threaded_conversation_with_injections_v2?.instructions ??
-    [];
+  const instructions = conversation.data?.timeline_response?.instructions ?? [];
   for (const instruction of instructions) {
     for (const entry of instruction.entries ?? []) {
-      const result = entry.content?.content?.tweetResult?.result;
-      if (result?.__typename === 'Tweet') {
-        const tweetResult = parseResult(result);
-        if (tweetResult.success) {
-          if (entry.content?.content?.tweetDisplayType === 'SelfThread') {
-            tweetResult.tweet.isSelfThread = true;
-          }
-
-          tweets.push(tweetResult.tweet);
-        }
+      const entryContent = entry.content?.content;
+      if (entryContent) {
+        parseAndPush(tweets, entryContent, entry.entryId, true);
       }
 
       for (const item of entry.content?.items ?? []) {
-        if (
-          item.item?.itemContent?.tweetResult?.result?.__typename === 'Tweet'
-        ) {
-          const tweetResult = parseResult(
-            item.item.itemContent.tweetResult.result,
-          );
-          if (tweetResult.success) {
-            if (item.item.itemContent.tweetDisplayType === 'SelfThread') {
-              tweetResult.tweet.isSelfThread = true;
-            }
-
-            tweets.push(tweetResult.tweet);
-          }
+        const itemContent = item.item?.content;
+        if (itemContent) {
+          parseAndPush(tweets, itemContent, entry.entryId, true);
         }
       }
     }
@@ -326,5 +322,6 @@ export function parseThreadedConversation(
     }
   }
 
+  //console.log(tweets);
   return tweets;
 }
