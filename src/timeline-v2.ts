@@ -235,18 +235,24 @@ export function parseTimelineTweetsV2(
     timeline.data?.user_result?.result?.timeline_response?.timeline
       ?.instructions ?? [];
   for (const instruction of instructions) {
-    for (const entry of instruction.entries ?? []) {
+    const entries = instruction.entries ?? [];
+    for (const entry of entries) {
+      const entryContent = entry.content;
+      if (!entryContent) continue;
+
+      if (entryContent.cursorType === 'Bottom') {
+        cursor = entryContent.value;
+        continue;
+      }
+
       const idStr = entry.entryId;
       if (!idStr.startsWith('tweet')) {
         continue;
       }
 
-      if (entry.content?.cursorType === 'Bottom') {
-        cursor = entry.content.value;
-        continue;
+      if (entryContent.content) {
+        parseAndPush(tweets, entryContent.content, idStr);
       }
-
-      parseAndPush(tweets, entry.content?.content, idStr);
     }
   }
 
@@ -255,7 +261,7 @@ export function parseTimelineTweetsV2(
 
 function parseAndPush(
   tweets: Tweet[],
-  content: any,
+  content: TimelineEntryItemContentRaw,
   entryId: string,
   isConversation = false,
 ) {
@@ -322,6 +328,5 @@ export function parseThreadedConversation(
     }
   }
 
-  //console.log(tweets);
   return tweets;
 }
