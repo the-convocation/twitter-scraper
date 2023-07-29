@@ -3,7 +3,6 @@ import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
 import { QueryTweetsResponse } from './timeline-v1';
 import {
-  TimelineV2,
   parseTimelineTweetsV2,
   parseThreadedConversation,
   ThreadedConversation,
@@ -98,10 +97,6 @@ export async function fetchTweets(
     includeHasBirdwatchNotes: false,
     rest_id: userId,
     count: maxTweets,
-    // includePromotedContent: false,
-    // withQuickPromoteEligibilityTweetFields: false,
-    // withVoice: true,
-    // withV2Timeline: true,
   };
 
   const features = addApiFeatures({
