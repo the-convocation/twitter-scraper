@@ -88,7 +88,7 @@ export interface LegacyTweetRaw {
   extended_entities?: {
     media?: TimelineMediaExtendedRaw[];
   };
-  id_str?: string;
+  id_str: string;
   in_reply_to_status_id_str?: string;
   place?: PlaceRaw;
   reply_count?: number;

@@ -236,7 +236,8 @@ export function parseTimelineTweetsV2(
       ?.instructions ?? [];
   for (const instruction of instructions) {
     for (const entry of instruction.entries ?? []) {
-      if (!entry.entryId.startsWith('tweet')) {
+      const idStr = entry.entryId;
+      if (!idStr.startsWith('tweet')) {
         continue;
       }
 
@@ -246,12 +247,13 @@ export function parseTimelineTweetsV2(
       }
 
       const result = entry.content?.content?.tweetResult?.result;
-      console.log(result?.core?.user_result?.result);
-
       if (result?.__typename === 'Tweet') {
+        if (result.legacy) {
+          result.legacy.id_str = idStr.replace('tweet-', '');
+        }
+
         const tweetResult = parseResult(result);
         if (tweetResult.success) {
-          //console.log(tweetResult);
           tweets.push(tweetResult.tweet);
         }
       }
