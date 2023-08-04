@@ -4,6 +4,7 @@ import {
   LegacyTweetRaw,
   ParseTweetResult,
   QueryTweetsResponse,
+  SearchResultRaw,
   TimelineResultRaw,
 } from './timeline-v1';
 import { Tweet } from './tweets';
@@ -36,6 +37,34 @@ export interface TimelineEntryRaw {
       };
     }[];
     content?: TimelineEntryItemContentRaw;
+  };
+}
+
+export interface SearchEntryItemContentRaw {
+  tweetDisplayType?: string;
+  tweet_results?: {
+    result?: SearchResultRaw;
+  };
+  userDisplayType?: string;
+  user_results?: {
+    result?: TimelineUserResultRaw;
+  };
+}
+
+export interface SearchEntryRaw {
+  entryId: string;
+  sortIndex: string;
+  content?: {
+    cursorType?: string;
+    entryType?: string;
+    __typename?: string;
+    value?: string;
+    items?: {
+      item?: {
+        content?: SearchEntryItemContentRaw;
+      };
+    }[];
+    itemContent?: SearchEntryItemContentRaw;
   };
 }
 
@@ -86,10 +115,14 @@ export function parseLegacyTweet(
   }
 
   if (tweet.id_str == null) {
-    return {
-      success: false,
-      err: new Error('Tweet ID was not found in object.'),
-    };
+    if (!tweet.conversation_id_str) {
+      return {
+        success: false,
+        err: new Error('Tweet ID was not found in object.'),
+      };
+    }
+
+    tweet.id_str = tweet.conversation_id_str;
   }
 
   const hashtags = tweet.entities?.hashtags ?? [];
