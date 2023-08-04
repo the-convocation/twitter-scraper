@@ -6,6 +6,7 @@ import {
   parseTimelineTweetsV2,
   parseThreadedConversation,
   ThreadedConversation,
+  TimelineV2,
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
 import stringify from 'json-stable-stringify';
@@ -116,7 +117,7 @@ export async function fetchTweets(
   params.set('variables', stringify(variables));
   params.set('features', stringify(features));
 
-  const res = await requestApi<any>(
+  const res = await requestApi<TimelineV2>(
     `https://api.twitter.com/graphql/8IS8MaO-2EN6GZZZb8jF0g/UserWithProfileTweetsAndRepliesQueryV2?${params.toString()}`,
     auth,
   );
