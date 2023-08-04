@@ -91,8 +91,13 @@ export function parseSearchTimelineUsers(
         const itemContent = entry.content?.itemContent;
         if (itemContent?.userDisplayType === 'User') {
           const userResultRaw = itemContent.user_results?.result;
+
           if (userResultRaw?.legacy) {
-            const profile = parseProfile(userResultRaw.legacy);
+            const profile = parseProfile(
+              userResultRaw.legacy,
+              userResultRaw.is_blue_verified,
+            );
+
             if (!profile.userId) {
               profile.userId = userResultRaw.rest_id;
             }

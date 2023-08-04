@@ -1,4 +1,4 @@
-import stringify from 'json-stable-stringify'
+import stringify from 'json-stable-stringify';
 import { addApiFeatures, requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 
@@ -50,7 +50,6 @@ export interface Profile {
   isPrivate?: boolean;
   isVerified?: boolean;
   isBlueVerified?: boolean;
-  hasNftAvatar?: boolean;
   joined?: Date;
   likesCount?: number;
   listedCount?: number;
@@ -70,7 +69,6 @@ export interface UserRaw {
       result: {
         rest_id?: string;
         isBlueVerified: boolean;
-        hasNftAvatar: boolean;
         legacy: LegacyUserRaw;
       };
     };
@@ -80,7 +78,10 @@ export interface UserRaw {
   }[];
 }
 
-export function parseProfile(user: LegacyUserRaw): Profile {
+export function parseProfile(
+  user: LegacyUserRaw,
+  isBlueVerified?: boolean,
+): Profile {
   const profile: Profile = {
     avatar: user.profile_image_url_https,
     banner: user.profile_banner_url,
@@ -100,6 +101,7 @@ export function parseProfile(user: LegacyUserRaw): Profile {
     url: `https://twitter.com/${user.screen_name}`,
     userId: user.id_str,
     username: user.screen_name,
+    isBlueVerified: isBlueVerified ?? false,
   };
 
   if (user.created_at != null) {
@@ -176,7 +178,7 @@ export async function getProfile(
 
   return {
     success: true,
-    value: parseProfile(user.legacy),
+    value: parseProfile(user.legacy, user.isBlueVerified),
   };
 }
 

@@ -13,6 +13,7 @@ import { isFieldDefined } from './type-util';
 export interface TimelineUserResultRaw {
   rest_id?: string;
   legacy?: LegacyUserRaw;
+  is_blue_verified?: boolean;
 }
 
 export interface TimelineEntryItemContentRaw {
@@ -329,7 +330,8 @@ export function parseThreadedConversation(
   const tweets: Tweet[] = [];
   const instructions = conversation.data?.timeline_response?.instructions ?? [];
   for (const instruction of instructions) {
-    for (const entry of instruction.entries ?? []) {
+    const entries = instruction.entries ?? [];
+    for (const entry of entries) {
       const entryContent = entry.content?.content;
       if (entryContent) {
         parseAndPush(tweets, entryContent, entry.entryId, true);
