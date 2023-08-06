@@ -1,6 +1,6 @@
 import { Profile, parseProfile } from './profile';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
-import { TimelineEntryRaw, parseLegacyTweet } from './timeline-v2';
+import { SearchEntryRaw, parseLegacyTweet } from './timeline-v2';
 import { Tweet } from './tweets';
 
 export interface SearchTimeline {
@@ -9,8 +9,8 @@ export interface SearchTimeline {
       search_timeline?: {
         timeline?: {
           instructions?: {
-            entries?: TimelineEntryRaw[];
-            entry?: TimelineEntryRaw;
+            entries?: SearchEntryRaw[];
+            entry?: SearchEntryRaw;
             type?: string;
           }[];
         };
@@ -37,7 +37,8 @@ export function parseSearchTimelineTweets(
         continue;
       }
 
-      for (const entry of instruction.entries ?? []) {
+      const entries = instruction.entries ?? [];
+      for (const entry of entries) {
         const itemContent = entry.content?.itemContent;
         if (itemContent?.tweetDisplayType === 'Tweet') {
           const tweetResultRaw = itemContent.tweet_results?.result;
@@ -45,6 +46,7 @@ export function parseSearchTimelineTweets(
             tweetResultRaw?.core?.user_results?.result?.legacy,
             tweetResultRaw?.legacy,
           );
+
           if (tweetResult.success) {
             if (!tweetResult.tweet.views && tweetResultRaw?.views?.count) {
               const views = parseInt(tweetResultRaw.views.count);
@@ -73,6 +75,7 @@ export function parseSearchTimelineUsers(
   const instructions =
     timeline.data?.search_by_raw_query?.search_timeline?.timeline
       ?.instructions ?? [];
+
   for (const instruction of instructions) {
     if (
       instruction.type === 'TimelineAddEntries' ||
@@ -83,14 +86,20 @@ export function parseSearchTimelineUsers(
         continue;
       }
 
-      for (const entry of instruction.entries ?? []) {
+      const entries = instruction.entries ?? [];
+      for (const entry of entries) {
         const itemContent = entry.content?.itemContent;
         if (itemContent?.userDisplayType === 'User') {
           const userResultRaw = itemContent.user_results?.result;
+
           if (userResultRaw?.legacy) {
-            const profile = parseProfile(userResultRaw.legacy);
+            const profile = parseProfile(
+              userResultRaw.legacy,
+              userResultRaw.is_blue_verified,
+            );
+
             if (!profile.userId) {
-              profile.userId = itemContent.user_results?.result?.rest_id;
+              profile.userId = userResultRaw.rest_id;
             }
 
             profiles.push(profile);

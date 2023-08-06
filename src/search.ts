@@ -107,6 +107,9 @@ async function getSearchTimeline(
     responsive_web_twitter_article_tweet_consumption_enabled: false,
     tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
       true,
+    interactive_text_enabled: false,
+    responsive_web_text_conversations_enabled: false,
+    vibe_api_enabled: false,
   });
 
   const fieldToggles: Record<string, any> = {
@@ -140,9 +143,10 @@ async function getSearchTimeline(
   params.set('variables', stringify(variables));
 
   const res = await requestApi<SearchTimeline>(
-    `https://twitter.com/i/api/graphql/nK1dw4oV3k4w5TdtcAdSww/SearchTimeline?${params.toString()}`,
+    `https://api.twitter.com/graphql/gkjsKepM6gl_HmFWoWKfgg/SearchTimeline?${params.toString()}`,
     auth,
   );
+
   if (!res.success) {
     throw res.err;
   }

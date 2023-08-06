@@ -3,10 +3,10 @@ import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
 import { QueryTweetsResponse } from './timeline-v1';
 import {
-  TimelineV2,
   parseTimelineTweetsV2,
   parseThreadedConversation,
   ThreadedConversation,
+  TimelineV2,
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
 import stringify from 'json-stable-stringify';
@@ -84,6 +84,15 @@ export type TweetQuery =
   | Partial<Tweet>
   | ((tweet: Tweet) => boolean | Promise<boolean>);
 
+export const features = addApiFeatures({
+  interactive_text_enabled: true,
+  longform_notetweets_inline_media_enabled: false,
+  responsive_web_text_conversations_enabled: false,
+  tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+    false,
+  vibe_api_enabled: false,
+});
+
 export async function fetchTweets(
   userId: string,
   maxTweets: number,
@@ -95,22 +104,10 @@ export async function fetchTweets(
   }
 
   const variables: Record<string, any> = {
-    userId,
+    includeHasBirdwatchNotes: false,
+    rest_id: userId,
     count: maxTweets,
-    includePromotedContent: false,
-    withQuickPromoteEligibilityTweetFields: false,
-    withVoice: true,
-    withV2Timeline: true,
   };
-
-  const features = addApiFeatures({
-    interactive_text_enabled: true,
-    longform_notetweets_inline_media_enabled: false,
-    responsive_web_text_conversations_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      false,
-    vibe_api_enabled: true,
-  });
 
   if (cursor != null && cursor != '') {
     variables['cursor'] = cursor;
@@ -121,9 +118,10 @@ export async function fetchTweets(
   params.set('features', stringify(features));
 
   const res = await requestApi<TimelineV2>(
-    `https://twitter.com/i/api/graphql/UGi7tjRPr-d_U3bCPIko5Q/UserTweets?${params.toString()}`,
+    `https://api.twitter.com/graphql/8IS8MaO-2EN6GZZZb8jF0g/UserWithProfileTweetsAndRepliesQueryV2?${params.toString()}`,
     auth,
   );
+
   if (!res.success) {
     throw res.err;
   }
@@ -138,6 +136,7 @@ export function getTweets(
 ): AsyncGenerator<Tweet, void> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const userIdRes = await getUserIdByScreenName(q, auth);
+
     if (!userIdRes.success) {
       throw userIdRes.err;
     }
@@ -221,39 +220,22 @@ export async function getTweet(
 ): Promise<Tweet | null> {
   const variables: Record<string, any> = {
     focalTweetId: id,
-    with_rux_injections: false,
-    includePromotedContent: true,
-    withCommunity: true,
-    withQuickPromoteEligibilityTweetFields: true,
-    withBirdwatchNotes: true,
-    withVoice: true,
-    withV2Timeline: true,
+    includeHasBirdwatchNotes: false,
   };
-
-  const features = addApiFeatures({
-    longform_notetweets_inline_media_enabled: true,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      false,
-  });
 
   const params = new URLSearchParams();
   params.set('features', stringify(features));
   params.set('variables', stringify(variables));
 
   const res = await requestApi<ThreadedConversation>(
-    `https://twitter.com/i/api/graphql/VWFGPVAGkZMGRKGe3GFFnA/TweetDetail?${params.toString()}`,
+    `https://api.twitter.com/graphql/83h5UyHZ9wEKBVzALX8R_g/ConversationTimelineV2?${params.toString()}`,
     auth,
   );
+
   if (!res.success) {
     throw res.err;
   }
 
   const tweets = parseThreadedConversation(res.value);
-  for (const tweet of tweets) {
-    if (tweet.id === id) {
-      return tweet;
-    }
-  }
-
-  return null;
+  return tweets.find((t) => t.id === id) ?? null;
 }

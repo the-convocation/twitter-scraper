@@ -48,10 +48,38 @@ export interface TimelineMediaExtendedRaw {
   video_info?: VideoInfo;
 }
 
-export interface TimelineResultRaw {
+export interface SearchResultRaw {
+  rest_id?: string;
   __typename?: string;
   core?: {
     user_results?: {
+      result?: {
+        is_blue_verified?: boolean;
+        legacy?: LegacyUserRaw;
+      };
+    };
+  };
+  views?: {
+    count?: string;
+  };
+  note_tweet?: {
+    note_tweet_results?: {
+      result?: {
+        text?: string;
+      };
+    };
+  };
+  quoted_status_result?: {
+    result?: SearchResultRaw;
+  };
+  legacy?: LegacyTweetRaw;
+}
+
+export interface TimelineResultRaw {
+  rest_id?: string;
+  __typename?: string;
+  core?: {
+    user_result?: {
       result?: {
         is_blue_verified?: boolean;
         legacy?: LegacyUserRaw;

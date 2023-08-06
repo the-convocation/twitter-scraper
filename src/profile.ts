@@ -1,4 +1,5 @@
-import { requestApi, RequestApiResult } from './api';
+import stringify from 'json-stable-stringify';
+import { addApiFeatures, requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 
 export interface LegacyUserRaw {
@@ -14,17 +15,23 @@ export interface LegacyUserRaw {
   favourites_count?: number;
   followers_count?: number;
   friends_count?: number;
+  media_count?: number;
+  statuses_count?: number;
   id_str?: string;
   listed_count?: number;
   name?: string;
   location: string;
+  geo_enabled?: boolean;
   pinned_tweet_ids_str?: string[];
+  profile_background_color?: string;
   profile_banner_url?: string;
   profile_image_url_https?: string;
   protected?: boolean;
   screen_name?: string;
-  statuses_count?: number;
   verified?: boolean;
+  has_custom_timelines?: boolean;
+  has_extended_profile?: boolean;
+  url?: string;
 }
 
 /**
@@ -38,8 +45,11 @@ export interface Profile {
   followersCount?: number;
   followingCount?: number;
   friendsCount?: number;
+  mediaCount?: number;
+  statusesCount?: number;
   isPrivate?: boolean;
   isVerified?: boolean;
+  isBlueVerified?: boolean;
   joined?: Date;
   likesCount?: number;
   listedCount?: number;
@@ -55,9 +65,12 @@ export interface Profile {
 
 export interface UserRaw {
   data: {
-    user: {
-      rest_id?: string;
-      legacy: LegacyUserRaw;
+    user_result: {
+      result: {
+        rest_id?: string;
+        isBlueVerified: boolean;
+        legacy: LegacyUserRaw;
+      };
     };
   };
   errors?: {
@@ -65,7 +78,10 @@ export interface UserRaw {
   }[];
 }
 
-export function parseProfile(user: LegacyUserRaw): Profile {
+export function parseProfile(
+  user: LegacyUserRaw,
+  isBlueVerified?: boolean,
+): Profile {
   const profile: Profile = {
     avatar: user.profile_image_url_https,
     banner: user.profile_banner_url,
@@ -73,6 +89,7 @@ export function parseProfile(user: LegacyUserRaw): Profile {
     followersCount: user.followers_count,
     followingCount: user.favourites_count,
     friendsCount: user.friends_count,
+    mediaCount: user.media_count,
     isPrivate: user.protected,
     isVerified: user.verified,
     likesCount: user.favourites_count,
@@ -84,6 +101,7 @@ export function parseProfile(user: LegacyUserRaw): Profile {
     url: `https://twitter.com/${user.screen_name}`,
     userId: user.id_str,
     username: user.screen_name,
+    isBlueVerified: isBlueVerified ?? false,
   };
 
   if (user.created_at != null) {
@@ -105,13 +123,25 @@ export async function getProfile(
   const params = new URLSearchParams();
   params.set(
     'variables',
-    JSON.stringify({
+    stringify({
       screen_name: username,
       withHighlightedLabel: true,
     }),
   );
+
+  const features = addApiFeatures({
+    interactive_text_enabled: true,
+    longform_notetweets_inline_media_enabled: false,
+    responsive_web_text_conversations_enabled: false,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      false,
+    vibe_api_enabled: false,
+  });
+
+  params.set('features', stringify(features));
+
   const res = await requestApi<UserRaw>(
-    `https://api.twitter.com/graphql/4S2ihIKfF3xhp-ENxvUAfQ/UserByScreenName?${params}`,
+    `https://api.twitter.com/graphql/u7wQyGi6oExe8_TRWGMq4Q/UserResultByScreenNameQuery?${params.toString()}`,
     auth,
   );
   if (!res.success) {
@@ -127,8 +157,9 @@ export async function getProfile(
     };
   }
 
-  const { user } = value.data;
+  const { result: user } = value.data.user_result;
   const { legacy } = user;
+
   if (user.rest_id == null || user.rest_id.length === 0) {
     return {
       success: false,
@@ -147,7 +178,7 @@ export async function getProfile(
 
   return {
     success: true,
-    value: parseProfile(user.legacy),
+    value: parseProfile(user.legacy, user.isBlueVerified),
   };
 }
 
