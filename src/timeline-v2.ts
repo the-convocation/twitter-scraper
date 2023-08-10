@@ -115,7 +115,7 @@ export function parseLegacyTweet(
     };
   }
 
-  if (tweet.id_str == null) {
+  if (!tweet.id_str) {
     if (!tweet.conversation_id_str) {
       return {
         success: false,
@@ -275,6 +275,7 @@ export function parseTimelineTweetsV2(
       ?.instructions ?? [];
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
+
     for (const entry of entries) {
       const entryContent = entry.content;
       if (!entryContent) continue;
@@ -307,8 +308,9 @@ function parseAndPush(
   const result = content.tweetResult?.result;
   if (result?.__typename === 'Tweet') {
     if (result.legacy) {
-      const toReplace = isConversation ? 'tweet-' : 'conversation-';
-      result.legacy.id_str = entryId.replace(toReplace, '');
+      result.legacy.id_str = entryId
+        .replace('conversation-', '')
+        .replace('tweet-', '');
     }
 
     const tweetResult = parseResult(result);
@@ -329,6 +331,7 @@ export function parseThreadedConversation(
 ): Tweet[] {
   const tweets: Tweet[] = [];
   const instructions = conversation.data?.timeline_response?.instructions ?? [];
+
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
     for (const entry of entries) {
