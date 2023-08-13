@@ -20,6 +20,7 @@ export interface Mention {
 export interface Photo {
   id: string;
   url: string;
+  alt_text: string | undefined;
 }
 
 export interface Video {

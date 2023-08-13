@@ -46,6 +46,7 @@ export interface TimelineMediaExtendedRaw {
   type?: string;
   url?: string;
   video_info?: VideoInfo;
+  ext_alt_text: string | undefined;
 }
 
 export interface SearchResultRaw {
