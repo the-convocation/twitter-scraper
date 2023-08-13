@@ -78,12 +78,16 @@ export interface UserRaw {
   }[];
 }
 
+export function getAvatarOriginalSizeUrl(avatarUrl: string | undefined) {
+  return avatarUrl ? avatarUrl.replace('_normal', '') : undefined;
+}
+
 export function parseProfile(
   user: LegacyUserRaw,
   isBlueVerified?: boolean,
 ): Profile {
   const profile: Profile = {
-    avatar: user.profile_image_url_https,
+    avatar: getAvatarOriginalSizeUrl(user.profile_image_url_https),
     banner: user.profile_banner_url,
     biography: user.description,
     followersCount: user.followers_count,
