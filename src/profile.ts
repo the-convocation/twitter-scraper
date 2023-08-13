@@ -78,7 +78,7 @@ export interface UserRaw {
   }[];
 }
 
-export function getAvatarOriginalSizeUrl(avatarUrl: string | undefined) {
+function getAvatarOriginalSizeUrl(avatarUrl: string | undefined) {
   return avatarUrl ? avatarUrl.replace('_normal', '') : undefined;
 }
 
