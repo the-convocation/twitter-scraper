@@ -120,7 +120,7 @@ test('scraper can get tweet quotes and replies', async () => {
       {
         id: '1237110473486729218',
         url: 'https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg',
-        alt_text: '',
+        alt_text: undefined,
       },
     ],
     text: 'The Easiest Problem Everyone Gets Wrong \n\n[new video] --&gt; https://t.co/YdaeDYmPAU https://t.co/iKu4Xs6o2V',
