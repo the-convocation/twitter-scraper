@@ -4,7 +4,7 @@ import { Scraper } from './scraper';
 test('scraper can get profile', async () => {
   const expected: Profile = {
     avatar:
-      'https://pbs.twimg.com/profile_images/436075027193004032/XlDa2oaz_normal.jpeg',
+      'https://pbs.twimg.com/profile_images/436075027193004032/XlDa2oaz.jpeg',
     banner: 'https://pbs.twimg.com/profile_banners/106037940/1541084318',
     biography: 'nothing',
     isPrivate: false,
@@ -40,7 +40,7 @@ test('scraper can get profile', async () => {
 test('scraper can get partial private profile', async () => {
   const expected: Profile = {
     avatar:
-      'https://pbs.twimg.com/profile_images/1612213936082030594/_HEsjv7Q_normal.jpg',
+      'https://pbs.twimg.com/profile_images/1612213936082030594/_HEsjv7Q.jpg',
     banner:
       'https://pbs.twimg.com/profile_banners/1221221876849995777/1673110776',
     biography: `t h e h e r m i t`,
