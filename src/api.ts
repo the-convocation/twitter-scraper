@@ -96,7 +96,7 @@ export async function requestApi<T>(
   if (!res.ok) {
     return {
       success: false,
-      err: new ApiError(res, `Response status: ${res.status}`),
+      err: await ApiError.fromResponse(res),
     };
   }
 
