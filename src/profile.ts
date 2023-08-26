@@ -1,5 +1,5 @@
 import stringify from 'json-stable-stringify';
-import { addApiFeatures, requestApi, RequestApiResult } from './api';
+import { requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 import { TwitterApiErrorRaw } from './errors';
 
@@ -66,10 +66,10 @@ export interface Profile {
 
 export interface UserRaw {
   data: {
-    user_result: {
+    user: {
       result: {
         rest_id?: string;
-        isBlueVerified: boolean;
+        is_blue_verified?: boolean;
         legacy: LegacyUserRaw;
       };
     };
@@ -93,7 +93,7 @@ export function parseProfile(
     followingCount: user.favourites_count,
     friendsCount: user.friends_count,
     mediaCount: user.media_count,
-    isPrivate: user.protected,
+    isPrivate: user.protected ?? false,
     isVerified: user.verified,
     likesCount: user.favourites_count,
     listedCount: user.listed_count,
@@ -128,23 +128,30 @@ export async function getProfile(
     'variables',
     stringify({
       screen_name: username,
-      withHighlightedLabel: true,
+      withSafetyModeUserFields: true,
     }),
   );
 
-  const features = addApiFeatures({
-    interactive_text_enabled: true,
-    longform_notetweets_inline_media_enabled: false,
-    responsive_web_text_conversations_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      false,
-    vibe_api_enabled: false,
-  });
+  params.set(
+    'features',
+    stringify({
+      hidden_profile_likes_enabled: false,
+      hidden_profile_subscriptions_enabled: false, // Auth-restricted
+      responsive_web_graphql_exclude_directive_enabled: true,
+      verified_phone_label_enabled: false,
+      subscriptions_verification_info_is_identity_verified_enabled: false,
+      subscriptions_verification_info_verified_since_enabled: true,
+      highlights_tweets_tab_ui_enabled: true,
+      creator_subscriptions_tweet_preview_api_enabled: true,
+      responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+      responsive_web_graphql_timeline_navigation_enabled: true,
+    }),
+  );
 
-  params.set('features', stringify(features));
+  params.set('fieldToggles', stringify({ withAuxiliaryUserLabels: false }));
 
   const res = await requestApi<UserRaw>(
-    `https://api.twitter.com/graphql/u7wQyGi6oExe8_TRWGMq4Q/UserResultByScreenNameQuery?${params.toString()}`,
+    `https://twitter.com/i/api/graphql/G3KGOASz96M-Qu0nwmGXNg/UserByScreenName?${params.toString()}`,
     auth,
   );
   if (!res.success) {
@@ -160,7 +167,7 @@ export async function getProfile(
     };
   }
 
-  const { result: user } = value.data.user_result;
+  const { result: user } = value.data.user;
   const { legacy } = user;
 
   if (user.rest_id == null || user.rest_id.length === 0) {
@@ -181,7 +188,7 @@ export async function getProfile(
 
   return {
     success: true,
-    value: parseProfile(user.legacy, user.isBlueVerified),
+    value: parseProfile(user.legacy, user.is_blue_verified),
   };
 }
 
