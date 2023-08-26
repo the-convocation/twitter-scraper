@@ -80,7 +80,7 @@ export interface TimelineResultRaw {
   rest_id?: string;
   __typename?: string;
   core?: {
-    user_result?: {
+    user_results?: {
       result?: {
         is_blue_verified?: boolean;
         legacy?: LegacyUserRaw;
