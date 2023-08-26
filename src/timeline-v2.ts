@@ -77,7 +77,7 @@ export interface TimelineInstruction {
 
 export interface TimelineV2 {
   data?: {
-    user_result?: {
+    user?: {
       result?: {
         timeline_response?: {
           timeline?: {
@@ -271,8 +271,8 @@ export function parseTimelineTweetsV2(
   let cursor: string | undefined;
   const tweets: Tweet[] = [];
   const instructions =
-    timeline.data?.user_result?.result?.timeline_response?.timeline
-      ?.instructions ?? [];
+    timeline.data?.user?.result?.timeline_response?.timeline?.instructions ??
+    [];
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
 
