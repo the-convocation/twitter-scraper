@@ -3,6 +3,7 @@ import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
+import { TwitterApiErrorRaw } from './errors';
 
 interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
@@ -21,10 +22,7 @@ type TwitterUserAuthFlowRequest =
   | TwitterUserAuthFlowSubtaskRequest;
 
 interface TwitterUserAuthFlowResponse {
-  errors?: {
-    code?: number;
-    message?: string;
-  }[];
+  errors?: TwitterApiErrorRaw[];
   flow_token?: string;
   status?: string;
   subtasks?: {
@@ -33,10 +31,7 @@ interface TwitterUserAuthFlowResponse {
 }
 
 interface TwitterUserAuthVerifyCredentials {
-  errors?: {
-    code?: number;
-    message?: string;
-  }[];
+  errors?: TwitterApiErrorRaw[];
 }
 
 type FlowTokenResult =

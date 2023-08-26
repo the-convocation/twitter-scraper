@@ -1,6 +1,7 @@
 import stringify from 'json-stable-stringify';
 import { addApiFeatures, requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
+import { TwitterApiErrorRaw } from './errors';
 
 export interface LegacyUserRaw {
   created_at?: string;
@@ -73,9 +74,7 @@ export interface UserRaw {
       };
     };
   };
-  errors?: {
-    message: string;
-  }[];
+  errors?: TwitterApiErrorRaw[];
 }
 
 function getAvatarOriginalSizeUrl(avatarUrl: string | undefined) {
