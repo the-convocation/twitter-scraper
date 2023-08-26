@@ -90,7 +90,7 @@ test('scraper can get latest tweet', async () => {
     expected?.isRetweet || false,
   )) as Tweet;
 
-  expect(expected?.permanentUrl).toEqual(latest?.permanentUrl);
+  expect(latest?.permanentUrl).toEqual(expected?.permanentUrl);
 }, 30000);
 
 test('scraper can get user mentions in tweets', async () => {
@@ -104,7 +104,7 @@ test('scraper can get user mentions in tweets', async () => {
 
   const scraper = new Scraper();
   const tweet = await scraper.getTweet('1554522888904101890');
-  expect(expected).toEqual(tweet?.mentions);
+  expect(tweet?.mentions).toEqual(expected);
 });
 
 test('scraper can get tweet quotes and replies', async () => {
@@ -145,7 +145,7 @@ test('scraper can get tweet quotes and replies', async () => {
   delete quote?.quotedStatus?.replies;
   delete quote?.quotedStatus?.retweets;
   delete quote?.quotedStatus?.views;
-  expect(expected).toEqual(quote?.quotedStatus);
+  expect(quote?.quotedStatus).toEqual(expected);
 
   const reply = await scraper.getTweet('1237111868445134850');
   expect(reply?.isReply).toBeTruthy();
@@ -156,7 +156,7 @@ test('scraper can get tweet quotes and replies', async () => {
   delete reply?.inReplyToStatus?.replies;
   delete reply?.inReplyToStatus?.retweets;
   delete reply?.inReplyToStatus?.views;
-  expect(expected).toEqual(reply?.inReplyToStatus);
+  expect(reply?.inReplyToStatus).toEqual(expected);
 });
 
 test('scraper can get retweet', async () => {
@@ -192,7 +192,7 @@ test('scraper can get retweet', async () => {
   delete retweet?.retweetedStatus?.replies;
   delete retweet?.retweetedStatus?.retweets;
   delete retweet?.retweetedStatus?.views;
-  expect(expected).toEqual(retweet?.retweetedStatus);
+  expect(retweet?.retweetedStatus).toEqual(expected);
 });
 
 test('scraper can get tweet views', async () => {
@@ -227,7 +227,7 @@ test('scraper can get tweet views', async () => {
   delete actual?.replies;
   delete actual?.retweets;
   delete actual?.views;
-  expect(expected).toEqual(actual);
+  expect(actual).toEqual(expected);
 });
 
 test('scraper can get tweet thread', async () => {
