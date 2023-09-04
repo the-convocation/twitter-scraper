@@ -111,8 +111,8 @@ function linkHashtagHtml(hashtag: string) {
 }
 
 function linkUsernameHtml(username: string) {
-  return `<a href="https://twitter.com/${username[0].replace('@', '')}">${
-    username[0]
+  return `<a href="https://twitter.com/${username.replace('@', '')}">${
+    username
   }</a>`;
 }
 
