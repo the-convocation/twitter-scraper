@@ -22,7 +22,8 @@ export interface SearchTimeline {
 export function parseSearchTimelineTweets(
   timeline: SearchTimeline,
 ): QueryTweetsResponse {
-  let cursor: string | undefined;
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
   const tweets: Tweet[] = [];
   const instructions =
     timeline.data?.search_by_raw_query?.search_timeline?.timeline
@@ -33,7 +34,10 @@ export function parseSearchTimelineTweets(
       instruction.type === 'TimelineReplaceEntry'
     ) {
       if (instruction.entry?.content?.cursorType === 'Bottom') {
-        cursor = instruction.entry.content.value;
+        bottomCursor = instruction.entry.content.value;
+        continue;
+      } else if (instruction.entry?.content?.cursorType === 'Top') {
+        topCursor = instruction.entry.content.value;
         continue;
       }
 
@@ -58,19 +62,22 @@ export function parseSearchTimelineTweets(
             tweets.push(tweetResult.tweet);
           }
         } else if (entry.content?.cursorType === 'Bottom') {
-          cursor = entry.content.value;
+          bottomCursor = entry.content.value;
+        } else if (entry.content?.cursorType === 'Top') {
+          topCursor = entry.content.value;
         }
       }
     }
   }
 
-  return { tweets, next: cursor };
+  return { tweets, next: bottomCursor, previous: topCursor };
 }
 
 export function parseSearchTimelineUsers(
   timeline: SearchTimeline,
 ): QueryProfilesResponse {
-  let cursor: string | undefined;
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
   const profiles: Profile[] = [];
   const instructions =
     timeline.data?.search_by_raw_query?.search_timeline?.timeline
@@ -82,7 +89,10 @@ export function parseSearchTimelineUsers(
       instruction.type === 'TimelineReplaceEntry'
     ) {
       if (instruction.entry?.content?.cursorType === 'Bottom') {
-        cursor = instruction.entry.content.value;
+        bottomCursor = instruction.entry.content.value;
+        continue;
+      } else if (instruction.entry?.content?.cursorType === 'Top') {
+        topCursor = instruction.entry.content.value;
         continue;
       }
 
@@ -105,11 +115,13 @@ export function parseSearchTimelineUsers(
             profiles.push(profile);
           }
         } else if (entry.content?.cursorType === 'Bottom') {
-          cursor = entry.content.value;
+          bottomCursor = entry.content.value;
+        } else if (entry.content?.cursorType === 'Top') {
+          topCursor = entry.content.value;
         }
       }
     }
   }
 
-  return { profiles, next: cursor };
+  return { profiles, next: bottomCursor, previous: topCursor };
 }
