@@ -1,4 +1,4 @@
-import { Scraper } from './scraper';
+import { getScraper } from './test-utils';
 import { Mention, Tweet } from './tweets';
 
 test('scraper can get tweet', async () => {
@@ -28,7 +28,7 @@ test('scraper can get tweet', async () => {
     sensitiveContent: false,
   };
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   const actual = await scraper.getTweet('1585338303800578049');
   delete actual?.likes;
   delete actual?.replies;
@@ -38,7 +38,7 @@ test('scraper can get tweet', async () => {
 });
 
 test('scraper can get tweets without logging in', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper({ authMethod: 'anonymous' });
   const tweets = scraper.getTweets('elonmusk', 10);
 
   let counter = 0;
@@ -52,7 +52,7 @@ test('scraper can get tweets without logging in', async () => {
 });
 
 test('scraper can get first tweet matching query', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
 
   const timeline = scraper.getTweets('elonmusk');
   const latestQuote = await scraper.getTweetWhere(timeline, { isQuoted: true });
@@ -61,7 +61,7 @@ test('scraper can get first tweet matching query', async () => {
 });
 
 test('scraper can get all tweets matching query', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
 
   // Sample size of 20 should be enough without taking long.
   const timeline = scraper.getTweets('elonmusk', 20);
@@ -78,7 +78,7 @@ test('scraper can get all tweets matching query', async () => {
 }, 20000);
 
 test('scraper can get latest tweet', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
 
   // OLD APPROACH (without retweet filtering)
   const tweets = scraper.getTweets('elonmusk', 1);
@@ -102,7 +102,7 @@ test('scraper can get user mentions in tweets', async () => {
     },
   ];
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   const tweet = await scraper.getTweet('1554522888904101890');
   expect(tweet?.mentions).toEqual(expected);
 });
@@ -138,7 +138,7 @@ test('scraper can get tweet quotes and replies', async () => {
     sensitiveContent: false,
   };
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   const quote = await scraper.getTweet('1237110897597976576');
   expect(quote?.isQuoted).toBeTruthy();
   delete quote?.quotedStatus?.likes;
@@ -185,7 +185,7 @@ test('scraper can get retweet', async () => {
     sensitiveContent: false,
   };
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   const retweet = await scraper.getTweet('1685032881872330754');
   expect(retweet?.isRetweet).toBeTruthy();
   delete retweet?.retweetedStatus?.likes;
@@ -220,7 +220,7 @@ test('scraper can get tweet views', async () => {
     sensitiveContent: false,
   };
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   const actual = await scraper.getTweet('1606055187348688896');
   expect(actual?.views).toBeTruthy();
   delete actual?.likes;
@@ -231,7 +231,7 @@ test('scraper can get tweet views', async () => {
 });
 
 test('scraper can get tweet thread', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   const tweet = await scraper.getTweet('1665602315745673217');
   expect(tweet).not.toBeNull();
   expect(tweet?.isSelfThread).toBeTruthy();

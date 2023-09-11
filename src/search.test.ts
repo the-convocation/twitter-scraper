@@ -1,9 +1,9 @@
-import { authSearchScraper } from './auth.test';
+import { getScraper } from './test-utils';
 import { SearchMode } from './search';
 import { QueryTweetsResponse } from './timeline-v1';
 
 test('scraper can process search cursor', async () => {
-  const scraper = await authSearchScraper();
+  const scraper = await getScraper();
 
   let cursor: string | undefined = undefined;
   const maxTweets = 30;
@@ -24,7 +24,7 @@ test('scraper can process search cursor', async () => {
 }, 30000);
 
 test('scraper can search profiles', async () => {
-  const scraper = await authSearchScraper();
+  const scraper = await getScraper();
 
   const seenProfiles = new Map<string, boolean>();
   const maxProfiles = 150;
@@ -47,7 +47,7 @@ test('scraper can search profiles', async () => {
 }, 30000);
 
 test('scraper can search tweets', async () => {
-  const scraper = await authSearchScraper();
+  const scraper = await getScraper();
 
   const seenTweets = new Map<string, boolean>();
   const maxTweets = 150;
