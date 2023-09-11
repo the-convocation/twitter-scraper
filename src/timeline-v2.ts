@@ -268,7 +268,8 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
 export function parseTimelineTweetsV2(
   timeline: TimelineV2,
 ): QueryTweetsResponse {
-  let cursor: string | undefined;
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
   const tweets: Tweet[] = [];
   const instructions =
     timeline.data?.user?.result?.timeline_response?.timeline?.instructions ??
@@ -281,7 +282,10 @@ export function parseTimelineTweetsV2(
       if (!entryContent) continue;
 
       if (entryContent.cursorType === 'Bottom') {
-        cursor = entryContent.value;
+        bottomCursor = entryContent.value;
+        continue;
+      } else if (entryContent.cursorType === 'Top') {
+        topCursor = entryContent.value;
         continue;
       }
 
@@ -296,7 +300,7 @@ export function parseTimelineTweetsV2(
     }
   }
 
-  return { tweets, next: cursor };
+  return { tweets, next: bottomCursor, previous: topCursor };
 }
 
 export function parseTimelineEntryItemContentRaw(
