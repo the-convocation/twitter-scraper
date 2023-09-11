@@ -43,7 +43,8 @@ export interface RelationshipTimeline {
 export function parseRelationshipTimeline(
   timeline: RelationshipTimeline,
 ): QueryProfilesResponse {
-  let cursor: string | undefined;
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
   const profiles: Profile[] = [];
   const instructions =
     timeline.data?.user?.result?.timeline?.timeline?.instructions ?? [];
@@ -54,7 +55,12 @@ export function parseRelationshipTimeline(
       instruction.type === 'TimelineReplaceEntry'
     ) {
       if (instruction.entry?.content?.cursorType === 'Bottom') {
-        cursor = instruction.entry.content.value;
+        bottomCursor = instruction.entry.content.value;
+        continue;
+      }
+
+      if (instruction.entry?.content?.cursorType === 'Top') {
+        topCursor = instruction.entry.content.value;
         continue;
       }
 
@@ -77,11 +83,13 @@ export function parseRelationshipTimeline(
             profiles.push(profile);
           }
         } else if (entry.content?.cursorType === 'Bottom') {
-          cursor = entry.content.value;
+          bottomCursor = entry.content.value;
+        } else if (entry.content?.cursorType === 'Top') {
+          topCursor = entry.content.value;
         }
       }
     }
   }
 
-  return { profiles, next: cursor };
+  return { profiles, next: bottomCursor, previous: topCursor };
 }
