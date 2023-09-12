@@ -14,7 +14,7 @@ import {
   fetchProfileFollowing,
   fetchProfileFollowers,
   getFollowing,
-  getFollowers
+  getFollowers,
 } from './relationships';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
@@ -167,7 +167,7 @@ export class Scraper {
     userId: string,
     maxProfiles: number,
   ): AsyncGenerator<Profile, void> {
-    return getFollowing(userId, maxProfiles, this.auth)
+    return getFollowing(userId, maxProfiles, this.auth);
   }
 
   /**
@@ -180,7 +180,7 @@ export class Scraper {
     userId: string,
     maxProfiles: number,
   ): AsyncGenerator<Profile, void> {
-    return getFollowers(userId, maxProfiles, this.auth)
+    return getFollowers(userId, maxProfiles, this.auth);
   }
 
   /**

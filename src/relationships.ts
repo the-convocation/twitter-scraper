@@ -3,7 +3,10 @@ import { TwitterAuth } from './auth';
 import { Profile, getUserIdByScreenName } from './profile';
 import { QueryProfilesResponse } from './timeline-v1';
 import { getUserTimeline } from './timeline-async';
-import { RelationshipTimeline, parseRelationshipTimeline } from './timeline-relationship';
+import {
+  RelationshipTimeline,
+  parseRelationshipTimeline,
+} from './timeline-relationship';
 import stringify from 'json-stable-stringify';
 
 export function getFollowing(
@@ -13,7 +16,7 @@ export function getFollowing(
 ): AsyncGenerator<Profile, void> {
   return getUserTimeline(userId, maxProfiles, (q, mt, c) => {
     return fetchProfileFollowing(q, mt, auth, c);
-  })
+  });
 }
 
 export function getFollowers(
@@ -23,7 +26,7 @@ export function getFollowers(
 ): AsyncGenerator<Profile, void> {
   return getUserTimeline(userId, maxProfiles, (q, mt, c) => {
     return fetchProfileFollowers(q, mt, auth, c);
-  })
+  });
 }
 
 export async function fetchProfileFollowing(
@@ -71,7 +74,7 @@ async function getFollowingTimeline(
   if (maxItems > 50) {
     maxItems = 50;
   }
- 
+
   const variables: Record<string, any> = {
     userId,
     count: maxItems,
@@ -80,7 +83,8 @@ async function getFollowingTimeline(
 
   const features = addApiFeatures({
     responsive_web_twitter_article_tweet_consumption_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      true,
     longform_notetweets_inline_media_enabled: true,
     responsive_web_media_download_video_enabled: false,
   });
@@ -118,7 +122,7 @@ async function getFollowersTimeline(
   if (maxItems > 50) {
     maxItems = 50;
   }
- 
+
   const variables: Record<string, any> = {
     userId,
     count: maxItems,
@@ -127,7 +131,8 @@ async function getFollowersTimeline(
 
   const features = addApiFeatures({
     responsive_web_twitter_article_tweet_consumption_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+      true,
     longform_notetweets_inline_media_enabled: true,
     responsive_web_media_download_video_enabled: false,
   });

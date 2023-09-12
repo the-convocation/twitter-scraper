@@ -1,13 +1,16 @@
 import { getScraper } from './test-utils';
 
 test('scraper can get profile followers', async () => {
-  const scraper = await getScraper()
+  const scraper = await getScraper();
 
   const seenProfiles = new Map<string, boolean>();
   const maxProfiles = 50;
   let nProfiles = 0;
 
-  const profiles = await scraper.getFollowers('1425600122885394432', maxProfiles)
+  const profiles = await scraper.getFollowers(
+    '1425600122885394432',
+    maxProfiles,
+  );
 
   for await (const profile of profiles) {
     nProfiles++;
@@ -27,13 +30,16 @@ test('scraper can get profile followers', async () => {
 });
 
 test('scraper can get profile following', async () => {
-  const scraper = await getScraper()
+  const scraper = await getScraper();
 
   const seenProfiles = new Map<string, boolean>();
   const maxProfiles = 50;
   let nProfiles = 0;
 
-  const profiles = await scraper.getFollowing('1425600122885394432', maxProfiles)
+  const profiles = await scraper.getFollowing(
+    '1425600122885394432',
+    maxProfiles,
+  );
 
   for await (const profile of profiles) {
     nProfiles++;
