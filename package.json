@@ -1,5 +1,6 @@
 {
   "name": "@the-convocation/twitter-scraper",
+  "description": "A port of n0madic/twitter-scraper to Node.js.",
   "version": "0.7.0",
   "main": "dist/_module.js",
   "repository": "https://github.com/the-convocation/twitter-scraper.git",
