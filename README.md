@@ -148,5 +148,23 @@ const scraper = new Scraper({
 });
 ```
 
+## Testing
+This package includes unit tests for all major functionality. Given the speed at which Twitter's private API
+changes, failing tests are to be expected.
+
+```sh
+npm run test
+```
+
+Before running tests, you should configure environment variables for authentication.
+
+```
+TWITTER_USERNAME=    # Account username
+TWITTER_PASSWORD=    # Account password
+TWITTER_EMAIL=       # Account email
+TWITTER_COOKIES=     # JSON-serialized array of cookies of an authenticated session
+PROXY_URL=           # HTTP(s) proxy for requests (optional)
+```
+
 ## Contributing
 We use [Conventional Commits](https://www.conventionalcommits.org), and enforce this with precommit checks.

@@ -1,5 +1,5 @@
 import { Profile } from './profile';
-import { Scraper } from './scraper';
+import { getScraper } from './test-utils';
 
 test('scraper can get profile', async () => {
   const expected: Profile = {
@@ -19,7 +19,7 @@ test('scraper can get profile', async () => {
     website: 'https://nomadic.name',
   };
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
 
   const actual = await scraper.getProfile('nomadic_ua');
   expect(actual.avatar).toEqual(expected.avatar);
@@ -56,7 +56,7 @@ test('scraper can get partial private profile', async () => {
     website: undefined,
   };
 
-  const scraper = new Scraper();
+  const scraper = await getScraper();
 
   const actual = await scraper.getProfile('tomdumont');
   expect(actual.avatar).toEqual(expected.avatar);
@@ -75,16 +75,16 @@ test('scraper can get partial private profile', async () => {
 });
 
 test('scraper cannot get suspended profile', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   expect(scraper.getProfile('123')).rejects.toThrow();
 });
 
 test('scraper cannot get not found profile', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   expect(scraper.getProfile('sample3123131')).rejects.toThrow();
 });
 
 test('scraper can get profile by screen name', async () => {
-  const scraper = new Scraper();
+  const scraper = await getScraper();
   await scraper.getProfile('Twitter');
 });
