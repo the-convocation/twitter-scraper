@@ -114,3 +114,6 @@ dist
 
 # Documentation
 docs/
+
+# NPM lockfile
+package-lock.json

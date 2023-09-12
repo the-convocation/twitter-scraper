@@ -8,6 +8,7 @@
   "engines": {
     "node": ">=16"
   },
+  "packageManager": "yarn@1.22.19",
   "scripts": {
     "build": "tsc",
     "commit": "cz",
