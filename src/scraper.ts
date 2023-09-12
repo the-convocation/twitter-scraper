@@ -10,6 +10,12 @@ import {
   searchProfiles,
   searchTweets,
 } from './search';
+import {
+  fetchProfileFollowing,
+  fetchProfileFollowers,
+  getFollowing,
+  getFollowers
+} from './relationships';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
 import {
@@ -149,6 +155,62 @@ export class Scraper {
     cursor?: string,
   ): Promise<QueryProfilesResponse> {
     return fetchSearchProfiles(query, maxProfiles, this.auth, cursor);
+  }
+
+  /**
+   * Fetch the profiles a user is following
+   * @param userId The user whose following should be returned
+   * @param maxProfiles The maximum number of profiles to return.
+   * @returns An {@link AsyncGenerator} of following profiles for the provided user.
+   */
+  public getFollowing(
+    userId: string,
+    maxProfiles: number,
+  ): AsyncGenerator<Profile, void> {
+    return getFollowing(userId, maxProfiles, this.auth)
+  }
+
+  /**
+   * Fetch the profiles that follow a user
+   * @param userId The user whose followers should be returned
+   * @param maxProfiles The maximum number of profiles to return.
+   * @returns An {@link AsyncGenerator} of profiles following the provided user.
+   */
+  public getFollowers(
+    userId: string,
+    maxProfiles: number,
+  ): AsyncGenerator<Profile, void> {
+    return getFollowers(userId, maxProfiles, this.auth)
+  }
+
+  /**
+   * Fetches following profiles from Twitter.
+   * @param userId The user whose following should be returned
+   * @param maxProfiles The maximum number of profiles to return.
+   * @param cursor The search cursor, which can be passed into further requests for more results.
+   * @returns A page of results, containing a cursor that can be used in further requests.
+   */
+  public fetchProfileFollowing(
+    userId: string,
+    maxProfiles: number,
+    cursor?: string,
+  ): Promise<QueryProfilesResponse> {
+    return fetchProfileFollowing(userId, maxProfiles, this.auth, cursor);
+  }
+
+  /**
+   * Fetches profile followers from Twitter.
+   * @param userId The user whose following should be returned
+   * @param maxProfiles The maximum number of profiles to return.
+   * @param cursor The search cursor, which can be passed into further requests for more results.
+   * @returns A page of results, containing a cursor that can be used in further requests.
+   */
+  public fetchProfileFollowers(
+    userId: string,
+    maxProfiles: number,
+    cursor?: string,
+  ): Promise<QueryProfilesResponse> {
+    return fetchProfileFollowers(userId, maxProfiles, this.auth, cursor);
   }
 
   /**
