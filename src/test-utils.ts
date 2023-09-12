@@ -1,4 +1,4 @@
-import { HttpsProxyAgent } from 'https-proxy-agent'
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Scraper } from './scraper';
 
 export interface ScraperTestOptions {
@@ -10,7 +10,9 @@ export interface ScraperTestOptions {
   authMethod: 'password' | 'cookies' | 'anonymous';
 }
 
-export async function getScraper(options: Partial<ScraperTestOptions> = { authMethod: 'cookies' }) {
+export async function getScraper(
+  options: Partial<ScraperTestOptions> = { authMethod: 'cookies' },
+) {
   const username = process.env['TWITTER_USERNAME'];
   const password = process.env['TWITTER_PASSWORD'];
   const email = process.env['TWITTER_EMAIL'];
@@ -19,31 +21,33 @@ export async function getScraper(options: Partial<ScraperTestOptions> = { authMe
   let agent: any;
 
   if (options.authMethod === 'cookies' && !cookies) {
-    console.warn('TWITTER_COOKIES variable is not defined, reverting to password auth (not recommended)')
-    options.authMethod = 'password'
+    console.warn(
+      'TWITTER_COOKIES variable is not defined, reverting to password auth (not recommended)',
+    );
+    options.authMethod = 'password';
   }
 
   if (options.authMethod === 'password' && !(username && password)) {
     throw new Error(
       'TWITTER_USERNAME and TWITTER_PASSWORD variables must be defined.',
-    )
+    );
   }
 
   if (proxyUrl) {
     agent = new HttpsProxyAgent(proxyUrl, {
       rejectUnauthorized: false,
-    })
+    });
   }
 
   const scraper = new Scraper({
     transform: {
       request: (input, init) => {
         if (agent) {
-          return [input, { ...init, agent }]
+          return [input, { ...init, agent }];
         }
-        return [input, init]
-      }
-    }
+        return [input, init];
+      },
+    },
   });
 
   if (options.authMethod === 'password') {

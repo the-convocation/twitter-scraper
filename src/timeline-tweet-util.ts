@@ -120,9 +120,10 @@ function linkCashtagHtml(cashtag: string) {
 }
 
 function linkUsernameHtml(username: string) {
-  return `<a href="https://twitter.com/${username.replace('@', '')}">${
-    username
-  }</a>`;
+  return `<a href="https://twitter.com/${username.replace(
+    '@',
+    '',
+  )}">${username}</a>`;
 }
 
 function unwrapTcoUrlHtml(tweet: LegacyTweetRaw, foundedMedia: string[]) {

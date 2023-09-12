@@ -1,4 +1,4 @@
-import { getScraper } from './test-utils'
+import { getScraper } from './test-utils';
 
 test('scraper can log in', async () => {
   const scraper = await getScraper({ authMethod: 'password' });
