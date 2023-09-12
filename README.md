@@ -148,12 +148,26 @@ const scraper = new Scraper({
 });
 ```
 
-## Testing
+## Contributing
+
+### Setup
+This project currently targets Node 16.x and uses Yarn for package management. [Corepack](https://nodejs.org/dist/latest-v16.x/docs/api/corepack.html)
+is configured for this project, so you don't need to install a particular package manager version manually.
+
+Just run `corepack enable` to turn on the shims, then run `yarn` to install the dependencies.
+
+#### Basic scripts
+* `yarn build`: Builds the project into the `dist` folder
+* `yarn test`: Runs the package tests (see [Testing](#testing) first)
+
+Run `yarn help` for general `yarn` usage information.
+
+### Testing
 This package includes unit tests for all major functionality. Given the speed at which Twitter's private API
 changes, failing tests are to be expected.
 
 ```sh
-npm run test
+yarn test
 ```
 
 Before running tests, you should configure environment variables for authentication.
@@ -166,5 +180,6 @@ TWITTER_COOKIES=     # JSON-serialized array of cookies of an authenticated sess
 PROXY_URL=           # HTTP(s) proxy for requests (optional)
 ```
 
-## Contributing
+### Commit message format
 We use [Conventional Commits](https://www.conventionalcommits.org), and enforce this with precommit checks.
+Please refer to the Git history for real examples of the commit message format.
