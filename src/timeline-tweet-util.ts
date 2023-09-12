@@ -3,6 +3,7 @@ import { Photo, Video } from './tweets';
 import { isFieldDefined, NonNullableField } from './type-util';
 
 const reHashtag = /\B(\#\S+\b)/g;
+const reCashtag = /\B(\$\S+\b)/g;
 const reTwitterUrl = /https:(\/\/t\.co\/([A-Za-z0-9]|[A-Za-z]){10})/g;
 const reUsername = /\B(\@\S{1,15}\b)/g;
 
@@ -79,6 +80,7 @@ export function reconstructTweetHtml(
   let html = tweet.full_text ?? '';
 
   html = html.replace(reHashtag, linkHashtagHtml);
+  html = html.replace(reCashtag, linkCashtagHtml);
   html = html.replace(reUsername, linkUsernameHtml);
   html = html.replace(reTwitterUrl, unwrapTcoUrlHtml(tweet, media));
 
@@ -110,9 +112,16 @@ function linkHashtagHtml(hashtag: string) {
   )}">${hashtag}</a>`;
 }
 
+function linkCashtagHtml(cashtag: string) {
+  return `<a href="https://twitter.com/search?q=%24${cashtag.replace(
+    '$',
+    '',
+  )}">${cashtag}</a>`;
+}
+
 function linkUsernameHtml(username: string) {
-  return `<a href="https://twitter.com/${username[0].replace('@', '')}">${
-    username[0]
+  return `<a href="https://twitter.com/${username.replace('@', '')}">${
+    username
   }</a>`;
 }
 

@@ -352,17 +352,21 @@ function parseTimelineTweet(
 }
 
 /**
- * A paginated tweets API response. The `next` field can be used to fetch the next page of results.
+ * A paginated tweets API response. The `next` field can be used to fetch the next page of results,
+ * and the `previous` can be used to fetch the previous results (or results created after the
+ * inital request)
  */
 export interface QueryTweetsResponse {
   tweets: Tweet[];
   next?: string;
+  previous?: string;
 }
 
 export function parseTimelineTweetsV1(
   timeline: TimelineV1,
 ): QueryTweetsResponse {
-  let cursor: string | undefined;
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
   let pinnedTweet: Tweet | undefined;
   let orderedTweets: Tweet[] = [];
   for (const instruction of timeline.timeline?.instructions ?? []) {
@@ -389,14 +393,18 @@ export function parseTimelineTweetsV1(
 
       const operation = content?.operation;
       if (operation?.cursor?.cursorType === 'Bottom') {
-        cursor = operation?.cursor?.value;
+        bottomCursor = operation?.cursor?.value;
+      } else if (operation?.cursor?.cursorType === 'Top') {
+        topCursor = operation?.cursor?.value;
       }
     }
 
     // Handle replace instruction
     const operation = replaceEntry?.entry?.content?.operation;
     if (operation?.cursor?.cursorType === 'Bottom') {
-      cursor = operation.cursor.value;
+      bottomCursor = operation.cursor.value;
+    } else if (operation?.cursor?.cursorType === 'Top') {
+      topCursor = operation.cursor.value;
     }
   }
 
@@ -406,7 +414,8 @@ export function parseTimelineTweetsV1(
 
   return {
     tweets: orderedTweets,
-    next: cursor,
+    next: bottomCursor,
+    previous: topCursor,
   };
 }
 
@@ -416,6 +425,7 @@ export function parseTimelineTweetsV1(
 export interface QueryProfilesResponse {
   profiles: Profile[];
   next?: string;
+  previous?: string;
 }
 
 export function parseUsers(timeline: TimelineV1): QueryProfilesResponse {
@@ -432,7 +442,8 @@ export function parseUsers(timeline: TimelineV1): QueryProfilesResponse {
     users.set(id, user);
   }
 
-  let cursor: string | undefined;
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
   const orderedProfiles: Profile[] = [];
   for (const instruction of timeline.timeline?.instructions ?? []) {
     for (const entry of instruction.addEntries?.entries ?? []) {
@@ -444,18 +455,23 @@ export function parseUsers(timeline: TimelineV1): QueryProfilesResponse {
 
       const operation = entry.content?.operation;
       if (operation?.cursor?.cursorType === 'Bottom') {
-        cursor = operation?.cursor?.value;
+        bottomCursor = operation?.cursor?.value;
+      } else if (operation?.cursor?.cursorType === 'Top') {
+        topCursor = operation?.cursor?.value;
       }
     }
 
     const operation = instruction.replaceEntry?.entry?.content?.operation;
     if (operation?.cursor?.cursorType === 'Bottom') {
-      cursor = operation.cursor.value;
+      bottomCursor = operation.cursor.value;
+    } else if (operation?.cursor?.cursorType === 'Top') {
+      topCursor = operation.cursor.value;
     }
   }
 
   return {
     profiles: orderedProfiles,
-    next: cursor,
+    next: bottomCursor,
+    previous: topCursor,
   };
 }
