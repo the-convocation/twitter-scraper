@@ -56,14 +56,23 @@ provided in the options:</p>
 supported directly by interceptors):</p>
 <pre><code class="language-ts"><span class="hl-3">const</span><span class="hl-1"> </span><span class="hl-4">scraper</span><span class="hl-1"> = </span><span class="hl-3">new</span><span class="hl-1"> </span><span class="hl-0">Scraper</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-0">fetch</span><span class="hl-5">:</span><span class="hl-1"> (</span><span class="hl-5">input</span><span class="hl-1">, </span><span class="hl-5">init</span><span class="hl-1">) </span><span class="hl-3">=&gt;</span><span class="hl-1"> {</span><br/><span class="hl-1">    </span><span class="hl-7">// Transform input and init into your function&#39;s expected types...</span><br/><span class="hl-1">    </span><span class="hl-8">return</span><span class="hl-1"> </span><span class="hl-0">fetch</span><span class="hl-1">(</span><span class="hl-5">input</span><span class="hl-1">, </span><span class="hl-5">init</span><span class="hl-1">)</span><br/><span class="hl-1">      .</span><span class="hl-0">then</span><span class="hl-1">((</span><span class="hl-5">res</span><span class="hl-1">) </span><span class="hl-3">=&gt;</span><span class="hl-1"> {</span><br/><span class="hl-1">        </span><span class="hl-7">// Transform res into a web-compliant response...</span><br/><span class="hl-1">        </span><span class="hl-8">return</span><span class="hl-1"> </span><span class="hl-5">res</span><span class="hl-1">;</span><br/><span class="hl-1">      });</span><br/><span class="hl-1">  },</span><br/><span class="hl-1">});</span>
 </code><button>Copy</button></pre>
-<a id="md:testing" class="tsd-anchor"></a><h2><a href="#md:testing">Testing</a></h2><p>This package includes unit tests for all major functionality. Given the speed at which Twitter&#39;s private API
+<a id="md:contributing" class="tsd-anchor"></a><h2><a href="#md:contributing">Contributing</a></h2><a id="md:setup" class="tsd-anchor"></a><h3><a href="#md:setup">Setup</a></h3><p>This project currently targets Node 16.x and uses Yarn for package management. <a href="https://nodejs.org/dist/latest-v16.x/docs/api/corepack.html">Corepack</a>
+is configured for this project, so you don&#39;t need to install a particular package manager version manually.</p>
+<p>Just run <code>corepack enable</code> to turn on the shims, then run <code>yarn</code> to install the dependencies.</p>
+<a id="md:basic-scripts" class="tsd-anchor"></a><h4><a href="#md:basic-scripts">Basic scripts</a></h4><ul>
+<li><code>yarn build</code>: Builds the project into the <code>dist</code> folder</li>
+<li><code>yarn test</code>: Runs the package tests (see <a href="#testing">Testing</a> first)</li>
+</ul>
+<p>Run <code>yarn help</code> for general <code>yarn</code> usage information.</p>
+<a id="md:testing" class="tsd-anchor"></a><h3><a href="#md:testing">Testing</a></h3><p>This package includes unit tests for all major functionality. Given the speed at which Twitter&#39;s private API
 changes, failing tests are to be expected.</p>
-<pre><code class="language-sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">test</span>
+<pre><code class="language-sh"><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-2">test</span>
 </code><button>Copy</button></pre>
 <p>Before running tests, you should configure environment variables for authentication.</p>
 <pre><code><span class="hl-4">TWITTER_USERNAME</span><span class="hl-1">=    # </span><span class="hl-5">Account</span><span class="hl-1"> </span><span class="hl-5">username</span><br/><span class="hl-4">TWITTER_PASSWORD</span><span class="hl-1">=    # </span><span class="hl-5">Account</span><span class="hl-1"> </span><span class="hl-5">password</span><br/><span class="hl-4">TWITTER_EMAIL</span><span class="hl-1">=       # </span><span class="hl-5">Account</span><span class="hl-1"> </span><span class="hl-5">email</span><br/><span class="hl-4">TWITTER_COOKIES</span><span class="hl-1">=     # </span><span class="hl-4">JSON</span><span class="hl-1">-</span><span class="hl-5">serialized</span><span class="hl-1"> </span><span class="hl-5">array</span><span class="hl-1"> </span><span class="hl-3">of</span><span class="hl-1"> </span><span class="hl-5">cookies</span><span class="hl-1"> </span><span class="hl-3">of</span><span class="hl-1"> </span><span class="hl-5">an</span><span class="hl-1"> </span><span class="hl-5">authenticated</span><span class="hl-1"> </span><span class="hl-5">session</span><br/><span class="hl-4">PROXY_URL</span><span class="hl-1">=           # </span><span class="hl-0">HTTP</span><span class="hl-1">(</span><span class="hl-5">s</span><span class="hl-1">) </span><span class="hl-5">proxy</span><span class="hl-1"> </span><span class="hl-5">for</span><span class="hl-1"> </span><span class="hl-0">requests</span><span class="hl-1"> (</span><span class="hl-5">optional</span><span class="hl-1">)</span>
 </code><button>Copy</button></pre>
-<a id="md:contributing" class="tsd-anchor"></a><h2><a href="#md:contributing">Contributing</a></h2><p>We use <a href="https://www.conventionalcommits.org">Conventional Commits</a>, and enforce this with precommit checks.</p>
+<a id="md:commit-message-format" class="tsd-anchor"></a><h3><a href="#md:commit-message-format">Commit message format</a></h3><p>We use <a href="https://www.conventionalcommits.org">Conventional Commits</a>, and enforce this with precommit checks.
+Please refer to the Git history for real examples of the commit message format.</p>
 </div></div>
 <div class="col-sidebar">
 <div class="page-menu">
@@ -98,8 +107,15 @@ changes, failing tests are to be expected.</p>
 <ul>
 <li><a href="#md:nextjs-13x-example"><span>Next.js 13.x example:</span></a></li></ul></li>
 <li><a href="#md:edge-runtimes"><span>Edge runtimes</span></a></li></ul></li>
+<li><a href="#md:contributing"><span>Contributing</span></a></li>
+<li>
+<ul>
+<li><a href="#md:setup"><span>Setup</span></a></li>
+<li>
+<ul>
+<li><a href="#md:basic-scripts"><span>Basic scripts</span></a></li></ul></li>
 <li><a href="#md:testing"><span>Testing</span></a></li>
-<li><a href="#md:contributing"><span>Contributing</span></a></li></ul></li></ul></li></ul></div></details></div>
+<li><a href="#md:commit-message-format"><span>Commit message format</span></a></li></ul></li></ul></li></ul></li></ul></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="index.html" class="current"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-4"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-namespace)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.33 16V7.24H10.77L13.446 14.74C13.43 14.54 13.41 14.296 13.386 14.008C13.37 13.712 13.354 13.404 13.338 13.084C13.33 12.756 13.326 12.448 13.326 12.16V7.24H14.37V16H12.93L10.266 8.5C10.282 8.692 10.298 8.936 10.314 9.232C10.33 9.52 10.342 9.828 10.35 10.156C10.366 10.476 10.374 10.784 10.374 11.08V16H9.33Z" fill="var(--color-text)"></path></g></svg><span>@the-<wbr/>convocation/twitter-<wbr/>scraper</span></a>
 <ul class="tsd-small-nested-navigation">
