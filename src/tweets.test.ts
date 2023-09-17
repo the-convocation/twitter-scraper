@@ -39,11 +39,10 @@ test('scraper can get tweet', async () => {
 
 test('scraper can get tweets without logging in', async () => {
   const scraper = await getScraper({ authMethod: 'anonymous' });
-  const tweets = scraper.getTweets('elonmusk', 10);
 
   let counter = 0;
-  for await (const tweet of tweets) {
-    if (tweet?.permanentUrl) {
+  for await (const tweet of scraper.getTweets('elonmusk', 10)) {
+    if (tweet) {
       counter++;
     }
   }
