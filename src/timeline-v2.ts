@@ -95,7 +95,7 @@ export interface TimelineV2 {
 
 export interface ThreadedConversation {
   data?: {
-    timeline_response?: {
+    threaded_conversation_with_injections_v2?: {
       instructions?: TimelineInstruction[];
     };
   };
@@ -355,7 +355,9 @@ export function parseThreadedConversation(
   conversation: ThreadedConversation,
 ): Tweet[] {
   const tweets: Tweet[] = [];
-  const instructions = conversation.data?.timeline_response?.instructions ?? [];
+  const instructions =
+    conversation.data?.threaded_conversation_with_injections_v2?.instructions ??
+    [];
 
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
