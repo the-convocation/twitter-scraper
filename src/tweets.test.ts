@@ -106,6 +106,47 @@ test('scraper can get user mentions in tweets', async () => {
   expect(tweet?.mentions).toEqual(expected);
 });
 
+test('scraper can get tweet quotes without logging in', async () => {
+  const expected: Tweet = {
+    conversationId: '1237110546383724547',
+    html: `The Easiest Problem Everyone Gets Wrong <br><br>[new video] --&gt; <a href=\"https://youtu.be/ytfCdqWhmdg\">https://t.co/YdaeDYmPAU</a> <br><a href=\"https://t.co/iKu4Xs6o2V\"><img src=\"https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg\"/></a>`,
+    id: '1237110546383724547',
+    hashtags: [],
+    mentions: [],
+    name: 'Vsauce2',
+    permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
+    photos: [
+      {
+        id: '1237110473486729218',
+        url: 'https://pbs.twimg.com/media/ESsZa9AXgAIAYnF.jpg',
+        alt_text: undefined,
+      },
+    ],
+    text: 'The Easiest Problem Everyone Gets Wrong \n\n[new video] --&gt; https://t.co/YdaeDYmPAU https://t.co/iKu4Xs6o2V',
+    thread: [],
+    timeParsed: new Date(Date.UTC(2020, 2, 9, 20, 18, 33, 0)),
+    timestamp: 1583785113,
+    urls: ['https://youtu.be/ytfCdqWhmdg'],
+    userId: '978944851',
+    username: 'VsauceTwo',
+    videos: [],
+    isQuoted: false,
+    isReply: false,
+    isRetweet: false,
+    isPin: false,
+    sensitiveContent: false,
+  };
+
+  const scraper = await getScraper({ authMethod: 'anonymous' });
+  const quote = await scraper.getTweet('1237110897597976576');
+  expect(quote?.isQuoted).toBeTruthy();
+  delete quote?.quotedStatus?.likes;
+  delete quote?.quotedStatus?.replies;
+  delete quote?.quotedStatus?.retweets;
+  delete quote?.quotedStatus?.views;
+  expect(quote?.quotedStatus).toEqual(expected);
+});
+
 test('scraper can get tweet quotes and replies', async () => {
   const expected: Tweet = {
     conversationId: '1237110546383724547',
