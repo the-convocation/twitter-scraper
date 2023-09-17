@@ -20,13 +20,14 @@ import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
 import {
   Tweet,
-  getTweet,
+  getTweetAnonymous,
   getTweets,
   getLatestTweet,
   getTweetWhere,
   getTweetsWhere,
   getTweetsByUserId,
   TweetQuery,
+  getTweet,
 } from './tweets';
 import fetch from 'cross-fetch';
 
@@ -310,7 +311,11 @@ export class Scraper {
    * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
    */
   public getTweet(id: string): Promise<Tweet | null> {
-    return getTweet(id, this.auth);
+    if (this.auth instanceof TwitterUserAuth) {
+      return getTweet(id, this.auth);
+    } else {
+      return getTweetAnonymous(id, this.auth);
+    }
   }
 
   /**
