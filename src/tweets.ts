@@ -11,7 +11,6 @@ import {
   parseThreadedConversation,
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
-import stringify from 'json-stable-stringify';
 import { apiRequestFactory } from './api-data';
 
 export interface Mention {
