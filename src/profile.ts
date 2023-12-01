@@ -33,6 +33,7 @@ export interface LegacyUserRaw {
   has_custom_timelines?: boolean;
   has_extended_profile?: boolean;
   url?: string;
+  can_dm?: boolean;
 }
 
 /**
@@ -62,6 +63,7 @@ export interface Profile {
   userId?: string;
   username?: string;
   website?: string;
+  canDm?: boolean;
 }
 
 export interface UserRaw {
@@ -105,6 +107,7 @@ export function parseProfile(
     userId: user.id_str,
     username: user.screen_name,
     isBlueVerified: isBlueVerified ?? false,
+    canDm: user.can_dm,
   };
 
   if (user.created_at != null) {
