@@ -1,5 +1,7 @@
 import { getScraper } from './test-utils';
 import { Mention, Tweet } from './tweets';
+import {QueryTweetsResponse} from "./timeline-v1";
+import {SearchMode} from "./search";
 
 test('scraper can get tweet', async () => {
   const expected: Tweet = {
@@ -48,6 +50,27 @@ test('scraper can get tweets without logging in', async () => {
   }
 
   expect(counter).toBeGreaterThanOrEqual(1);
+});
+
+test.only('scraper can get tweets without logging in', async () => {
+  const scraper = await getScraper();
+
+  let cursor: string | undefined = undefined;
+  const maxTweets = 30;
+  let nTweets = 0;
+  while (nTweets < maxTweets) {
+    const res: QueryTweetsResponse = await scraper.fetchListTweets(
+        '1736495155002106192',
+        maxTweets,
+        cursor,
+    );
+    console.log('res', res);
+
+    expect(res.next).toBeTruthy();
+
+    nTweets += res.tweets.length;
+    cursor = res.next;
+  }
 });
 
 test('scraper can get first tweet matching query', async () => {

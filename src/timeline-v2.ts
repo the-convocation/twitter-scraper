@@ -334,7 +334,7 @@ export function parseTimelineEntryItemContentRaw(
   return null;
 }
 
-function parseAndPush(
+export function parseAndPush(
   tweets: Tweet[],
   content: TimelineEntryItemContentRaw,
   entryId: string,
