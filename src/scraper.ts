@@ -28,6 +28,7 @@ import {
   getTweetsByUserId,
   TweetQuery,
   getTweet,
+  fetchListTweets,
 } from './tweets';
 import fetch from 'cross-fetch';
 
@@ -156,6 +157,21 @@ export class Scraper {
     cursor?: string,
   ): Promise<QueryProfilesResponse> {
     return fetchSearchProfiles(query, maxProfiles, this.auth, cursor);
+  }
+
+  /**
+   * Fetches list tweets from Twitter.
+   * @param listId The list id
+   * @param maxTweets The maximum number of tweets to return.
+   * @param cursor The search cursor, which can be passed into further requests for more results.
+   * @returns A page of results, containing a cursor that can be used in further requests.
+   */
+  public fetchListTweets(
+      listId: string,
+      maxTweets: number,
+      cursor?: string,
+  ): Promise<QueryTweetsResponse> {
+    return fetchListTweets(listId, maxTweets, cursor, this.auth);
   }
 
   /**
