@@ -52,7 +52,7 @@ test('scraper can get tweets without logging in', async () => {
   expect(counter).toBeGreaterThanOrEqual(1);
 });
 
-test.only('scraper can get tweets without logging in', async () => {
+test('scraper can get tweets from list', async () => {
   const scraper = await getScraper();
 
   let cursor: string | undefined = undefined;
@@ -64,7 +64,6 @@ test.only('scraper can get tweets without logging in', async () => {
         maxTweets,
         cursor,
     );
-    console.log('res', res);
 
     expect(res.next).toBeTruthy();
 
