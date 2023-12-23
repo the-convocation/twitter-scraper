@@ -2,7 +2,7 @@
   "name": "@the-convocation/twitter-scraper",
   "description": "A port of n0madic/twitter-scraper to Node.js.",
   "keywords": ["x", "twitter", "scraper"],
-  "version": "0.8.3",
+  "version": "0.9.0",
   "main": "dist/_module.js",
   "repository": "https://github.com/the-convocation/twitter-scraper.git",
   "author": "karashiiro <49822414+karashiiro@users.noreply.github.com>",
