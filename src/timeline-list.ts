@@ -1,5 +1,5 @@
 import { QueryTweetsResponse } from './timeline-v1';
-import { SearchEntryRaw, parseAndPush } from './timeline-v2';
+import {parseAndPush, TimelineEntryRaw} from './timeline-v2';
 import { Tweet } from './tweets';
 
 export interface ListTimeline {
@@ -8,8 +8,8 @@ export interface ListTimeline {
       tweets_timeline?: {
         timeline?: {
           instructions?: {
-            entries?: SearchEntryRaw[];
-            entry?: SearchEntryRaw;
+            entries?: TimelineEntryRaw[];
+            entry?: TimelineEntryRaw;
             type?: string;
           }[];
         };
@@ -43,12 +43,18 @@ export function parseListTimelineTweets(
       }
 
       const idStr = entry.entryId;
-      if (!idStr.startsWith('tweet')) {
+      if (!idStr.startsWith('tweet') && !idStr.startsWith('list-conversation')) {
         continue;
       }
 
       if (entryContent.itemContent) {
         parseAndPush(tweets, entryContent.itemContent, idStr);
+      } else if (entryContent.items) {
+        for (const contentItem of entryContent.items) {
+          if (contentItem.item && contentItem.item.itemContent && contentItem.entryId) {
+            parseAndPush(tweets, contentItem.item.itemContent, contentItem.entryId.split('tweet-')[1]);
+          }
+        }
       }
     }
   }
