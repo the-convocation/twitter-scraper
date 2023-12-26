@@ -37,8 +37,10 @@ export interface TimelineEntryRaw {
     cursorType?: string;
     value?: string;
     items?: {
+      entryId?: string;
       item?: {
         content?: TimelineEntryItemContentRaw;
+        itemContent?: SearchEntryItemContentRaw;
       };
     }[];
     itemContent?: TimelineEntryItemContentRaw;
