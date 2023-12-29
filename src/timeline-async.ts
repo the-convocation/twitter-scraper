@@ -30,6 +30,7 @@ export async function* getUserTimeline(
 ): AsyncGenerator<Profile, void> {
   let nProfiles = 0;
   let cursor: string | undefined = undefined;
+  let consecutiveEmptyBatches = 0;
   while (nProfiles < maxProfiles) {
     const batch: FetchProfilesResponse = await fetchFunc(
       query,
@@ -38,21 +39,20 @@ export async function* getUserTimeline(
     );
 
     const { profiles, next } = batch;
+    cursor = next;
 
     if (profiles.length === 0) {
-      break;
-    }
+      consecutiveEmptyBatches++;
+      if (consecutiveEmptyBatches > 5) break;
+    } else consecutiveEmptyBatches = 0;
 
     for (const profile of profiles) {
-      if (nProfiles < maxProfiles) {
-        cursor = next;
-        yield profile;
-      } else {
-        break;
-      }
-
+      if (nProfiles < maxProfiles) yield profile;
+      else break;
       nProfiles++;
     }
+
+    if (!next) break;
   }
 }
 
