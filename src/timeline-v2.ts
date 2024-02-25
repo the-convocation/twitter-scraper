@@ -271,6 +271,8 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   return tweetResult;
 }
 
+const expectedEntryTypes = ['tweet', 'profile-conversation'];
+
 export function parseTimelineTweetsV2(
   timeline: TimelineV2,
 ): QueryTweetsResponse {
@@ -286,6 +288,7 @@ export function parseTimelineTweetsV2(
       const entryContent = entry.content;
       if (!entryContent) continue;
 
+      // Handle pagination
       if (entryContent.cursorType === 'Bottom') {
         bottomCursor = entryContent.value;
         continue;
@@ -295,12 +298,22 @@ export function parseTimelineTweetsV2(
       }
 
       const idStr = entry.entryId;
-      if (!idStr.startsWith('tweet')) {
+      if (
+        !expectedEntryTypes.some((entryType) => idStr.startsWith(entryType))
+      ) {
         continue;
       }
 
       if (entryContent.itemContent) {
+        // Typically TimelineTimelineTweet entries
         parseAndPush(tweets, entryContent.itemContent, idStr);
+      } else if (entryContent.items) {
+        // Typically TimelineTimelineModule entries
+        for (const item of entryContent.items) {
+          if (item.item?.itemContent) {
+            parseAndPush(tweets, item.item.itemContent, idStr);
+          }
+        }
       }
     }
   }
@@ -316,9 +329,9 @@ export function parseTimelineEntryItemContentRaw(
   const result = content.tweet_results?.result ?? content.tweetResult?.result;
   if (result?.__typename === 'Tweet') {
     if (result.legacy) {
-      result.legacy.id_str = entryId
-        .replace('conversation-', '')
-        .replace('tweet-', '');
+      result.legacy.id_str =
+        result.rest_id ??
+        entryId.replace('conversation-', '').replace('tweet-', '');
     }
 
     const tweetResult = parseResult(result);
