@@ -1,5 +1,5 @@
 import { QueryTweetsResponse } from './timeline-v1';
-import {parseAndPush, TimelineEntryRaw} from './timeline-v2';
+import { parseAndPush, TimelineEntryRaw } from './timeline-v2';
 import { Tweet } from './tweets';
 
 export interface ListTimeline {
@@ -25,8 +25,7 @@ export function parseListTimelineTweets(
   let topCursor: string | undefined;
   const tweets: Tweet[] = [];
   const instructions =
-    timeline.data?.list?.tweets_timeline?.timeline
-      ?.instructions ?? [];
+    timeline.data?.list?.tweets_timeline?.timeline?.instructions ?? [];
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
 
@@ -43,7 +42,10 @@ export function parseListTimelineTweets(
       }
 
       const idStr = entry.entryId;
-      if (!idStr.startsWith('tweet') && !idStr.startsWith('list-conversation')) {
+      if (
+        !idStr.startsWith('tweet') &&
+        !idStr.startsWith('list-conversation')
+      ) {
         continue;
       }
 
@@ -51,8 +53,16 @@ export function parseListTimelineTweets(
         parseAndPush(tweets, entryContent.itemContent, idStr);
       } else if (entryContent.items) {
         for (const contentItem of entryContent.items) {
-          if (contentItem.item && contentItem.item.itemContent && contentItem.entryId) {
-            parseAndPush(tweets, contentItem.item.itemContent, contentItem.entryId.split('tweet-')[1]);
+          if (
+            contentItem.item &&
+            contentItem.item.itemContent &&
+            contentItem.entryId
+          ) {
+            parseAndPush(
+              tweets,
+              contentItem.item.itemContent,
+              contentItem.entryId.split('tweet-')[1],
+            );
           }
         }
       }

@@ -1,7 +1,7 @@
 import { getScraper } from './test-utils';
 import { Mention, Tweet } from './tweets';
-import {QueryTweetsResponse} from "./timeline-v1";
-import {SearchMode} from "./search";
+import { QueryTweetsResponse } from './timeline-v1';
+import { SearchMode } from './search';
 
 test('scraper can get tweet', async () => {
   const expected: Tweet = {
@@ -60,9 +60,9 @@ test('scraper can get tweets from list', async () => {
   let nTweets = 0;
   while (nTweets < maxTweets) {
     const res: QueryTweetsResponse = await scraper.fetchListTweets(
-        '1736495155002106192',
-        maxTweets,
-        cursor,
+      '1736495155002106192',
+      maxTweets,
+      cursor,
     );
 
     expect(res.next).toBeTruthy();
