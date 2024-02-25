@@ -12,7 +12,7 @@ import {
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
 import { apiRequestFactory } from './api-data';
-import {ListTimeline, parseListTimelineTweets} from "./timeline-list";
+import { ListTimeline, parseListTimelineTweets } from './timeline-list';
 
 export interface Mention {
   id: string;
@@ -129,10 +129,10 @@ export async function fetchTweets(
 }
 
 export async function fetchListTweets(
-    listId: string,
-    maxTweets: number,
-    cursor: string | undefined,
-    auth: TwitterAuth,
+  listId: string,
+  maxTweets: number,
+  cursor: string | undefined,
+  auth: TwitterAuth,
 ): Promise<QueryTweetsResponse> {
   if (maxTweets > 200) {
     maxTweets = 200;
@@ -147,8 +147,8 @@ export async function fetchListTweets(
   }
 
   const res = await requestApi<ListTimeline>(
-      listTweetsRequest.toRequestUrl(),
-      auth,
+    listTweetsRequest.toRequestUrl(),
+    auth,
   );
 
   if (!res.success) {

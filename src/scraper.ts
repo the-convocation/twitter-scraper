@@ -167,9 +167,9 @@ export class Scraper {
    * @returns A page of results, containing a cursor that can be used in further requests.
    */
   public fetchListTweets(
-      listId: string,
-      maxTweets: number,
-      cursor?: string,
+    listId: string,
+    maxTweets: number,
+    cursor?: string,
   ): Promise<QueryTweetsResponse> {
     return fetchListTweets(listId, maxTweets, cursor, this.auth);
   }
