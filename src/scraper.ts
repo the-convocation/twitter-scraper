@@ -23,6 +23,7 @@ import {
   getTweetAnonymous,
   getTweets,
   getLatestTweet,
+  getLikedTweets,
   getTweetWhere,
   getTweetsWhere,
   getTweetsByUserId,
@@ -246,6 +247,16 @@ export class Scraper {
    */
   public getTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
     return getTweets(user, maxTweets, this.auth);
+  }
+
+  /**
+   * Fetches liked tweets from a Twitter user. Requires authentication.
+   * @param user The user whose likes should be returned.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of liked tweets from the provided user.
+   */
+  public getLikedTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
+    return getLikedTweets(user, maxTweets, this.auth);
   }
 
   /**
