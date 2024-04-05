@@ -76,7 +76,8 @@ test('scraper can get partial private profile', async () => {
 
 test('scraper cannot get suspended profile', async () => {
   const scraper = await getScraper();
-  expect(scraper.getProfile('123')).rejects.toThrow();
+  // taken from https://en.wikipedia.org/wiki/Twitter_suspensions#List_of_notable_suspensions
+  expect(scraper.getProfile('RobertC20041800')).rejects.toThrow();
 });
 
 test('scraper cannot get not found profile', async () => {
