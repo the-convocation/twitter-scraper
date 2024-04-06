@@ -383,7 +383,7 @@ export function parseThreadedConversation(
       }
 
       for (const item of entry.content?.items ?? []) {
-        const itemContent = item.item?.content;
+        const itemContent = item.item?.itemContent;
         if (itemContent) {
           parseAndPush(tweets, itemContent, entry.entryId, true);
         }
