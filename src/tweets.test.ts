@@ -223,23 +223,29 @@ test('scraper can get tweet quotes and replies', async () => {
 
 test('scraper can get retweet', async () => {
   const expected: Tweet = {
-    conversationId: '1359151057872580612',
-    html: `We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.`,
-    id: '1359151057872580612',
+    conversationId: '1776276954435481937',
+    html: `<br><a href=\"https://t.co/qqiu5ntffp\"><img src=\"https://pbs.twimg.com/amplify_video_thumb/1776276900580622336/img/UknAtyWSZ286nCD3.jpg\"/></a>`,
+    id: '1776276954435481937',
     hashtags: [],
     mentions: [],
-    name: 'Twitter Together',
-    permanentUrl:
-      'https://twitter.com/TwitterTogether/status/1359151057872580612',
+    name: 'federico.',
+    permanentUrl: 'https://twitter.com/federicosmos/status/1776276954435481937',
     photos: [],
-    text: 'We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.',
+    text: 'https://t.co/qqiu5ntffp',
     thread: [],
-    timeParsed: new Date(Date.UTC(2021, 1, 9, 14, 43, 58, 0)),
-    timestamp: 1612881838,
+    timeParsed: new Date(Date.UTC(2024, 3, 5, 15, 53, 22, 0)),
+    timestamp: 1712332402,
     urls: [],
-    userId: '773578328498372608',
-    username: 'TwitterTogether',
-    videos: [],
+    userId: '2376017065',
+    username: 'federicosmos',
+    videos: [
+      {
+        id: '1776276900580622336',
+        preview:
+          'https://pbs.twimg.com/amplify_video_thumb/1776276900580622336/img/UknAtyWSZ286nCD3.jpg',
+        url: 'https://video.twimg.com/amplify_video/1776276900580622336/vid/avc1/640x360/uACt_egp_hmvPOZF.mp4?tag=14',
+      },
+    ],
     isQuoted: false,
     isReply: false,
     isRetweet: false,
@@ -248,7 +254,7 @@ test('scraper can get retweet', async () => {
   };
 
   const scraper = await getScraper();
-  const retweet = await scraper.getTweet('1685032881872330754');
+  const retweet = await scraper.getTweet('1776285549566808397');
   expect(retweet?.isRetweet).toBeTruthy();
   delete retweet?.retweetedStatus?.likes;
   delete retweet?.retweetedStatus?.replies;
