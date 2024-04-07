@@ -16,6 +16,7 @@ export async function getScraper(
   const username = process.env['TWITTER_USERNAME'];
   const password = process.env['TWITTER_PASSWORD'];
   const email = process.env['TWITTER_EMAIL'];
+  const twoFactorSecret = process.env['TWITTER_2FA_SECRET'];
   const cookies = process.env['TWITTER_COOKIES'];
   const proxyUrl = process.env['PROXY_URL'];
   let agent: any;
@@ -51,7 +52,7 @@ export async function getScraper(
   });
 
   if (options.authMethod === 'password') {
-    await scraper.login(username!, password!, email);
+    await scraper.login(username!, password!, email, twoFactorSecret);
   } else if (options.authMethod === 'cookies') {
     await scraper.setCookies(JSON.parse(cookies!));
   }

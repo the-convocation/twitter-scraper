@@ -368,16 +368,18 @@ export class Scraper {
    * searches.
    * @param username The username of the Twitter account to login with.
    * @param password The password of the Twitter account to login with.
-   * @param email The password to log in with, if you have email confirmation enabled.
+   * @param email The email to log in with, if you have email confirmation enabled.
+   * @param twoFactorSecret The secret to generate two factor authentication tokens with, if you have two factor authentication enabled.
    */
   public async login(
     username: string,
     password: string,
     email?: string,
+    twoFactorSecret?: string,
   ): Promise<void> {
     // Swap in a real authorizer for all requests
     const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
-    await userAuth.login(username, password, email);
+    await userAuth.login(username, password, email, twoFactorSecret);
     this.auth = userAuth;
     this.authTrends = userAuth;
   }

@@ -6,6 +6,7 @@ import { Headers } from 'headers-polyfill';
 import { TwitterApiErrorRaw } from './errors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Check } from '@sinclair/typebox/value';
+import * as OTPAuth from 'otpauth';
 
 interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
@@ -73,6 +74,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     username: string,
     password: string,
     email?: string,
+    twoFactorSecret?: string,
   ): Promise<void> {
     await this.updateGuestToken();
 
@@ -86,6 +88,14 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         next = await this.handleEnterPassword(next, password);
       } else if (next.subtask.subtask_id === 'AccountDuplicationCheck') {
         next = await this.handleAccountDuplicationCheck(next);
+      } else if (next.subtask.subtask_id === 'LoginTwoFactorAuthChallenge') {
+        if (twoFactorSecret) {
+          next = await this.handleTwoFactorAuthChallenge(next, twoFactorSecret);
+        } else {
+          throw new Error(
+            'Requested two factor authentication code but no secret provided',
+          );
+        }
       } else if (next.subtask.subtask_id === 'LoginAcid') {
         next = await this.handleAcid(next, email);
       } else if (next.subtask.subtask_id === 'LoginSuccessSubtask') {
@@ -211,6 +221,34 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         },
       ],
     });
+  }
+
+  private async handleTwoFactorAuthChallenge(
+    prev: FlowTokenResultSuccess,
+    secret: string,
+  ) {
+    const totp = new OTPAuth.TOTP({ secret });
+    let error;
+    for (let attempts = 1; attempts < 4; attempts += 1) {
+      try {
+        return await this.executeFlowTask({
+          flow_token: prev.flowToken,
+          subtask_inputs: [
+            {
+              subtask_id: 'LoginTwoFactorAuthChallenge',
+              enter_text: {
+                link: 'next_link',
+                text: totp.generate(),
+              },
+            },
+          ],
+        });
+      } catch (err) {
+        error = err;
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempts));
+      }
+    }
+    throw error;
   }
 
   private async handleAcid(
