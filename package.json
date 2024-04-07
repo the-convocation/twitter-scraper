@@ -1,7 +1,12 @@
 {
   "name": "@the-convocation/twitter-scraper",
   "description": "A port of n0madic/twitter-scraper to Node.js.",
-  "keywords": ["x", "twitter", "scraper", "crawler"],
+  "keywords": [
+    "x",
+    "twitter",
+    "scraper",
+    "crawler"
+  ],
   "version": "0.10.1",
   "main": "dist/_module.js",
   "repository": "https://github.com/the-convocation/twitter-scraper.git",
@@ -21,6 +26,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@sinclair/typebox": "^0.32.20",
     "cross-fetch": "^4.0.0-alpha.5",
     "headers-polyfill": "^3.1.2",
     "json-stable-stringify": "^1.0.2",

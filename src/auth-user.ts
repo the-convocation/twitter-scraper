@@ -4,6 +4,8 @@ import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import { TwitterApiErrorRaw } from './errors';
+import { Type, type Static } from '@sinclair/typebox';
+import { Check } from '@sinclair/typebox/value';
 
 interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
@@ -25,19 +27,26 @@ interface TwitterUserAuthFlowResponse {
   errors?: TwitterApiErrorRaw[];
   flow_token?: string;
   status?: string;
-  subtasks?: {
-    subtask_id?: string;
-  }[];
+  subtasks?: TwitterUserAuthSubtask[];
 }
 
 interface TwitterUserAuthVerifyCredentials {
   errors?: TwitterApiErrorRaw[];
 }
 
-type FlowTokenResult =
-  | { status: 'success'; flowToken: string }
-  | { status: 'acid'; flowToken: string }
-  | { status: 'error'; err: Error };
+const TwitterUserAuthSubtask = Type.Object({
+  subtask_id: Type.String(),
+  enter_text: Type.Optional(Type.Object({})),
+});
+type TwitterUserAuthSubtask = Static<typeof TwitterUserAuthSubtask>;
+
+type FlowTokenResultSuccess = {
+  status: 'success';
+  flowToken: string;
+  subtask?: TwitterUserAuthSubtask;
+};
+
+type FlowTokenResult = FlowTokenResultSuccess | { status: 'error'; err: Error };
 
 /**
  * A user authentication token manager.
@@ -67,113 +76,27 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   ): Promise<void> {
     await this.updateGuestToken();
 
-    // Executes the potential acid step in the login flow
-    const executeFlowAcid = (ft: string) =>
-      this.executeFlowTask({
-        flow_token: ft,
-        subtask_inputs: [
-          {
-            subtask_id: 'LoginAcid',
-            enter_text: {
-              text: email,
-              link: 'next_link',
-            },
-          },
-        ],
-      });
-
-    // Handles the result of a flow task
-    const handleFlowTokenResult = async (
-      p: Promise<FlowTokenResult>,
-    ): Promise<string> => {
-      const result = await p;
-      const { status } = result;
-      if (status === 'error') {
-        throw result.err;
-      } else if (status === 'acid') {
-        return await handleFlowTokenResult(executeFlowAcid(result.flowToken));
+    let next = await this.initLogin();
+    while ('subtask' in next && next.subtask) {
+      if (next.subtask.subtask_id === 'LoginJsInstrumentationSubtask') {
+        next = await this.handleJsInstrumentationSubtask(next);
+      } else if (next.subtask.subtask_id === 'LoginEnterUserIdentifierSSO') {
+        next = await this.handleEnterUserIdentifierSSO(next, username);
+      } else if (next.subtask.subtask_id === 'LoginEnterPassword') {
+        next = await this.handleEnterPassword(next, password);
+      } else if (next.subtask.subtask_id === 'AccountDuplicationCheck') {
+        next = await this.handleAccountDuplicationCheck(next);
+      } else if (next.subtask.subtask_id === 'LoginAcid') {
+        next = await this.handleAcid(next, email);
+      } else if (next.subtask.subtask_id === 'LoginSuccessSubtask') {
+        next = await this.handleSuccessSubtask(next);
       } else {
-        return result.flowToken;
+        throw new Error(`Unknown subtask ${next.subtask.subtask_id}`);
       }
-    };
-
-    // Executes a flow subtask and handles the result
-    const executeFlowSubtask = (data: TwitterUserAuthFlowRequest) =>
-      handleFlowTokenResult(this.executeFlowTask(data));
-
-    await executeFlowSubtask({
-      flow_name: 'login',
-      input_flow_data: {
-        flow_context: {
-          debug_overrides: {},
-          start_location: {
-            location: 'splash_screen',
-          },
-        },
-      },
-    })
-      .then((ft) =>
-        executeFlowSubtask({
-          flow_token: ft,
-          subtask_inputs: [
-            {
-              subtask_id: 'LoginJsInstrumentationSubtask',
-              js_instrumentation: {
-                response: '{}',
-                link: 'next_link',
-              },
-            },
-          ],
-        }),
-      )
-      .then((ft) =>
-        executeFlowSubtask({
-          flow_token: ft,
-          subtask_inputs: [
-            {
-              subtask_id: 'LoginEnterUserIdentifierSSO',
-              settings_list: {
-                setting_responses: [
-                  {
-                    key: 'user_identifier',
-                    response_data: {
-                      text_data: { result: username },
-                    },
-                  },
-                ],
-                link: 'next_link',
-              },
-            },
-          ],
-        }),
-      )
-      .then((ft) =>
-        executeFlowSubtask({
-          flow_token: ft,
-          subtask_inputs: [
-            {
-              subtask_id: 'LoginEnterPassword',
-              enter_password: {
-                password,
-                link: 'next_link',
-              },
-            },
-          ],
-        }),
-      )
-      .then((ft) =>
-        executeFlowSubtask({
-          flow_token: ft,
-          subtask_inputs: [
-            {
-              subtask_id: 'AccountDuplicationCheck',
-              check_logged_in_account: {
-                link: 'AccountDuplicationCheck_false',
-              },
-            },
-          ],
-        }),
-      );
+    }
+    if ('err' in next) {
+      throw next.err;
+    }
   }
 
   async logout(): Promise<void> {
@@ -190,15 +113,129 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     this.jar = new CookieJar();
   }
 
-  async installTo(headers: Headers, url: string): Promise<void> {
-    headers.set('authorization', `Bearer ${this.bearerToken}`);
-    headers.set('cookie', await this.jar.getCookieString(url));
-
-    const cookies = await this.jar.getCookies(url);
+  async installCsrfToken(headers: Headers): Promise<void> {
+    const cookies = await this.jar.getCookies('https://twitter.com');
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
       headers.set('x-csrf-token', xCsrfToken.value);
     }
+  }
+
+  async installTo(headers: Headers, url: string): Promise<void> {
+    headers.set('authorization', `Bearer ${this.bearerToken}`);
+    headers.set('cookie', await this.jar.getCookieString(url));
+    await this.installCsrfToken(headers);
+  }
+
+  private async initLogin() {
+    return await this.executeFlowTask({
+      flow_name: 'login',
+      input_flow_data: {
+        flow_context: {
+          debug_overrides: {},
+          start_location: {
+            location: 'splash_screen',
+          },
+        },
+      },
+    });
+  }
+
+  private async handleJsInstrumentationSubtask(prev: FlowTokenResultSuccess) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [
+        {
+          subtask_id: 'LoginJsInstrumentationSubtask',
+          js_instrumentation: {
+            response: '{}',
+            link: 'next_link',
+          },
+        },
+      ],
+    });
+  }
+
+  private async handleEnterUserIdentifierSSO(
+    prev: FlowTokenResultSuccess,
+    username: string,
+  ) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [
+        {
+          subtask_id: 'LoginEnterUserIdentifierSSO',
+          settings_list: {
+            setting_responses: [
+              {
+                key: 'user_identifier',
+                response_data: {
+                  text_data: { result: username },
+                },
+              },
+            ],
+            link: 'next_link',
+          },
+        },
+      ],
+    });
+  }
+
+  private async handleEnterPassword(
+    prev: FlowTokenResultSuccess,
+    password: string,
+  ) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [
+        {
+          subtask_id: 'LoginEnterPassword',
+          enter_password: {
+            password,
+            link: 'next_link',
+          },
+        },
+      ],
+    });
+  }
+
+  private async handleAccountDuplicationCheck(prev: FlowTokenResultSuccess) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [
+        {
+          subtask_id: 'AccountDuplicationCheck',
+          check_logged_in_account: {
+            link: 'AccountDuplicationCheck_false',
+          },
+        },
+      ],
+    });
+  }
+
+  private async handleAcid(
+    prev: FlowTokenResultSuccess,
+    email: string | undefined,
+  ) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [
+        {
+          subtask_id: 'LoginAcid',
+          enter_text: {
+            text: email,
+            link: 'next_link',
+          },
+        },
+      ],
+    });
+  }
+
+  private async handleSuccessSubtask(prev: FlowTokenResultSuccess) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [],
+    });
   }
 
   private async executeFlowTask(
@@ -223,6 +260,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
     });
+    await this.installCsrfToken(headers);
 
     const res = await this.fetch(onboardingTaskUrl, {
       method: 'POST',
@@ -257,38 +295,19 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       };
     }
 
-    if (flow.subtasks?.length) {
-      if (
-        flow.subtasks[0].subtask_id === 'LoginEnterAlternateIdentifierSubtask'
-      ) {
-        return {
-          status: 'error',
-          err: new Error(
-            'Authentication error: LoginEnterAlternateIdentifierSubtask',
-          ),
-        };
-      } else if (flow.subtasks[0].subtask_id === 'LoginAcid') {
-        return {
-          status: 'acid',
-          flowToken: flow.flow_token,
-        };
-      } else if (
-        flow.subtasks[0].subtask_id === 'LoginTwoFactorAuthChallenge'
-      ) {
-        return {
-          status: 'error',
-          err: new Error('Authentication error: LoginTwoFactorAuthChallenge'),
-        };
-      } else if (flow.subtasks[0].subtask_id === 'DenyLoginSubtask') {
-        return {
-          status: 'error',
-          err: new Error('Authentication error: DenyLoginSubtask'),
-        };
-      }
+    const subtask = flow.subtasks?.length ? flow.subtasks[0] : undefined;
+    Check(TwitterUserAuthSubtask, subtask);
+
+    if (subtask && subtask.subtask_id === 'DenyLoginSubtask') {
+      return {
+        status: 'error',
+        err: new Error('Authentication error: DenyLoginSubtask'),
+      };
     }
 
     return {
       status: 'success',
+      subtask,
       flowToken: flow.flow_token,
     };
   }
