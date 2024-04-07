@@ -795,6 +795,11 @@
   resolved "https://registry.npmjs.org/@sinclair/typebox/-/typebox-0.27.8.tgz"
   integrity sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==
 
+"@sinclair/typebox@^0.32.20":
+  version "0.32.20"
+  resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.32.20.tgz#32bdeb6b185188622f965ebbc88e1a6d5127d88a"
+  integrity sha512-ziK497ILSIYMxD/thl496idIb03IZPlha04itLQu1xAFQbumWZ+Dj4PMMCkDRpAYhvVSdmRlTjGu2B2MA5RplQ==
+
 "@sinonjs/commons@^3.0.0":
   version "3.0.0"
   resolved "https://registry.npmjs.org/@sinonjs/commons/-/commons-3.0.0.tgz"
