@@ -30,6 +30,7 @@
     "cross-fetch": "^4.0.0-alpha.5",
     "headers-polyfill": "^3.1.2",
     "json-stable-stringify": "^1.0.2",
+    "otpauth": "^9.2.2",
     "set-cookie-parser": "^2.6.0",
     "tough-cookie": "^4.1.2",
     "tslib": "^2.5.2"

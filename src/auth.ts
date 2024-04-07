@@ -27,9 +27,15 @@ export interface TwitterAuth {
    * Logs into a Twitter account.
    * @param username The username to log in with.
    * @param password The password to log in with.
-   * @param email The password to log in with, if you have email confirmation enabled.
+   * @param email The email to log in with, if you have email confirmation enabled.
+   * @param twoFactorSecret The secret to generate two factor authentication tokens with, if you have two factor authentication enabled.
    */
-  login(username: string, password: string, email?: string): Promise<void>;
+  login(
+    username: string,
+    password: string,
+    email?: string,
+    twoFactorSecret?: string,
+  ): Promise<void>;
 
   /**
    * Logs out of the current session.
