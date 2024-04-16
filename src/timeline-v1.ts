@@ -101,6 +101,7 @@ export interface TimelineResultRaw {
     result?: TimelineResultRaw;
   };
   legacy?: LegacyTweetRaw;
+  tweet?: TimelineResultRaw;
 }
 
 export interface LegacyTweetRaw {
