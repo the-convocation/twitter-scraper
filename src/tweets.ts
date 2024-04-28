@@ -49,6 +49,7 @@ export interface PlaceRaw {
  * A parsed Tweet object.
  */
 export interface Tweet {
+  bookmarkCount?: number;
   conversationId?: string;
   hashtags: string[];
   html?: string;

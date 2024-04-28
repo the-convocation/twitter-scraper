@@ -142,6 +142,7 @@ export function parseLegacyTweet(
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
   const tw: Tweet = {
+    bookmarkCount: tweet.bookmark_count,
     conversationId: tweet.conversation_id_str,
     id: tweet.id_str,
     hashtags: hashtags
