@@ -7,7 +7,7 @@
     "scraper",
     "crawler"
   ],
-  "version": "0.11.0",
+  "version": "0.12.0",
   "main": "dist/_module.js",
   "repository": "https://github.com/the-convocation/twitter-scraper.git",
   "author": "karashiiro <49822414+karashiiro@users.noreply.github.com>",
