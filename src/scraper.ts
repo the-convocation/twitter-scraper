@@ -30,6 +30,8 @@ import {
   TweetQuery,
   getTweet,
   fetchListTweets,
+  getTweetsAndRepliesByUserId,
+  getTweetsAndReplies,
 } from './tweets';
 import fetch from 'cross-fetch';
 
@@ -270,6 +272,32 @@ export class Scraper {
     maxTweets = 200,
   ): AsyncGenerator<Tweet, void> {
     return getTweetsByUserId(userId, maxTweets, this.auth);
+  }
+
+  /**
+   * Fetches tweets and replies from a Twitter user.
+   * @param user The user whose tweets should be returned.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of tweets from the provided user.
+   */
+  public getTweetsAndReplies(
+    user: string,
+    maxTweets = 200,
+  ): AsyncGenerator<Tweet> {
+    return getTweetsAndReplies(user, maxTweets, this.auth);
+  }
+
+  /**
+   * Fetches tweets and replies from a Twitter user using their ID.
+   * @param userId The user whose tweets should be returned.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of tweets from the provided user.
+   */
+  public getTweetsAndRepliesByUserId(
+    userId: string,
+    maxTweets = 200,
+  ): AsyncGenerator<Tweet, void> {
+    return getTweetsAndRepliesByUserId(userId, maxTweets, this.auth);
   }
 
   /**
