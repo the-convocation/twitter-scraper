@@ -1,26 +1,35 @@
 # twitter-scraper
+
 [![Documentation badge](https://img.shields.io/badge/docs-here-informational)](https://the-convocation.github.io/twitter-scraper/)
 
-A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper) to Node.js.
+A port of [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper)
+to Node.js.
 
-> Twitter's API is annoying to work with, and has lots of limitations — luckily their frontend (JavaScript) has it's own API, which I reverse-engineered. No API rate limits. No tokens needed. No restrictions. Extremely fast.
+> Twitter's API is annoying to work with, and has lots of limitations — luckily
+> their frontend (JavaScript) has it's own API, which I reverse-engineered. No
+> API rate limits. No tokens needed. No restrictions. Extremely fast.
 >
 > You can use this library to get the text of any user's Tweets trivially.
 
 Known limitations:
 
-* Search operations require logging in with a real user account via `scraper.login()`.
-* Twitter's frontend API does in fact have rate limits ([#11](https://github.com/the-convocation/twitter-scraper/issues/11))
+- Search operations require logging in with a real user account via
+  `scraper.login()`.
+- Twitter's frontend API does in fact have rate limits
+  ([#11](https://github.com/the-convocation/twitter-scraper/issues/11))
 
 ## Installation
+
 This package requires Node.js v16.0.0 or greater.
 
 NPM:
+
 ```sh
 npm install @the-convocation/twitter-scraper
 ```
 
 Yarn:
+
 ```sh
 yarn add @the-convocation/twitter-scraper
 ```
@@ -28,16 +37,23 @@ yarn add @the-convocation/twitter-scraper
 TypeScript types have been bundled with the distribution.
 
 ## Usage
-Most use cases are exactly the same as in [n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper).
-Channel iterators have been translated into [AsyncGenerator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator)
-instances, and can be consumed with the corresponding `for await (const x of y) { ... }` syntax.
+
+Most use cases are exactly the same as in
+[n0madic/twitter-scraper](https://github.com/n0madic/twitter-scraper). Channel
+iterators have been translated into
+[AsyncGenerator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/AsyncGenerator)
+instances, and can be consumed with the corresponding
+`for await (const x of y) { ... }` syntax.
 
 ### Browser usage
-This package directly invokes the Twitter API, which does not have permissive CORS headers. With the default
-settings, requests will fail unless you disable CORS checks, which is not advised. Instead, applications must
-provide a CORS proxy and configure it in the `Scraper` options.
 
-Proxies (and other request mutations) can be configured with the request interceptor transform:
+This package directly invokes the Twitter API, which does not have permissive
+CORS headers. With the default settings, requests will fail unless you disable
+CORS checks, which is not advised. Instead, applications must provide a CORS
+proxy and configure it in the `Scraper` options.
+
+Proxies (and other request mutations) can be configured with the request
+interceptor transform:
 
 ```ts
 const scraper = new Scraper({
@@ -46,13 +62,11 @@ const scraper = new Scraper({
       // The arguments here are the same as the parameters to fetch(), and
       // are kept as-is for flexibility of both the library and applications.
       if (input instanceof URL) {
-        const proxy =
-          "https://corsproxy.io/?" +
+        const proxy = "https://corsproxy.io/?" +
           encodeURIComponent(input.toString());
         return [proxy, init];
       } else if (typeof input === "string") {
-        const proxy =
-          "https://corsproxy.io/?" + encodeURIComponent(input);
+        const proxy = "https://corsproxy.io/?" + encodeURIComponent(input);
         return [proxy, init];
       } else {
         // Omitting handling for example
@@ -63,12 +77,15 @@ const scraper = new Scraper({
 });
 ```
 
-[corsproxy.io](https://corsproxy.io) is a public CORS proxy that works correctly with this package.
+[corsproxy.io](https://corsproxy.io) is a public CORS proxy that works correctly
+with this package.
 
-The public CORS proxy [corsproxy.org](https://corsproxy.org) *does not work* at the time of writing (at least
-not using their recommended integration on the front page).
+The public CORS proxy [corsproxy.org](https://corsproxy.org) _does not work_ at
+the time of writing (at least not using their recommended integration on the
+front page).
 
 #### Next.js 13.x example:
+
 ```tsx
 "use client";
 
@@ -82,13 +99,12 @@ export default function Home() {
         transform: {
           request(input: RequestInfo | URL, init?: RequestInit) {
             if (input instanceof URL) {
-              const proxy =
-                "https://corsproxy.io/?" +
+              const proxy = "https://corsproxy.io/?" +
                 encodeURIComponent(input.toString());
               return [proxy, init];
             } else if (typeof input === "string") {
-              const proxy =
-                "https://corsproxy.io/?" + encodeURIComponent(input);
+              const proxy = "https://corsproxy.io/?" +
+                encodeURIComponent(input);
               return [proxy, init];
             } else {
               throw new Error("Unexpected request input type");
@@ -120,19 +136,23 @@ export default function Home() {
 ```
 
 ### Edge runtimes
-This package currently uses [`cross-fetch`](https://www.npmjs.com/package/cross-fetch) as a portable `fetch`.
-Edge runtimes such as CloudFlare Workers sometimes have `fetch` functions that behave differently from the web
-standard, so you may need to override the `fetch` function the scraper uses. If so, a custom `fetch` can be
+
+This package currently uses
+[`cross-fetch`](https://www.npmjs.com/package/cross-fetch) as a portable
+`fetch`. Edge runtimes such as CloudFlare Workers sometimes have `fetch`
+functions that behave differently from the web standard, so you may need to
+override the `fetch` function the scraper uses. If so, a custom `fetch` can be
 provided in the options:
 
 ```ts
 const scraper = new Scraper({
-  fetch: fetch
+  fetch: fetch,
 });
 ```
 
-Note that this does not change the arguments passed to the function, or the expected return type. If the custom
-`fetch` function produces runtime errors related to incorrect types, be sure to wrap it in a shim (not currently
+Note that this does not change the arguments passed to the function, or the
+expected return type. If the custom `fetch` function produces runtime errors
+related to incorrect types, be sure to wrap it in a shim (not currently
 supported directly by interceptors):
 
 ```ts
@@ -151,26 +171,37 @@ const scraper = new Scraper({
 ## Contributing
 
 ### Setup
-This project currently targets Node 16.x and uses Yarn for package management. [Corepack](https://nodejs.org/dist/latest-v16.x/docs/api/corepack.html)
-is configured for this project, so you don't need to install a particular package manager version manually.
 
-Just run `corepack enable` to turn on the shims, then run `yarn` to install the dependencies.
+This project currently requires Node 18.x for development and uses Yarn for
+package management.
+[Corepack](https://nodejs.org/dist/latest-v18.x/docs/api/corepack.html) is
+configured for this project, so you don't need to install a particular package
+manager version manually.
+
+> The project supports Node 16.x at runtime, but requires Node 18.x to run its
+> build tools.
+
+Just run `corepack enable` to turn on the shims, then run `yarn` to install the
+dependencies.
 
 #### Basic scripts
-* `yarn build`: Builds the project into the `dist` folder
-* `yarn test`: Runs the package tests (see [Testing](#testing) first)
+
+- `yarn build`: Builds the project into the `dist` folder
+- `yarn test`: Runs the package tests (see [Testing](#testing) first)
 
 Run `yarn help` for general `yarn` usage information.
 
 ### Testing
-This package includes unit tests for all major functionality. Given the speed at which Twitter's private API
-changes, failing tests are to be expected.
+
+This package includes unit tests for all major functionality. Given the speed at
+which Twitter's private API changes, failing tests are to be expected.
 
 ```sh
 yarn test
 ```
 
-Before running tests, you should configure environment variables for authentication.
+Before running tests, you should configure environment variables for
+authentication.
 
 ```
 TWITTER_USERNAME=    # Account username
@@ -181,5 +212,7 @@ PROXY_URL=           # HTTP(s) proxy for requests (optional)
 ```
 
 ### Commit message format
-We use [Conventional Commits](https://www.conventionalcommits.org), and enforce this with precommit checks.
-Please refer to the Git history for real examples of the commit message format.
+
+We use [Conventional Commits](https://www.conventionalcommits.org), and enforce
+this with precommit checks. Please refer to the Git history for real examples of
+the commit message format.
