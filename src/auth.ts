@@ -1,4 +1,4 @@
-import { CookieJar } from 'tough-cookie';
+import { Cookie, CookieJar, MemoryCookieStore } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
@@ -143,7 +143,7 @@ export class TwitterGuestAuth implements TwitterAuth {
     return new Date(this.guestCreatedAt);
   }
 
-  async installTo(headers: Headers, url: string): Promise<void> {
+  async installTo(headers: Headers): Promise<void> {
     if (this.shouldUpdate()) {
       await this.updateGuestToken();
     }
@@ -156,13 +156,41 @@ export class TwitterGuestAuth implements TwitterAuth {
     headers.set('authorization', `Bearer ${this.bearerToken}`);
     headers.set('x-guest-token', token);
 
-    const cookies = await this.jar.getCookies(url);
+    const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
       headers.set('x-csrf-token', xCsrfToken.value);
     }
 
-    headers.set('cookie', await this.jar.getCookieString(url));
+    headers.set('cookie', await this.getCookieString());
+  }
+
+  protected getCookies(): Promise<Cookie[]> {
+    return this.jar.getCookies(this.getCookieJarUrl());
+  }
+
+  protected getCookieString(): Promise<string> {
+    return this.jar.getCookieString(this.getCookieJarUrl());
+  }
+
+  protected async removeCookie(key: string): Promise<void> {
+    //@ts-expect-error don't care
+    const store: MemoryCookieStore = this.jar.store;
+    const cookies = await this.jar.getCookies(this.getCookieJarUrl());
+    for (const cookie of cookies) {
+      if (!cookie.domain || !cookie.path) continue;
+      store.removeCookie(cookie.domain, cookie.path, key);
+
+      if (typeof document !== 'undefined') {
+        document.cookie = `${cookie.key}=; Max-Age=0; path=${cookie.path}; domain=${cookie.domain}`;
+      }
+    }
+  }
+
+  private getCookieJarUrl(): string {
+    return typeof document !== 'undefined'
+      ? document.location.toString()
+      : 'https://twitter.com';
   }
 
   /**
@@ -173,12 +201,13 @@ export class TwitterGuestAuth implements TwitterAuth {
 
     const headers = new Headers({
       Authorization: `Bearer ${this.bearerToken}`,
-      Cookie: await this.jar.getCookieString(guestActivateUrl),
+      Cookie: await this.getCookieString(),
     });
 
     const res = await this.fetch(guestActivateUrl, {
       method: 'POST',
       headers: headers,
+      referrerPolicy: 'no-referrer',
     });
 
     await updateCookieJar(this.jar, res.headers);

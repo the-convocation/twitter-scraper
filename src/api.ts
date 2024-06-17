@@ -62,6 +62,7 @@ export async function requestApi<T>(
       res = await auth.fetch(url, {
         method,
         headers,
+        credentials: 'include',
       });
     } catch (err) {
       if (!(err instanceof Error)) {

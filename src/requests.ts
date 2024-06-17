@@ -21,5 +21,12 @@ export async function updateCookieJar(
         `${cookie.secure ? 'https' : 'http'}://${cookie.domain}${cookie.path}`,
       );
     }
+  } else if (typeof document !== 'undefined') {
+    for (const cookie of document.cookie.split(';')) {
+      const hardCookie = Cookie.parse(cookie);
+      if (hardCookie) {
+        await cookieJar.setCookie(hardCookie, document.location.toString());
+      }
+    }
   }
 }
