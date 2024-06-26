@@ -84,6 +84,13 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         next = await this.handleJsInstrumentationSubtask(next);
       } else if (next.subtask.subtask_id === 'LoginEnterUserIdentifierSSO') {
         next = await this.handleEnterUserIdentifierSSO(next, username);
+      } else if (
+        next.subtask.subtask_id === 'LoginEnterAlternateIdentifierSubtask'
+      ) {
+        next = await this.handleEnterAlternateIdentifierSubtask(
+          next,
+          email as string,
+        );
       } else if (next.subtask.subtask_id === 'LoginEnterPassword') {
         next = await this.handleEnterPassword(next, password);
       } else if (next.subtask.subtask_id === 'AccountDuplicationCheck') {
@@ -159,6 +166,24 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           subtask_id: 'LoginJsInstrumentationSubtask',
           js_instrumentation: {
             response: '{}',
+            link: 'next_link',
+          },
+        },
+      ],
+    });
+  }
+
+  private async handleEnterAlternateIdentifierSubtask(
+    prev: FlowTokenResultSuccess,
+    email: string,
+  ) {
+    return await this.executeFlowTask({
+      flow_token: prev.flowToken,
+      subtask_inputs: [
+        {
+          subtask_id: 'LoginEnterAlternateIdentifierSubtask',
+          enter_text: {
+            text: email,
             link: 'next_link',
           },
         },
