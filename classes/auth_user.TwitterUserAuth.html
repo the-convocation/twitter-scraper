@@ -27,7 +27,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">TwitterUserAuth</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L55">src/auth-user.ts:55</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L55">src/auth-user.ts:55</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -54,6 +54,7 @@
 <a href="auth_user.TwitterUserAuth.html#executeFlowTask" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>execute<wbr/>Flow<wbr/>Task</span></a>
 <a href="auth_user.TwitterUserAuth.html#handleAccountDuplicationCheck" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Account<wbr/>Duplication<wbr/>Check</span></a>
 <a href="auth_user.TwitterUserAuth.html#handleAcid" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Acid</span></a>
+<a href="auth_user.TwitterUserAuth.html#handleEnterAlternateIdentifierSubtask" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Enter<wbr/>Alternate<wbr/>Identifier<wbr/>Subtask</span></a>
 <a href="auth_user.TwitterUserAuth.html#handleEnterPassword" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Enter<wbr/>Password</span></a>
 <a href="auth_user.TwitterUserAuth.html#handleEnterUserIdentifierSSO" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Enter<wbr/>User<wbr/>IdentifierSSO</span></a>
 <a href="auth_user.TwitterUserAuth.html#handleJsInstrumentationSubtask" class="tsd-index-link tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Js<wbr/>Instrumentation<wbr/>Subtask</span></a>
@@ -85,7 +86,7 @@
 <h4 class="tsd-returns-title">Returns <a href="auth_user.TwitterUserAuth.html" class="tsd-signature-type tsd-kind-class">TwitterUserAuth</a></h4><aside class="tsd-sources">
 <p>Overrides <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#constructor">constructor</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L56">src/auth-user.ts:56</a></li></ul></aside></li></ul></section></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L56">src/auth-user.ts:56</a></li></ul></aside></li></ul></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
 <section class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"><a id="bearerToken" class="tsd-anchor"></a>
@@ -93,7 +94,7 @@
 <div class="tsd-signature"><span class="tsd-kind-property">bearer<wbr/>Token</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#bearerToken">bearerToken</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L94">src/auth.ts:94</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L94">src/auth.ts:94</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-inherited"><a id="fetch" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>fetch</span><a href="#fetch" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fetch</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">input</span>, <span class="tsd-kind-parameter">init</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol"> =&gt; </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">Response</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">)</span></div>
@@ -117,31 +118,31 @@
 <div class="tsd-comment tsd-typography"></div></li></ul></li></ul></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#fetch">fetch</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L99">src/auth.ts:99</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L99">src/auth.ts:99</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"><a id="guestCreatedAt" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagProtected">Protected</code> <code class="tsd-tag ts-flagOptional">Optional</code> <span>guest<wbr/>Created<wbr/>At</span><a href="#guestCreatedAt" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">guest<wbr/>Created<wbr/>At</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Date</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#guestCreatedAt">guestCreatedAt</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L97">src/auth.ts:97</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L97">src/auth.ts:97</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"><a id="guestToken" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagProtected">Protected</code> <code class="tsd-tag ts-flagOptional">Optional</code> <span>guest<wbr/>Token</span><a href="#guestToken" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">guest<wbr/>Token</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#guestToken">guestToken</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L96">src/auth.ts:96</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L96">src/auth.ts:96</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"><a id="jar" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagProtected">Protected</code> <span>jar</span><a href="#jar" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">jar</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">CookieJar</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#jar">jar</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L95">src/auth.ts:95</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L95">src/auth.ts:95</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"><a id="options" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagProtected">Protected</code> <code class="tsd-tag ts-flagOptional">Optional</code> <code class="tsd-tag ts-flagReadonly">Readonly</code> <span>options</span><a href="#options" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">options</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Partial</span><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/auth.TwitterAuthOptions.html" class="tsd-signature-type tsd-kind-interface">TwitterAuthOptions</a><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#options">options</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L103">src/auth.ts:103</a></li></ul></aside></section></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L103">src/auth.ts:103</a></li></ul></aside></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Methods</h2>
 <section class="tsd-panel tsd-member tsd-is-inherited"><a id="authenticatedAt" class="tsd-anchor"></a>
@@ -156,7 +157,7 @@
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#authenticatedAt">authenticatedAt</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L138">src/auth.ts:138</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L138">src/auth.ts:138</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited"><a id="cookieJar" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>cookie<wbr/>Jar</span><a href="#cookieJar" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -168,7 +169,7 @@
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#cookieJar">cookieJar</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L110">src/auth.ts:110</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L110">src/auth.ts:110</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited"><a id="deleteToken" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>delete<wbr/>Token</span><a href="#deleteToken" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -180,7 +181,7 @@
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#deleteToken">deleteToken</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L129">src/auth.ts:129</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L129">src/auth.ts:129</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="executeFlowTask" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>execute<wbr/>Flow<wbr/>Task</span><a href="#executeFlowTask" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -193,7 +194,7 @@
 <h5><span class="tsd-kind-parameter">data</span>: <span class="tsd-signature-type ">TwitterUserAuthFlowRequest</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L279">src/auth-user.ts:279</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L304">src/auth-user.ts:304</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleAccountDuplicationCheck" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Account<wbr/>Duplication<wbr/>Check</span><a href="#handleAccountDuplicationCheck" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -206,7 +207,7 @@
 <h5><span class="tsd-kind-parameter">prev</span>: <span class="tsd-signature-type ">FlowTokenResultSuccess</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L212">src/auth-user.ts:212</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L237">src/auth-user.ts:237</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleAcid" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Acid</span><a href="#handleAcid" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -221,7 +222,22 @@
 <h5><span class="tsd-kind-parameter">email</span>: <span class="tsd-signature-type">undefined</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L254">src/auth-user.ts:254</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L279">src/auth-user.ts:279</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member tsd-is-private"><a id="handleEnterAlternateIdentifierSubtask" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Enter<wbr/>Alternate<wbr/>Identifier<wbr/>Subtask</span><a href="#handleEnterAlternateIdentifierSubtask" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures tsd-is-private">
+<li class="tsd-signature tsd-anchor-link" id="handleEnterAlternateIdentifierSubtask.handleEnterAlternateIdentifierSubtask-1"><span class="tsd-kind-call-signature">handle<wbr/>Enter<wbr/>Alternate<wbr/>Identifier<wbr/>Subtask</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">prev</span>, <span class="tsd-kind-parameter">email</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span><a href="#handleEnterAlternateIdentifierSubtask.handleEnterAlternateIdentifierSubtask-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">prev</span>: <span class="tsd-signature-type ">FlowTokenResultSuccess</span></h5></li>
+<li>
+<h5><span class="tsd-kind-parameter">email</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L176">src/auth-user.ts:176</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleEnterPassword" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Enter<wbr/>Password</span><a href="#handleEnterPassword" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -236,7 +252,7 @@
 <h5><span class="tsd-kind-parameter">password</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L194">src/auth-user.ts:194</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L219">src/auth-user.ts:219</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleEnterUserIdentifierSSO" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Enter<wbr/>User<wbr/>IdentifierSSO</span><a href="#handleEnterUserIdentifierSSO" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -251,7 +267,7 @@
 <h5><span class="tsd-kind-parameter">username</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L169">src/auth-user.ts:169</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L194">src/auth-user.ts:194</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleJsInstrumentationSubtask" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Js<wbr/>Instrumentation<wbr/>Subtask</span><a href="#handleJsInstrumentationSubtask" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -264,7 +280,7 @@
 <h5><span class="tsd-kind-parameter">prev</span>: <span class="tsd-signature-type ">FlowTokenResultSuccess</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L154">src/auth-user.ts:154</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L161">src/auth-user.ts:161</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleSuccessSubtask" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Success<wbr/>Subtask</span><a href="#handleSuccessSubtask" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -277,7 +293,7 @@
 <h5><span class="tsd-kind-parameter">prev</span>: <span class="tsd-signature-type ">FlowTokenResultSuccess</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L272">src/auth-user.ts:272</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L297">src/auth-user.ts:297</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="handleTwoFactorAuthChallenge" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>handle<wbr/>Two<wbr/>Factor<wbr/>Auth<wbr/>Challenge</span><a href="#handleTwoFactorAuthChallenge" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -292,7 +308,7 @@
 <h5><span class="tsd-kind-parameter">secret</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L226">src/auth-user.ts:226</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L251">src/auth-user.ts:251</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-inherited"><a id="hasToken" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>has<wbr/>Token</span><a href="#hasToken" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-inherited">
@@ -305,7 +321,7 @@
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#hasToken">hasToken</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L134">src/auth.ts:134</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L134">src/auth.ts:134</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-private"><a id="initLogin" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>init<wbr/>Login</span><a href="#initLogin" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
@@ -313,7 +329,7 @@
 <li class="tsd-description">
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">FlowTokenResult</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L140">src/auth-user.ts:140</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L147">src/auth-user.ts:147</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="installCsrfToken" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>install<wbr/>Csrf<wbr/>Token</span><a href="#installCsrfToken" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -326,7 +342,7 @@
 <h5><span class="tsd-kind-parameter">headers</span>: <span class="tsd-signature-type ">HeadersPolyfill</span></h5></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L126">src/auth-user.ts:126</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L133">src/auth-user.ts:133</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="installTo" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>install<wbr/>To</span><a href="#installTo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -349,7 +365,7 @@ authentication token will be updated from the API automatically.</p>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Overrides <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#installTo">installTo</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L134">src/auth-user.ts:134</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L141">src/auth-user.ts:141</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="isLoggedIn" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>is<wbr/>Logged<wbr/>In</span><a href="#isLoggedIn" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -362,7 +378,7 @@ authentication token will be updated from the API automatically.</p>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Overrides <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#isLoggedIn">isLoggedIn</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L60">src/auth-user.ts:60</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L60">src/auth-user.ts:60</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="login" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>login</span><a href="#login" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -394,7 +410,7 @@ authentication token will be updated from the API automatically.</p>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Overrides <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#login">login</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L73">src/auth-user.ts:73</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L73">src/auth-user.ts:73</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="logout" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>logout</span><a href="#logout" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures">
@@ -406,7 +422,7 @@ authentication token will be updated from the API automatically.</p>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Overrides <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#logout">logout</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth-user.ts#L112">src/auth-user.ts:112</a></li></ul></aside></li></ul></section>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth-user.ts#L119">src/auth-user.ts:119</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"><a id="updateGuestToken" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagProtected">Protected</code> <span>update<wbr/>Guest<wbr/>Token</span><a href="#updateGuestToken" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <ul class="tsd-signatures tsd-is-protected tsd-is-inherited">
@@ -418,7 +434,7 @@ authentication token will be updated from the API automatically.</p>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <p>Inherited from <a href="auth.TwitterGuestAuth.html">TwitterGuestAuth</a>.<a href="auth.TwitterGuestAuth.html#updateGuestToken">updateGuestToken</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/989b36e/src/auth.ts#L171">src/auth.ts:171</a></li></ul></aside></li></ul></section></section></div>
+<li>Defined in <a href="https://github.com/the-convocation/twitter-scraper/blob/b8daded/src/auth.ts#L171">src/auth.ts:171</a></li></ul></aside></li></ul></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -451,6 +467,7 @@ authentication token will be updated from the API automatically.</p>
 <li><a href="#executeFlowTask" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>execute<wbr/>Flow<wbr/>Task</span></a></li>
 <li><a href="#handleAccountDuplicationCheck" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Account<wbr/>Duplication<wbr/>Check</span></a></li>
 <li><a href="#handleAcid" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Acid</span></a></li>
+<li><a href="#handleEnterAlternateIdentifierSubtask" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Enter<wbr/>Alternate<wbr/>Identifier<wbr/>Subtask</span></a></li>
 <li><a href="#handleEnterPassword" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Enter<wbr/>Password</span></a></li>
 <li><a href="#handleEnterUserIdentifierSSO" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Enter<wbr/>User<wbr/>IdentifierSSO</span></a></li>
 <li><a href="#handleJsInstrumentationSubtask" class="tsd-is-private"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>handle<wbr/>Js<wbr/>Instrumentation<wbr/>Subtask</span></a></li>
