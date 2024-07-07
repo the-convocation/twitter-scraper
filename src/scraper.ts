@@ -428,7 +428,11 @@ export class Scraper {
    * @returns All cookies for the current session.
    */
   public async getCookies(): Promise<Cookie[]> {
-    return await this.authTrends.cookieJar().getCookies(twUrl);
+    return await this.authTrends
+      .cookieJar()
+      .getCookies(
+        typeof document !== 'undefined' ? document.location.toString() : twUrl,
+      );
   }
 
   /**

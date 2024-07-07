@@ -131,20 +131,34 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   async installCsrfToken(headers: Headers): Promise<void> {
-    const cookies = await this.jar.getCookies('https://twitter.com');
+    const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
       headers.set('x-csrf-token', xCsrfToken.value);
     }
   }
 
-  async installTo(headers: Headers, url: string): Promise<void> {
+  async installTo(headers: Headers): Promise<void> {
     headers.set('authorization', `Bearer ${this.bearerToken}`);
-    headers.set('cookie', await this.jar.getCookieString(url));
+    headers.set('cookie', await this.getCookieString());
     await this.installCsrfToken(headers);
   }
 
   private async initLogin() {
+    // Reset certain session-related cookies because Twitter complains sometimes if we don't
+    this.removeCookie('twitter_ads_id=');
+    this.removeCookie('ads_prefs=');
+    this.removeCookie('_twitter_sess=');
+    this.removeCookie('zipbox_forms_auth_token=');
+    this.removeCookie('lang=');
+    this.removeCookie('bouncer_reset_cookie=');
+    this.removeCookie('twid=');
+    this.removeCookie('twitter_ads_idb=');
+    this.removeCookie('email_uid=');
+    this.removeCookie('external_referer=');
+    this.removeCookie('ct0=');
+    this.removeCookie('aa_u=');
+
     return await this.executeFlowTask({
       flow_name: 'login',
       input_flow_data: {
@@ -314,7 +328,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
     const headers = new Headers({
       authorization: `Bearer ${this.bearerToken}`,
-      cookie: await this.jar.getCookieString(onboardingTaskUrl),
+      cookie: await this.getCookieString(),
       'content-type': 'application/json',
       'User-Agent':
         'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
@@ -326,6 +340,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     await this.installCsrfToken(headers);
 
     const res = await this.fetch(onboardingTaskUrl, {
+      credentials: 'include',
       method: 'POST',
       headers: headers,
       body: JSON.stringify(data),
