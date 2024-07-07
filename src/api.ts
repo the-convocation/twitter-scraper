@@ -1,5 +1,6 @@
 import { TwitterAuth } from './auth';
 import { ApiError } from './errors';
+import { Platform, PlatformExtensions } from './platform';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 
@@ -49,9 +50,11 @@ export async function requestApi<T>(
   url: string,
   auth: TwitterAuth,
   method: 'GET' | 'POST' = 'GET',
+  platform: PlatformExtensions = new Platform(),
 ): Promise<RequestApiResult<T>> {
   const headers = new Headers();
   await auth.installTo(headers, url);
+  await platform.randomizeCiphers();
 
   let res: Response;
   do {
