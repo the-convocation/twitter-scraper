@@ -49,6 +49,13 @@ export interface TimelineMediaExtendedRaw {
   ext_alt_text: string | undefined;
 }
 
+export interface EditControlInitialRaw {
+  edit_tweet_ids?: string[];
+  editable_until_msecs?: `${number}`;
+  edits_remaining?: `${number}`;
+  is_edit_eligible?: boolean;
+}
+
 export interface SearchResultRaw {
   rest_id?: string;
   __typename?: string;
@@ -59,6 +66,9 @@ export interface SearchResultRaw {
         legacy?: LegacyUserRaw;
       };
     };
+  };
+  edit_control?: {
+    edit_control_initial?: EditControlInitialRaw;
   };
   views?: {
     count?: string;

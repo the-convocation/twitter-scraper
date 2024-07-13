@@ -49,6 +49,7 @@ export function parseSearchTimelineTweets(
           const tweetResult = parseLegacyTweet(
             tweetResultRaw?.core?.user_results?.result?.legacy,
             tweetResultRaw?.legacy,
+            tweetResultRaw?.edit_control?.edit_control_initial,
           );
 
           if (tweetResult.success) {

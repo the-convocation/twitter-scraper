@@ -57,6 +57,8 @@ export interface Tweet {
   id?: string;
   inReplyToStatus?: Tweet;
   inReplyToStatusId?: string;
+  isEdited?: boolean;
+  versions?: string[];
   isQuoted?: boolean;
   isPin?: boolean;
   isReply?: boolean;
