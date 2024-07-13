@@ -1,6 +1,7 @@
 import { LegacyUserRaw } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import {
+  EditControlInitialRaw,
   LegacyTweetRaw,
   ParseTweetResult,
   QueryTweetsResponse,
@@ -114,6 +115,7 @@ function getLegacyTweetId(tweet: Readonly<LegacyTweetRaw>): string | undefined {
 export function parseLegacyTweet(
   user?: Readonly<LegacyUserRaw>,
   tweet?: Readonly<LegacyTweetRaw>,
+  editControl?: Readonly<EditControlInitialRaw>,
 ): ParseTweetResult {
   if (tweet == null) {
     return {
@@ -146,6 +148,10 @@ export function parseLegacyTweet(
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
+  // The edit tweets array always contains the original tweet, even if it has not been edited
+  const tweetVersions = editControl?.edit_tweet_ids ?? [tweetId];
+  const editIds = tweetVersions.filter((id) => id !== tweetId);
+
   const tw: Tweet = {
     __raw_UNSTABLE: tweet,
     bookmarkCount: tweet.bookmark_count,
@@ -175,6 +181,8 @@ export function parseLegacyTweet(
     videos,
     isQuoted: false,
     isReply: false,
+    isEdited: editIds.length > 1,
+    versions: tweetVersions,
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
