@@ -1,7 +1,7 @@
 import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
-import { QueryTweetsResponse } from './timeline-v1';
+import { LegacyTweetRaw, QueryTweetsResponse } from './timeline-v1';
 import {
   parseTimelineTweetsV2,
   TimelineV2,
@@ -49,6 +49,7 @@ export interface PlaceRaw {
  * A parsed Tweet object.
  */
 export interface Tweet {
+  __raw_UNSTABLE?: LegacyTweetRaw;
   bookmarkCount?: number;
   conversationId?: string;
   hashtags: string[];
