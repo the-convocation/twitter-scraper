@@ -112,7 +112,7 @@ export class Scraper {
     query: string,
     maxTweets: number,
     searchMode: SearchMode = SearchMode.Top,
-  ): AsyncGenerator<Tweet, void> {
+  ): AsyncGenerator<Tweet, string | undefined> {
     return searchTweets(query, maxTweets, searchMode, this.auth);
   }
 
@@ -247,7 +247,7 @@ export class Scraper {
    * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
    * @returns An {@link AsyncGenerator} of tweets from the provided user.
    */
-  public getTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
+  public getTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet, string | void> {
     return getTweets(user, maxTweets, this.auth);
   }
 
@@ -270,7 +270,7 @@ export class Scraper {
   public getTweetsByUserId(
     userId: string,
     maxTweets = 200,
-  ): AsyncGenerator<Tweet, void> {
+  ): AsyncGenerator<Tweet, string | undefined> {
     return getTweetsByUserId(userId, maxTweets, this.auth);
   }
 
@@ -296,7 +296,7 @@ export class Scraper {
   public getTweetsAndRepliesByUserId(
     userId: string,
     maxTweets = 200,
-  ): AsyncGenerator<Tweet, void> {
+  ): AsyncGenerator<Tweet, string | undefined> {
     return getTweetsAndRepliesByUserId(userId, maxTweets, this.auth);
   }
 
@@ -356,7 +356,7 @@ export class Scraper {
     user: string,
     includeRetweets = false,
     max = 200,
-  ): Promise<Tweet | null | void> {
+  ): Promise<Tweet | string | null | void> {
     return getLatestTweet(user, includeRetweets, max, this.auth);
   }
 

@@ -27,7 +27,7 @@ export function searchTweets(
   maxTweets: number,
   searchMode: SearchMode,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   return getTweetTimeline(query, maxTweets, (q, mt, c) => {
     return fetchSearchTweets(q, mt, searchMode, auth, c);
   });

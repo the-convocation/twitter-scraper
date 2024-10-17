@@ -198,7 +198,7 @@ export function getTweets(
   user: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const userIdRes = await getUserIdByScreenName(q, auth);
 
@@ -216,7 +216,7 @@ export function getTweetsByUserId(
   userId: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
     return fetchTweets(q, mt, c, auth);
   });
@@ -226,7 +226,7 @@ export function getTweetsAndReplies(
   user: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const userIdRes = await getUserIdByScreenName(q, auth);
 
@@ -244,7 +244,7 @@ export function getTweetsAndRepliesByUserId(
   userId: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
     return fetchTweetsAndReplies(q, mt, c, auth);
   });
@@ -289,7 +289,7 @@ export function getLikedTweets(
   user: string,
   maxTweets: number,
   auth: TwitterAuth,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
     const userIdRes = await getUserIdByScreenName(q, auth);
 
@@ -351,7 +351,7 @@ export async function getLatestTweet(
   includeRetweets: boolean,
   max: number,
   auth: TwitterAuth,
-): Promise<Tweet | null | void> {
+): Promise<Tweet | string | null | void> {
   const timeline = getTweets(user, max, auth);
 
   // No point looping if max is 1, just use first entry.

@@ -60,7 +60,7 @@ export async function* getTweetTimeline(
   query: string,
   maxTweets: number,
   fetchFunc: FetchTweets,
-): AsyncGenerator<Tweet, void> {
+): AsyncGenerator<Tweet, string | undefined> {
   let nTweets = 0;
   let cursor: string | undefined = undefined;
   while (nTweets < maxTweets) {
@@ -87,4 +87,5 @@ export async function* getTweetTimeline(
       nTweets++;
     }
   }
+  return cursor;
 }
