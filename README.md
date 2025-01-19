@@ -168,6 +168,38 @@ const scraper = new Scraper({
 });
 ```
 
+### Rate limiting
+The Twitter API heavily rate-limits clients, requiring that the scraper has its own
+rate-limit handling to behave predictably when rate-limiting occurs. By default, the
+scraper uses a rate-limiting strategy that rates for the current rate-limiting period
+to expire before resuming requests.
+
+**This has been known to take a very long time, in some cases (up to 13 minutes).**
+
+You may want to change how rate-limiting events are handled, potentially by pooling
+scrapers logged-in to different accounts (approach currently out of scope for this
+README). The rate-limit handling strategy can be configured by passing a custom
+implementation to the `rateLimitStrategy` option in the scraper constructor:
+
+```ts
+import { Scraper, RateLimitStrategy } from "@the-convocation/twitter-scraper";
+
+class CustomRateLimitStrategy implements RateLimitStrategy {
+  async onRateLimit(event: RateLimitEvent): Promise<void> {
+    // your own logic...
+  }
+}
+
+const scraper = new Scraper({
+  rateLimitStrategy: new CustomRateLimitStrategy(),
+});
+```
+
+More information on this interface can be found on the [`RateLimitStrategy`](https://the-convocation.github.io/twitter-scraper/interfaces/RateLimitStrategy.html)
+page in the documentation. The library provides two pre-written implementations to choose from:
+- `WaitingRateLimitStrategy`: The default, which waits for the limit to expire.
+- `ErrorRateLimitStrategy`: A strategy that throws if any rate-limit event occurs.
+
 ## Contributing
 
 ### Setup
