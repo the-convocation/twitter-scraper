@@ -70,7 +70,7 @@ export class WaitingRateLimitStrategy implements RateLimitStrategy {
  * A rate-limiting strategy that throws an {@link ApiError} when a rate limiting event occurs.
  */
 export class ErrorRateLimitStrategy implements RateLimitStrategy {
-  onRateLimit({ response: res }: RateLimitEvent): Promise<void> {
-    throw ApiError.fromResponse(res);
+  async onRateLimit({ response: res }: RateLimitEvent): Promise<void> {
+    throw await ApiError.fromResponse(res);
   }
 }

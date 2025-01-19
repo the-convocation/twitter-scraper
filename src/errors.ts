@@ -1,5 +1,5 @@
 export class ApiError extends Error {
-  private constructor(
+  constructor(
     readonly response: Response,
     readonly data: any,
     message: string,
