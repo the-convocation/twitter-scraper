@@ -3,14 +3,26 @@ import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
 import { FetchTransformOptions } from './api';
+import {
+  RateLimitEvent,
+  RateLimitStrategy,
+  WaitingRateLimitStrategy,
+} from './rate-limit';
 
 export interface TwitterAuthOptions {
   fetch: typeof fetch;
   transform: Partial<FetchTransformOptions>;
+  rateLimitStrategy: RateLimitStrategy;
 }
 
 export interface TwitterAuth {
   fetch: typeof fetch;
+
+  /**
+   * How to behave when being rate-limited.
+   * @param event The event information.
+   */
+  onRateLimit(event: RateLimitEvent): Promise<void>;
 
   /**
    * Returns the current cookie jar.
@@ -95,6 +107,7 @@ export class TwitterGuestAuth implements TwitterAuth {
   protected jar: CookieJar;
   protected guestToken?: string;
   protected guestCreatedAt?: Date;
+  protected rateLimitStrategy: RateLimitStrategy;
 
   fetch: typeof fetch;
 
@@ -103,8 +116,14 @@ export class TwitterGuestAuth implements TwitterAuth {
     protected readonly options?: Partial<TwitterAuthOptions>,
   ) {
     this.fetch = withTransform(options?.fetch ?? fetch, options?.transform);
+    this.rateLimitStrategy =
+      options?.rateLimitStrategy ?? new WaitingRateLimitStrategy();
     this.bearerToken = bearerToken;
     this.jar = new CookieJar();
+  }
+
+  async onRateLimit(event: RateLimitEvent): Promise<void> {
+    await this.rateLimitStrategy.onRateLimit(event);
   }
 
   cookieJar(): CookieJar {
