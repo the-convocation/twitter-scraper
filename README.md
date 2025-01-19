@@ -171,7 +171,7 @@ const scraper = new Scraper({
 ### Rate limiting
 The Twitter API heavily rate-limits clients, requiring that the scraper has its own
 rate-limit handling to behave predictably when rate-limiting occurs. By default, the
-scraper uses a rate-limiting strategy that rates for the current rate-limiting period
+scraper uses a rate-limiting strategy that waits for the current rate-limiting period
 to expire before resuming requests.
 
 **This has been known to take a very long time, in some cases (up to 13 minutes).**
