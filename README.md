@@ -177,8 +177,7 @@ to expire before resuming requests.
 **This has been known to take a very long time, in some cases (up to 13 minutes).**
 
 You may want to change how rate-limiting events are handled, potentially by pooling
-scrapers logged-in to different accounts (approach currently out of scope for this
-README). The rate-limit handling strategy can be configured by passing a custom
+scrapers logged-in to different accounts (refer to [#116](https://github.com/the-convocation/twitter-scraper/pull/116) for how to do this yourself). The rate-limit handling strategy can be configured by passing a custom
 implementation to the `rateLimitStrategy` option in the scraper constructor:
 
 ```ts
