@@ -189,17 +189,23 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   async logout(): Promise<void> {
-    if (!this.isLoggedIn()) {
+    if (!this.hasToken()) {
       return;
     }
 
-    await requestApi<void>(
-      'https://api.twitter.com/1.1/account/logout.json',
-      this,
-      'POST',
-    );
-    this.deleteToken();
-    this.jar = new CookieJar();
+    try {
+      await requestApi<void>(
+        'https://api.twitter.com/1.1/account/logout.json',
+        this,
+        'POST',
+      );
+    } catch (error) {
+      // Ignore errors during logout but still clean up state
+      console.warn('Error during logout:', error);
+    } finally {
+      this.deleteToken();
+      this.jar = new CookieJar();
+    }
   }
 
   async installCsrfToken(headers: Headers): Promise<void> {
@@ -356,6 +362,15 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     credentials: TwitterUserAuthCredentials,
     api: FlowSubtaskHandlerApi,
   ): Promise<FlowTokenResult> {
+    if (!credentials.twoFactorSecret) {
+      return {
+        status: 'error',
+        err: new Error(
+          'Two-factor authentication is required but no secret was provided',
+        ),
+      };
+    }
+
     const totp = new OTPAuth.TOTP({ secret: credentials.twoFactorSecret });
     let error;
     for (let attempts = 1; attempts < 4; attempts += 1) {
