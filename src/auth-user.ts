@@ -53,8 +53,61 @@ type FlowTokenResult = FlowTokenResultSuccess | { status: 'error'; err: Error };
  * A user authentication token manager.
  */
 export class TwitterUserAuth extends TwitterGuestAuth {
+  private readonly subtaskHandlers: Map<
+    string,
+    (prev: FlowTokenResultSuccess, ...args: any[]) => Promise<FlowTokenResult>
+  > = new Map();
+
   constructor(bearerToken: string, options?: Partial<TwitterAuthOptions>) {
     super(bearerToken, options);
+    this.initializeDefaultHandlers();
+  }
+
+  /**
+   * Register a custom subtask handler or override an existing one
+   * @param subtaskId The ID of the subtask to handle
+   * @param handler The handler function that processes the subtask
+   */
+  registerSubtaskHandler(
+    subtaskId: string,
+    handler: (
+      prev: FlowTokenResultSuccess,
+      ...args: any[]
+    ) => Promise<FlowTokenResult>,
+  ): void {
+    this.subtaskHandlers.set(subtaskId, handler);
+  }
+
+  private initializeDefaultHandlers(): void {
+    this.subtaskHandlers.set(
+      'LoginJsInstrumentationSubtask',
+      this.handleJsInstrumentationSubtask.bind(this),
+    );
+    this.subtaskHandlers.set(
+      'LoginEnterUserIdentifierSSO',
+      this.handleEnterUserIdentifierSSO.bind(this),
+    );
+    this.subtaskHandlers.set(
+      'LoginEnterAlternateIdentifierSubtask',
+      this.handleEnterAlternateIdentifierSubtask.bind(this),
+    );
+    this.subtaskHandlers.set(
+      'LoginEnterPassword',
+      this.handleEnterPassword.bind(this),
+    );
+    this.subtaskHandlers.set(
+      'AccountDuplicationCheck',
+      this.handleAccountDuplicationCheck.bind(this),
+    );
+    this.subtaskHandlers.set(
+      'LoginTwoFactorAuthChallenge',
+      this.handleTwoFactorAuthChallenge.bind(this),
+    );
+    this.subtaskHandlers.set('LoginAcid', this.handleAcid.bind(this));
+    this.subtaskHandlers.set(
+      'LoginSuccessSubtask',
+      this.handleSuccessSubtask.bind(this),
+    );
   }
 
   async isLoggedIn(): Promise<boolean> {
@@ -80,33 +133,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
     let next = await this.initLogin();
     while ('subtask' in next && next.subtask) {
-      if (next.subtask.subtask_id === 'LoginJsInstrumentationSubtask') {
-        next = await this.handleJsInstrumentationSubtask(next);
-      } else if (next.subtask.subtask_id === 'LoginEnterUserIdentifierSSO') {
-        next = await this.handleEnterUserIdentifierSSO(next, username);
-      } else if (
-        next.subtask.subtask_id === 'LoginEnterAlternateIdentifierSubtask'
-      ) {
-        next = await this.handleEnterAlternateIdentifierSubtask(
-          next,
-          email as string,
-        );
-      } else if (next.subtask.subtask_id === 'LoginEnterPassword') {
-        next = await this.handleEnterPassword(next, password);
-      } else if (next.subtask.subtask_id === 'AccountDuplicationCheck') {
-        next = await this.handleAccountDuplicationCheck(next);
-      } else if (next.subtask.subtask_id === 'LoginTwoFactorAuthChallenge') {
-        if (twoFactorSecret) {
-          next = await this.handleTwoFactorAuthChallenge(next, twoFactorSecret);
-        } else {
-          throw new Error(
-            'Requested two factor authentication code but no secret provided',
-          );
-        }
-      } else if (next.subtask.subtask_id === 'LoginAcid') {
-        next = await this.handleAcid(next, email);
-      } else if (next.subtask.subtask_id === 'LoginSuccessSubtask') {
-        next = await this.handleSuccessSubtask(next);
+      const handler = this.subtaskHandlers.get(next.subtask.subtask_id);
+      if (handler) {
+        next = await handler(next, username, password, email, twoFactorSecret);
       } else {
         throw new Error(`Unknown subtask ${next.subtask.subtask_id}`);
       }
