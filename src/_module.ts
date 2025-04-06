@@ -1,5 +1,17 @@
 export type { FetchTransformOptions } from './api';
 export type { FetchParameters } from './api-types';
+export type {
+  TwitterUserAuthCredentials,
+  TwitterUserAuthFlowInitRequest,
+  TwitterUserAuthFlowSubtaskRequest,
+  TwitterUserAuthFlowRequest,
+  TwitterUserAuthFlowResponse,
+  FlowSubtaskHandler,
+  FlowSubtaskHandlerApi,
+  FlowTokenResult,
+  FlowTokenResultError,
+  FlowTokenResultSuccess,
+} from './auth-user';
 export { ApiError } from './errors';
 export type { Profile } from './profile';
 export {
