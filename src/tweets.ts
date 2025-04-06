@@ -13,6 +13,7 @@ import {
 import { getTweetTimeline } from './timeline-async';
 import { apiRequestFactory } from './api-data';
 import { ListTimeline, parseListTimelineTweets } from './timeline-list';
+import { AuthenticationError } from './errors';
 
 export interface Mention {
   id: string;
@@ -256,8 +257,10 @@ export async function fetchLikedTweets(
   cursor: string | undefined,
   auth: TwitterAuth,
 ): Promise<QueryTweetsResponse> {
-  if (!auth.isLoggedIn()) {
-    throw new Error('Scraper is not logged-in for fetching liked tweets.');
+  if (!(await auth.isLoggedIn())) {
+    throw new AuthenticationError(
+      'Scraper is not logged-in for fetching liked tweets.',
+    );
   }
 
   if (maxTweets > 200) {

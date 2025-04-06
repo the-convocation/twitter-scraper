@@ -10,6 +10,7 @@ import {
   parseSearchTimelineUsers,
 } from './timeline-search';
 import stringify from 'json-stable-stringify';
+import { AuthenticationError } from './errors';
 
 /**
  * The categories that can be used in Twitter searches.
@@ -85,8 +86,8 @@ async function getSearchTimeline(
   auth: TwitterAuth,
   cursor?: string,
 ): Promise<SearchTimeline> {
-  if (!auth.isLoggedIn()) {
-    throw new Error('Scraper is not logged-in for search.');
+  if (!(await auth.isLoggedIn())) {
+    throw new AuthenticationError('Scraper is not logged-in for search.');
   }
 
   if (maxItems > 50) {
