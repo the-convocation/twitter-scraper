@@ -1,7 +1,7 @@
 import { Cookie } from 'tough-cookie';
 import { bearerToken, FetchTransformOptions, RequestApiResult } from './api';
 import { TwitterAuth, TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import { TwitterUserAuth } from './auth-user';
+import { FlowSubtaskHandler, TwitterUserAuth } from './auth-user';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
   fetchSearchProfiles,
@@ -74,6 +74,25 @@ export class Scraper {
   constructor(private readonly options?: Partial<ScraperOptions>) {
     this.token = bearerToken;
     this.useGuestAuth();
+  }
+
+  /**
+   * Registers a subtask handler for the given subtask ID. This
+   * will override any existing handler for the same subtask.
+   * @param subtaskId The ID of the subtask to register the handler for.
+   * @param subtaskHandler The handler function to register.
+   */
+  public registerAuthSubtaskHandler(
+    subtaskId: string,
+    subtaskHandler: FlowSubtaskHandler,
+  ): void {
+    if (this.auth instanceof TwitterUserAuth) {
+      this.auth.registerSubtaskHandler(subtaskId, subtaskHandler);
+    }
+
+    if (this.authTrends instanceof TwitterUserAuth) {
+      this.authTrends.registerSubtaskHandler(subtaskId, subtaskHandler);
+    }
   }
 
   /**
