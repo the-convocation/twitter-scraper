@@ -8,23 +8,23 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
 
-interface TwitterUserAuthFlowInitRequest {
+export interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
   input_flow_data: Record<string, unknown>;
 }
 
-interface TwitterUserAuthFlowSubtaskRequest {
+export interface TwitterUserAuthFlowSubtaskRequest {
   flow_token: string;
   subtask_inputs: ({
     subtask_id: string;
   } & Record<string, unknown>)[];
 }
 
-type TwitterUserAuthFlowRequest =
+export type TwitterUserAuthFlowRequest =
   | TwitterUserAuthFlowInitRequest
   | TwitterUserAuthFlowSubtaskRequest;
 
-interface TwitterUserAuthFlowResponse {
+export interface TwitterUserAuthFlowResponse {
   errors?: TwitterApiErrorRaw[];
   flow_token?: string;
   status?: string;
@@ -41,22 +41,53 @@ const TwitterUserAuthSubtask = Type.Object({
 });
 type TwitterUserAuthSubtask = Static<typeof TwitterUserAuthSubtask>;
 
-type FlowTokenResultSuccess = {
+export type FlowTokenResultSuccess = {
   status: 'success';
-  flowToken: string;
-  subtask?: TwitterUserAuthSubtask;
+  response: TwitterUserAuthFlowResponse;
 };
 
-type FlowTokenResult = FlowTokenResultSuccess | { status: 'error'; err: Error };
+export type FlowTokenResultError = {
+  status: 'error';
+  err: Error;
+};
+
+export type FlowTokenResult = FlowTokenResultSuccess | FlowTokenResultError;
+
+export interface TwitterUserAuthCredentials {
+  username: string;
+  password: string;
+  email?: string;
+  twoFactorSecret?: string;
+}
+
+export interface FlowSubtaskHandlerApi {
+  /**
+   * Send a flow request to the Twitter API.
+   * @param request The request object containing flow token and subtask inputs
+   * @returns The result of the flow task
+   */
+  sendFlowRequest: (
+    request: TwitterUserAuthFlowRequest,
+  ) => Promise<FlowTokenResult>;
+  /**
+   * Gets the current flow token.
+   * @returns The current flow token
+   */
+  getFlowToken: () => string;
+}
+
+export type FlowSubtaskHandler = (
+  subtaskId: string,
+  previousResponse: TwitterUserAuthFlowResponse,
+  credentials: TwitterUserAuthCredentials,
+  api: FlowSubtaskHandlerApi,
+) => Promise<FlowTokenResult>;
 
 /**
  * A user authentication token manager.
  */
 export class TwitterUserAuth extends TwitterGuestAuth {
-  private readonly subtaskHandlers: Map<
-    string,
-    (prev: FlowTokenResultSuccess, ...args: any[]) => Promise<FlowTokenResult>
-  > = new Map();
+  private readonly subtaskHandlers: Map<string, FlowSubtaskHandler> = new Map();
 
   constructor(bearerToken: string, options?: Partial<TwitterAuthOptions>) {
     super(bearerToken, options);
@@ -68,13 +99,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
    * @param subtaskId The ID of the subtask to handle
    * @param handler The handler function that processes the subtask
    */
-  registerSubtaskHandler(
-    subtaskId: string,
-    handler: (
-      prev: FlowTokenResultSuccess,
-      ...args: any[]
-    ) => Promise<FlowTokenResult>,
-  ): void {
+  registerSubtaskHandler(subtaskId: string, handler: FlowSubtaskHandler): void {
     this.subtaskHandlers.set(subtaskId, handler);
   }
 
@@ -131,16 +156,34 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   ): Promise<void> {
     await this.updateGuestToken();
 
-    let next = await this.initLogin();
-    while ('subtask' in next && next.subtask) {
-      const handler = this.subtaskHandlers.get(next.subtask.subtask_id);
+    const credentials: TwitterUserAuthCredentials = {
+      username,
+      password,
+      email,
+      twoFactorSecret,
+    };
+
+    let next: FlowTokenResult = await this.initLogin();
+    while (next.status === 'success' && next.response.subtasks?.length) {
+      const flowToken = next.response.flow_token;
+      if (flowToken == null) {
+        // Should never happen
+        throw new Error('flow_token not found.');
+      }
+
+      const subtaskId = next.response.subtasks[0].subtask_id;
+      const handler = this.subtaskHandlers.get(subtaskId);
+
       if (handler) {
-        next = await handler(next, username, password, email, twoFactorSecret);
+        next = await handler(subtaskId, next.response, credentials, {
+          sendFlowRequest: this.executeFlowTask.bind(this),
+          getFlowToken: () => flowToken,
+        });
       } else {
-        throw new Error(`Unknown subtask ${next.subtask.subtask_id}`);
+        throw new Error(`Unknown subtask ${subtaskId}`);
       }
     }
-    if ('err' in next) {
+    if (next.status === 'error') {
       throw next.err;
     }
   }
@@ -173,7 +216,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     await this.installCsrfToken(headers);
   }
 
-  private async initLogin() {
+  private async initLogin(): Promise<FlowTokenResult> {
     // Reset certain session-related cookies because Twitter complains sometimes if we don't
     this.removeCookie('twitter_ads_id=');
     this.removeCookie('ads_prefs=');
@@ -201,12 +244,17 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
   }
 
-  private async handleJsInstrumentationSubtask(prev: FlowTokenResultSuccess) {
-    return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+  private async handleJsInstrumentationSubtask(
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    _credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
+    return await api.sendFlowRequest({
+      flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
-          subtask_id: 'LoginJsInstrumentationSubtask',
+          subtask_id: subtaskId,
           js_instrumentation: {
             response: '{}',
             link: 'next_link',
@@ -217,16 +265,18 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   private async handleEnterAlternateIdentifierSubtask(
-    prev: FlowTokenResultSuccess,
-    email: string,
-  ) {
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
     return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+      flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
-          subtask_id: 'LoginEnterAlternateIdentifierSubtask',
+          subtask_id: subtaskId,
           enter_text: {
-            text: email,
+            text: credentials.email,
             link: 'next_link',
           },
         },
@@ -235,20 +285,22 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   private async handleEnterUserIdentifierSSO(
-    prev: FlowTokenResultSuccess,
-    username: string,
-  ) {
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
     return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+      flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
-          subtask_id: 'LoginEnterUserIdentifierSSO',
+          subtask_id: subtaskId,
           settings_list: {
             setting_responses: [
               {
                 key: 'user_identifier',
                 response_data: {
-                  text_data: { result: username },
+                  text_data: { result: credentials.username },
                 },
               },
             ],
@@ -260,16 +312,18 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   private async handleEnterPassword(
-    prev: FlowTokenResultSuccess,
-    password: string,
-  ) {
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
     return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+      flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
-          subtask_id: 'LoginEnterPassword',
+          subtask_id: subtaskId,
           enter_password: {
-            password,
+            password: credentials.password,
             link: 'next_link',
           },
         },
@@ -277,12 +331,17 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
   }
 
-  private async handleAccountDuplicationCheck(prev: FlowTokenResultSuccess) {
+  private async handleAccountDuplicationCheck(
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    _credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
     return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+      flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
-          subtask_id: 'AccountDuplicationCheck',
+          subtask_id: subtaskId,
           check_logged_in_account: {
             link: 'AccountDuplicationCheck_false',
           },
@@ -292,18 +351,20 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   private async handleTwoFactorAuthChallenge(
-    prev: FlowTokenResultSuccess,
-    secret: string,
-  ) {
-    const totp = new OTPAuth.TOTP({ secret });
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
+    const totp = new OTPAuth.TOTP({ secret: credentials.twoFactorSecret });
     let error;
     for (let attempts = 1; attempts < 4; attempts += 1) {
       try {
-        return await this.executeFlowTask({
-          flow_token: prev.flowToken,
+        return await api.sendFlowRequest({
+          flow_token: api.getFlowToken(),
           subtask_inputs: [
             {
-              subtask_id: 'LoginTwoFactorAuthChallenge',
+              subtask_id: subtaskId,
               enter_text: {
                 link: 'next_link',
                 text: totp.generate(),
@@ -320,16 +381,18 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   private async handleAcid(
-    prev: FlowTokenResultSuccess,
-    email: string | undefined,
-  ) {
+    subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
     return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+      flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
-          subtask_id: 'LoginAcid',
+          subtask_id: subtaskId,
           enter_text: {
-            text: email,
+            text: credentials.email,
             link: 'next_link',
           },
         },
@@ -337,9 +400,14 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
   }
 
-  private async handleSuccessSubtask(prev: FlowTokenResultSuccess) {
+  private async handleSuccessSubtask(
+    _subtaskId: string,
+    _prev: TwitterUserAuthFlowResponse,
+    _credentials: TwitterUserAuthCredentials,
+    api: FlowSubtaskHandlerApi,
+  ): Promise<FlowTokenResult> {
     return await this.executeFlowTask({
-      flow_token: prev.flowToken,
+      flow_token: api.getFlowToken(),
       subtask_inputs: [],
     });
   }
@@ -414,8 +482,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
     return {
       status: 'success',
-      subtask,
-      flowToken: flow.flow_token,
+      response: flow,
     };
   }
 }
