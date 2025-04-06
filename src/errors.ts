@@ -29,26 +29,26 @@ export class AuthenticationError extends Error {
   }
 }
 
-interface Position {
+export interface TwitterApiErrorPosition {
   line: number;
   column: number;
 }
 
-interface TraceInfo {
+export interface TwitterApiErrorTraceInfo {
   trace_id: string;
 }
 
-interface TwitterApiErrorExtensions {
+export interface TwitterApiErrorExtensions {
   code?: number;
   kind?: string;
   name?: string;
   source?: string;
-  tracing?: TraceInfo;
+  tracing?: TwitterApiErrorTraceInfo;
 }
 
 export interface TwitterApiErrorRaw extends TwitterApiErrorExtensions {
   message?: string;
-  locations?: Position[];
+  locations?: TwitterApiErrorPosition[];
   path?: string[];
   extensions?: TwitterApiErrorExtensions;
 }
