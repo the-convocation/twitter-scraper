@@ -131,6 +131,18 @@ describe('TwitterUserAuth', () => {
       );
     });
 
+    it('should handle DenyLoginSubtask flow', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponses.guestToken)
+        .mockResolvedValueOnce(
+          mockResponses.subtask('token1', 'DenyLoginSubtask'),
+        );
+
+      await expect(auth.login('testuser', 'wrongpass')).rejects.toThrow(
+        'Authentication error: DenyLoginSubtask',
+      );
+    });
+
     it('should handle 2FA challenge', async () => {
       mockLoginFlow(loginFlows.twoFactor);
       await auth.login('testuser', 'testpass', undefined, 'JBSWY3DPEHPK3PXP');
