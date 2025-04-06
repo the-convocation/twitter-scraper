@@ -22,6 +22,13 @@ export class ApiError extends Error {
   }
 }
 
+export class AuthenticationError extends Error {
+  constructor(message?: string) {
+    super(message || 'Authentication failed');
+    this.name = 'AuthenticationError';
+  }
+}
+
 interface Position {
   line: number;
   column: number;

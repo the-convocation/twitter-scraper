@@ -3,7 +3,7 @@ import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import { TwitterApiErrorRaw } from './errors';
+import { TwitterApiErrorRaw, AuthenticationError } from './errors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
@@ -365,7 +365,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     if (!credentials.twoFactorSecret) {
       return {
         status: 'error',
-        err: new Error(
+        err: new AuthenticationError(
           'Two-factor authentication is required but no secret was provided',
         ),
       };
@@ -435,7 +435,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
     const token = this.guestToken;
     if (token == null) {
-      throw new Error('Authentication token is null or undefined.');
+      throw new AuthenticationError(
+        'Authentication token is null or undefined.',
+      );
     }
 
     const headers = new Headers({
@@ -466,13 +468,16 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
     const flow: TwitterUserAuthFlowResponse = await res.json();
     if (flow?.flow_token == null) {
-      return { status: 'error', err: new Error('flow_token not found.') };
+      return {
+        status: 'error',
+        err: new AuthenticationError('flow_token not found.'),
+      };
     }
 
     if (flow.errors?.length) {
       return {
         status: 'error',
-        err: new Error(
+        err: new AuthenticationError(
           `Authentication error (${flow.errors[0].code}): ${flow.errors[0].message}`,
         ),
       };
@@ -481,7 +486,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     if (typeof flow.flow_token !== 'string') {
       return {
         status: 'error',
-        err: new Error('flow_token was not a string.'),
+        err: new AuthenticationError('flow_token was not a string.'),
       };
     }
 
@@ -491,7 +496,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     if (subtask && subtask.subtask_id === 'DenyLoginSubtask') {
       return {
         status: 'error',
-        err: new Error('Authentication error: DenyLoginSubtask'),
+        err: new AuthenticationError('Authentication error: DenyLoginSubtask'),
       };
     }
 

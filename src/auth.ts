@@ -8,6 +8,7 @@ import {
   RateLimitStrategy,
   WaitingRateLimitStrategy,
 } from './rate-limit';
+import { AuthenticationError } from './errors';
 
 export interface TwitterAuthOptions {
   fetch: typeof fetch;
@@ -169,7 +170,9 @@ export class TwitterGuestAuth implements TwitterAuth {
 
     const token = this.guestToken;
     if (token == null) {
-      throw new Error('Authentication token is null or undefined.');
+      throw new AuthenticationError(
+        'Authentication token is null or undefined.',
+      );
     }
 
     headers.set('authorization', `Bearer ${this.bearerToken}`);
@@ -232,17 +235,17 @@ export class TwitterGuestAuth implements TwitterAuth {
     await updateCookieJar(this.jar, res.headers);
 
     if (!res.ok) {
-      throw new Error(await res.text());
+      throw new AuthenticationError(await res.text());
     }
 
     const o = await res.json();
     if (o == null || o['guest_token'] == null) {
-      throw new Error('guest_token not found.');
+      throw new AuthenticationError('guest_token not found.');
     }
 
     const newGuestToken = o['guest_token'];
     if (typeof newGuestToken !== 'string') {
-      throw new Error('guest_token was not a string.');
+      throw new AuthenticationError('guest_token was not a string.');
     }
 
     this.guestToken = newGuestToken;
