@@ -12,7 +12,14 @@ export type {
   FlowTokenResultError,
   FlowTokenResultSuccess,
 } from './auth-user';
-export { ApiError } from './errors';
+export {
+  ApiError,
+  AuthenticationError,
+  type TwitterApiErrorRaw,
+  type TwitterApiErrorExtensions,
+  type TwitterApiErrorPosition,
+  type TwitterApiErrorTraceInfo,
+} from './errors';
 export type { Profile } from './profile';
 export {
   type RateLimitEvent,
