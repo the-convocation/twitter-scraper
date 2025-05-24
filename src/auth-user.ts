@@ -581,6 +581,8 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
     }
 
+    log(`Making POST request to ${onboardingTaskUrl}`);
+
     const token = this.guestToken;
     if (token == null) {
       throw new AuthenticationError(
@@ -622,7 +624,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
         return {
           status: 'error',
-          err: new Error('Failed to perform request.'),
+          err: err,
         };
       }
 
