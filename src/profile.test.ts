@@ -87,5 +87,5 @@ test('scraper cannot get not found profile', async () => {
 
 test('scraper can get profile by screen name', async () => {
   const scraper = await getScraper();
-  await scraper.getProfile('Twitter');
+  await scraper.getProfile('GeminiApp');
 });

@@ -3,7 +3,7 @@ import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import { TwitterApiErrorRaw, AuthenticationError } from './errors';
+import { TwitterApiErrorRaw, AuthenticationError, ApiError } from './errors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
@@ -560,7 +560,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     await updateCookieJar(this.jar, res.headers);
 
     if (!res.ok) {
-      return { status: 'error', err: new Error(await res.text()) };
+      return { status: 'error', err: await ApiError.fromResponse(res) };
     }
 
     const flow: TwitterUserAuthFlowResponse = await res.json();
