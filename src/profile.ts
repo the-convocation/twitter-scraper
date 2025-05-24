@@ -1,7 +1,13 @@
-import stringify from 'json-stable-stringify';
 import { requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 import { TwitterApiErrorRaw } from './errors';
+import { apiRequestFactory } from './api-data';
+
+export interface CoreUserRaw {
+  created_at?: string;
+  name?: string;
+  screen_name?: string;
+}
 
 export interface LegacyUserRaw {
   created_at?: string;
@@ -126,37 +132,13 @@ export async function getProfile(
   username: string,
   auth: TwitterAuth,
 ): Promise<RequestApiResult<Profile>> {
-  const params = new URLSearchParams();
-  params.set(
-    'variables',
-    stringify({
-      screen_name: username,
-      withSafetyModeUserFields: true,
-    }),
-  );
+  const request = apiRequestFactory.createUserByScreenNameRequest();
+  request.variables.screen_name = username;
+  request.variables.withSafetyModeUserFields = true;
+  request.features.hidden_profile_subscriptions_enabled = false; // Auth-restricted
+  request.fieldToggles.withAuxiliaryUserLabels = false;
 
-  params.set(
-    'features',
-    stringify({
-      hidden_profile_likes_enabled: false,
-      hidden_profile_subscriptions_enabled: false, // Auth-restricted
-      responsive_web_graphql_exclude_directive_enabled: true,
-      verified_phone_label_enabled: false,
-      subscriptions_verification_info_is_identity_verified_enabled: false,
-      subscriptions_verification_info_verified_since_enabled: true,
-      highlights_tweets_tab_ui_enabled: true,
-      creator_subscriptions_tweet_preview_api_enabled: true,
-      responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
-      responsive_web_graphql_timeline_navigation_enabled: true,
-    }),
-  );
-
-  params.set('fieldToggles', stringify({ withAuxiliaryUserLabels: false }));
-
-  const res = await requestApi<UserRaw>(
-    `https://twitter.com/i/api/graphql/G3KGOASz96M-Qu0nwmGXNg/UserByScreenName?${params.toString()}`,
-    auth,
-  );
+  const res = await requestApi<UserRaw>(request.toRequestUrl(), auth);
   if (!res.success) {
     return res;
   }

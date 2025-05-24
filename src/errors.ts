@@ -1,24 +1,28 @@
 export class ApiError extends Error {
-  constructor(
-    readonly response: Response,
-    readonly data: any,
-    message: string,
-  ) {
-    super(message);
+  constructor(readonly response: Response, readonly data: any) {
+    super(
+      `Response status: ${response.status} | response: ${JSON.stringify(
+        response,
+      )} | data: ${JSON.stringify(data)}`,
+    );
   }
 
   static async fromResponse(response: Response) {
     // Try our best to parse the result, but don't bother if we can't
     let data: string | object | undefined = undefined;
     try {
-      data = await response.json();
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
     } catch {
       try {
         data = await response.text();
       } catch {}
     }
 
-    return new ApiError(response, data, `Response status: ${response.status}`);
+    return new ApiError(response, data);
   }
 }
 

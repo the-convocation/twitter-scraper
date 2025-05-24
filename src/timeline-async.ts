@@ -1,3 +1,4 @@
+import { jitter } from './api';
 import { Profile } from './profile';
 import { Tweet } from './tweets';
 
@@ -53,6 +54,8 @@ export async function* getUserTimeline(
     }
 
     if (!next) break;
+
+    await jitter(1000);
   }
 }
 
@@ -86,5 +89,7 @@ export async function* getTweetTimeline(
 
       nTweets++;
     }
+
+    await jitter(1000);
   }
 }

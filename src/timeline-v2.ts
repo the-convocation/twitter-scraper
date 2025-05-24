@@ -1,4 +1,4 @@
-import { LegacyUserRaw } from './profile';
+import { CoreUserRaw, LegacyUserRaw } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import {
   EditControlInitialRaw,
@@ -113,6 +113,7 @@ function getLegacyTweetId(tweet: Readonly<LegacyTweetRaw>): string | undefined {
 }
 
 export function parseLegacyTweet(
+  coreUser?: Readonly<CoreUserRaw>,
   user?: Readonly<LegacyUserRaw>,
   tweet?: Readonly<LegacyTweetRaw>,
   editControl?: Readonly<EditControlInitialRaw>,
@@ -152,6 +153,8 @@ export function parseLegacyTweet(
   const tweetVersions = editControl?.edit_tweet_ids ?? [tweetId];
   const editIds = tweetVersions.filter((id) => id !== tweetId);
 
+  const name = user.name ?? coreUser?.name;
+  const username = user.screen_name ?? coreUser?.screen_name;
   const tw: Tweet = {
     __raw_UNSTABLE: tweet,
     bookmarkCount: tweet.bookmark_count,
@@ -166,8 +169,8 @@ export function parseLegacyTweet(
       username: mention.screen_name,
       name: mention.name,
     })),
-    name: user.name,
-    permanentUrl: `https://twitter.com/${user.screen_name}/status/${tweetId}`,
+    name: name,
+    permanentUrl: `https://twitter.com/${username}/status/${tweetId}`,
     photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
@@ -177,7 +180,7 @@ export function parseLegacyTweet(
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
     userId: tweet.user_id_str,
-    username: user.screen_name,
+    username: username,
     videos,
     isQuoted: false,
     isReply: false,
@@ -218,6 +221,7 @@ export function parseLegacyTweet(
 
     if (retweetedStatusResult) {
       const parsedResult = parseLegacyTweet(
+        retweetedStatusResult?.core?.user_results?.result?.core,
         retweetedStatusResult?.core?.user_results?.result?.legacy,
         retweetedStatusResult?.legacy,
       );
@@ -257,6 +261,7 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   }
 
   const tweetResult = parseLegacyTweet(
+    result?.core?.user_results?.result?.core,
     result?.core?.user_results?.result?.legacy,
     result?.legacy,
   );

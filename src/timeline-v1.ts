@@ -1,4 +1,4 @@
-import { LegacyUserRaw, parseProfile, Profile } from './profile';
+import { CoreUserRaw, LegacyUserRaw, parseProfile, Profile } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import { PlaceRaw, Tweet } from './tweets';
 import { isFieldDefined } from './type-util';
@@ -63,6 +63,7 @@ export interface SearchResultRaw {
     user_results?: {
       result?: {
         is_blue_verified?: boolean;
+        core?: CoreUserRaw;
         legacy?: LegacyUserRaw;
       };
     };
@@ -93,6 +94,7 @@ export interface TimelineResultRaw {
     user_results?: {
       result?: {
         is_blue_verified?: boolean;
+        core?: CoreUserRaw;
         legacy?: LegacyUserRaw;
       };
     };
