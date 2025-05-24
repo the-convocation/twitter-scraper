@@ -9,6 +9,9 @@ import {
   WaitingRateLimitStrategy,
 } from './rate-limit';
 import { AuthenticationError } from './errors';
+import debug from 'debug';
+
+const log = debug('twitter-scraper:auth');
 
 export interface TwitterAuthOptions {
   fetch: typeof fetch;
@@ -231,6 +234,8 @@ export class TwitterGuestAuth implements TwitterAuth {
       Authorization: `Bearer ${this.bearerToken}`,
       Cookie: await this.getCookieString(),
     });
+
+    log(`Making POST request to ${guestActivateUrl}`);
 
     const res = await this.fetch(guestActivateUrl, {
       method: 'POST',

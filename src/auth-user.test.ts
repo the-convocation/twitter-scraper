@@ -112,11 +112,14 @@ describe('TwitterUserAuth', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(6); // Including guest token
       expect(mockFetch.mock.calls[0][0]).toBe(
-        'https://api.twitter.com/1.1/guest/activate.json',
+        'https://api.x.com/1.1/guest/activate.json',
       );
-      for (let i = 1; i < mockFetch.mock.calls.length; i++) {
+      expect(mockFetch.mock.calls[1][0]).toBe(
+        'https://api.x.com/1.1/onboarding/task.json?flow_name=login',
+      );
+      for (let i = 2; i < mockFetch.mock.calls.length; i++) {
         expect(mockFetch.mock.calls[i][0]).toBe(
-          'https://api.twitter.com/1.1/onboarding/task.json',
+          'https://api.x.com/1.1/onboarding/task.json',
         );
       }
     });
@@ -281,16 +284,16 @@ describe('TwitterUserAuth', () => {
       await auth.logout();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.twitter.com/1.1/account/logout.json',
+        'https://api.x.com/1.1/account/logout.json',
         expect.objectContaining({
           method: 'POST',
         }),
       );
 
       expect(auth.hasToken()).toBe(false);
-      expect(
-        await auth.cookieJar().getCookies('https://twitter.com'),
-      ).toHaveLength(0);
+      expect(await auth.cookieJar().getCookies('https://x.com')).toHaveLength(
+        0,
+      );
     });
 
     it('should clear state on network error during logout', async () => {
@@ -298,9 +301,9 @@ describe('TwitterUserAuth', () => {
       await auth.logout();
 
       expect(auth.hasToken()).toBe(false);
-      expect(
-        await auth.cookieJar().getCookies('https://twitter.com'),
-      ).toHaveLength(0);
+      expect(await auth.cookieJar().getCookies('https://x.com')).toHaveLength(
+        0,
+      );
     });
 
     it('should clear state on failed logout', async () => {
@@ -311,9 +314,9 @@ describe('TwitterUserAuth', () => {
       await auth.logout();
 
       expect(auth.hasToken()).toBe(false);
-      expect(
-        await auth.cookieJar().getCookies('https://twitter.com'),
-      ).toHaveLength(0);
+      expect(await auth.cookieJar().getCookies('https://x.com')).toHaveLength(
+        0,
+      );
     });
   });
 
