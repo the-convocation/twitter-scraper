@@ -55,6 +55,22 @@ test('scraper can get tweets without logging in', async () => {
   expect(counter).toBeGreaterThanOrEqual(1);
 });
 
+test('scraper can get tweets by user ID', async () => {
+  const scraper = await getScraper();
+
+  let counter = 0;
+  for await (const tweet of scraper.getTweetsByUserId(
+    '1016333328083910656',
+    10,
+  )) {
+    if (tweet) {
+      counter++;
+    }
+  }
+
+  expect(counter).toBeGreaterThanOrEqual(1);
+});
+
 test('scraper can get tweets from list', async () => {
   const scraper = await getScraper();
 
