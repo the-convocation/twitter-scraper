@@ -1,9 +1,9 @@
 export class ApiError extends Error {
   constructor(readonly response: Response, readonly data: any) {
     super(
-      `Response status: ${response.status} | response: ${JSON.stringify(
-        response,
-      )} | data: ${JSON.stringify(data)}`,
+      `Response status: ${response.status} | headers: ${JSON.stringify(
+        headersToString(response.headers),
+      )} | data: ${data}`,
     );
   }
 
@@ -24,6 +24,14 @@ export class ApiError extends Error {
 
     return new ApiError(response, data);
   }
+}
+
+function headersToString(headers: Headers): string {
+  const result: string[] = [];
+  headers.forEach((value, key) => {
+    result.push(`${key}: ${value}`);
+  });
+  return result.join('\n');
 }
 
 export class AuthenticationError extends Error {
