@@ -7,10 +7,15 @@ import { TwitterApiErrorRaw, AuthenticationError, ApiError } from './errors';
 import { Type, type Static } from '@sinclair/typebox';
 import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
+import { FetchParameters } from './api-types';
+import debug from 'debug';
+
+const log = debug('twitter-scraper:auth-user');
 
 export interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
   input_flow_data: Record<string, unknown>;
+  subtask_versions: Record<string, number>;
 }
 
 export interface TwitterUserAuthFlowSubtaskRequest {
@@ -234,7 +239,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
   async isLoggedIn(): Promise<boolean> {
     const res = await requestApi<TwitterUserAuthVerifyCredentials>(
-      'https://api.twitter.com/1.1/account/verify_credentials.json',
+      'https://api.x.com/1.1/account/verify_credentials.json',
       this,
     );
     if (!res.success) {
@@ -292,7 +297,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
     try {
       await requestApi<void>(
-        'https://api.twitter.com/1.1/account/logout.json',
+        'https://api.x.com/1.1/account/logout.json',
         this,
         'POST',
       );
@@ -333,6 +338,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     this.removeCookie('external_referer=');
     this.removeCookie('ct0=');
     this.removeCookie('aa_u=');
+    this.removeCookie('__cf_bm=');
 
     return await this.executeFlowTask({
       flow_name: 'login',
@@ -340,9 +346,52 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         flow_context: {
           debug_overrides: {},
           start_location: {
-            location: 'splash_screen',
+            location: 'unknown',
           },
         },
+      },
+      subtask_versions: {
+        action_list: 2,
+        alert_dialog: 1,
+        app_download_cta: 1,
+        check_logged_in_account: 1,
+        choice_selection: 3,
+        contacts_live_sync_permission_prompt: 0,
+        cta: 7,
+        email_verification: 2,
+        end_flow: 1,
+        enter_date: 1,
+        enter_email: 2,
+        enter_password: 5,
+        enter_phone: 2,
+        enter_recaptcha: 1,
+        enter_text: 5,
+        enter_username: 2,
+        generic_urt: 3,
+        in_app_notification: 1,
+        interest_picker: 3,
+        js_instrumentation: 1,
+        menu_dialog: 1,
+        notifications_permission_prompt: 2,
+        open_account: 2,
+        open_home_timeline: 1,
+        open_link: 1,
+        phone_verification: 4,
+        privacy_options: 1,
+        security_key: 3,
+        select_avatar: 4,
+        select_banner: 2,
+        settings_list: 7,
+        show_code: 1,
+        sign_up: 2,
+        sign_up_review: 4,
+        tweet_selection_urt: 1,
+        update_users: 1,
+        upload_media: 1,
+        user_recommendations_list: 4,
+        user_recommendations_urt: 1,
+        wait_spinner: 3,
+        web_modal: 1,
       },
     });
   }
@@ -527,8 +576,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   private async executeFlowTask(
     data: TwitterUserAuthFlowRequest,
   ): Promise<FlowTokenResult> {
-    const onboardingTaskUrl =
-      'https://api.twitter.com/1.1/onboarding/task.json';
+    let onboardingTaskUrl = 'https://api.x.com/1.1/onboarding/task.json';
+    if ('flow_name' in data) {
+      onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
+    }
 
     const token = this.guestToken;
     if (token == null) {
@@ -550,14 +601,41 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
     await this.installCsrfToken(headers);
 
-    const res = await this.fetch(onboardingTaskUrl, {
-      credentials: 'include',
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(data),
-    });
+    let res: Response;
+    do {
+      const fetchParameters: FetchParameters = [
+        onboardingTaskUrl,
+        {
+          credentials: 'include',
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(data),
+        },
+      ];
 
-    await updateCookieJar(this.jar, res.headers);
+      try {
+        res = await this.fetch(...fetchParameters);
+      } catch (err) {
+        if (!(err instanceof Error)) {
+          throw err;
+        }
+
+        return {
+          status: 'error',
+          err: new Error('Failed to perform request.'),
+        };
+      }
+
+      await updateCookieJar(this.jar, res.headers);
+
+      if (res.status === 429) {
+        log('Rate limit hit, waiting before retrying...');
+        await this.onRateLimit({
+          fetchParameters: fetchParameters,
+          response: res,
+        });
+      }
+    } while (res.status === 429);
 
     if (!res.ok) {
       return { status: 'error', err: await ApiError.fromResponse(res) };
