@@ -3,7 +3,7 @@ export class ApiError extends Error {
     super(
       `Response status: ${response.status} | headers: ${JSON.stringify(
         headersToString(response.headers),
-      )} | data: ${data}`,
+      )} | data: ${typeof data === 'string' ? data : JSON.stringify(data)}`,
     );
   }
 

@@ -8,7 +8,8 @@ test('scraper can get profile', async () => {
     banner: 'https://pbs.twimg.com/profile_banners/106037940/1541084318',
     biography: 'nothing',
     isPrivate: false,
-    isVerified: false,
+    isVerified: undefined,
+    isBlueVerified: false,
     joined: new Date(Date.UTC(2010, 0, 18, 8, 49, 30, 0)),
     location: 'Ukraine',
     name: 'Nomadic',
@@ -27,6 +28,7 @@ test('scraper can get profile', async () => {
   expect(actual.biography).toEqual(expected.biography);
   expect(actual.isPrivate).toEqual(expected.isPrivate);
   expect(actual.isVerified).toEqual(expected.isVerified);
+  expect(actual.isBlueVerified).toEqual(expected.isBlueVerified);
   expect(actual.joined).toEqual(expected.joined);
   expect(actual.location).toEqual(expected.location);
   expect(actual.name).toEqual(expected.name);

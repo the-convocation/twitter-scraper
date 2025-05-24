@@ -7,7 +7,7 @@
     "scraper",
     "crawler"
   ],
-  "version": "0.16.1",
+  "version": "0.16.2",
   "main": "dist/default/cjs/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
@@ -40,6 +40,7 @@
   "dependencies": {
     "@sinclair/typebox": "^0.32.20",
     "cross-fetch": "^4.0.0-alpha.5",
+    "debug": "^4.4.1",
     "headers-polyfill": "^3.1.2",
     "json-stable-stringify": "^1.0.2",
     "otpauth": "^9.2.2",
@@ -51,6 +52,7 @@
     "@commitlint/cli": "^17.6.3",
     "@commitlint/config-conventional": "^17.6.3",
     "@tsconfig/node16": "^16.1.0",
+    "@types/debug": "^4.1.12",
     "@types/jest": "^29.5.1",
     "@types/json-stable-stringify": "^1.0.34",
     "@types/set-cookie-parser": "^2.4.2",

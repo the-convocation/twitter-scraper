@@ -27,7 +27,7 @@ export interface LegacyUserRaw {
   id_str?: string;
   listed_count?: number;
   name?: string;
-  location: string;
+  location?: string;
   geo_enabled?: boolean;
   pinned_tweet_ids_str?: string[];
   profile_background_color?: string;
@@ -61,7 +61,7 @@ export interface Profile {
   joined?: Date;
   likesCount?: number;
   listedCount?: number;
-  location: string;
+  location?: string;
   name?: string;
   pinnedTweetIds?: string[];
   tweetsCount?: number;
@@ -79,6 +79,13 @@ export interface UserRaw {
         rest_id?: string;
         is_blue_verified?: boolean;
         legacy: LegacyUserRaw;
+        core?: CoreUserRaw;
+        avatar?: {
+          image_url?: string;
+        };
+        location?: {
+          location?: string;
+        };
       };
     };
   };
@@ -90,37 +97,37 @@ function getAvatarOriginalSizeUrl(avatarUrl: string | undefined) {
 }
 
 export function parseProfile(
-  user: LegacyUserRaw,
+  legacy: LegacyUserRaw,
   isBlueVerified?: boolean,
 ): Profile {
   const profile: Profile = {
-    avatar: getAvatarOriginalSizeUrl(user.profile_image_url_https),
-    banner: user.profile_banner_url,
-    biography: user.description,
-    followersCount: user.followers_count,
-    followingCount: user.friends_count,
-    friendsCount: user.friends_count,
-    mediaCount: user.media_count,
-    isPrivate: user.protected ?? false,
-    isVerified: user.verified,
-    likesCount: user.favourites_count,
-    listedCount: user.listed_count,
-    location: user.location,
-    name: user.name,
-    pinnedTweetIds: user.pinned_tweet_ids_str,
-    tweetsCount: user.statuses_count,
-    url: `https://twitter.com/${user.screen_name}`,
-    userId: user.id_str,
-    username: user.screen_name,
+    avatar: getAvatarOriginalSizeUrl(legacy.profile_image_url_https),
+    banner: legacy.profile_banner_url,
+    biography: legacy.description,
+    followersCount: legacy.followers_count,
+    followingCount: legacy.friends_count,
+    friendsCount: legacy.friends_count,
+    mediaCount: legacy.media_count,
+    isPrivate: legacy.protected ?? false,
+    isVerified: legacy.verified,
+    likesCount: legacy.favourites_count,
+    listedCount: legacy.listed_count,
+    location: legacy.location,
+    name: legacy.name,
+    pinnedTweetIds: legacy.pinned_tweet_ids_str,
+    tweetsCount: legacy.statuses_count,
+    url: `https://twitter.com/${legacy.screen_name}`,
+    userId: legacy.id_str,
+    username: legacy.screen_name,
     isBlueVerified: isBlueVerified ?? false,
-    canDm: user.can_dm,
+    canDm: legacy.can_dm,
   };
 
-  if (user.created_at != null) {
-    profile.joined = new Date(Date.parse(user.created_at));
+  if (legacy.created_at != null) {
+    profile.joined = new Date(Date.parse(legacy.created_at));
   }
 
-  const urls = user.entities?.url?.urls;
+  const urls = legacy.entities?.url?.urls;
   if (urls?.length != null && urls?.length > 0) {
     profile.website = urls[0].expanded_url;
   }
@@ -169,17 +176,22 @@ export async function getProfile(
   }
 
   legacy.id_str = user.rest_id;
+  legacy.screen_name ??= user.core?.screen_name;
+  legacy.profile_image_url_https ??= user.avatar?.image_url;
+  legacy.created_at ??= user.core?.created_at;
+  legacy.location ??= user.location?.location;
+  legacy.name ??= user.core?.name;
 
   if (legacy.screen_name == null || legacy.screen_name.length === 0) {
     return {
       success: false,
-      err: new Error(`Either ${username} does not exist or is private.`),
+      err: new Error(`User ${username} does not exist or is private.`),
     };
   }
 
   return {
     success: true,
-    value: parseProfile(user.legacy, user.is_blue_verified),
+    value: parseProfile(legacy, user.is_blue_verified),
   };
 }
 

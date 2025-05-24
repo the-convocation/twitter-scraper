@@ -1,5 +1,8 @@
 import { FetchParameters } from './api-types';
 import { ApiError } from './errors';
+import debug from 'debug';
+
+const log = debug('twitter-scraper:rate-limit');
 
 /**
  * Information about a rate-limiting event. Both the request and response
@@ -54,8 +57,14 @@ export class WaitingRateLimitStrategy implements RateLimitStrategy {
       - x-rate-limit-reset: UNIX timestamp when the current rate limit will be reset.
       - x-rate-limit-remaining: Number of requests remaining in current time period?
       */
+    const xRateLimitLimit = res.headers.get('x-rate-limit-limit');
     const xRateLimitRemaining = res.headers.get('x-rate-limit-remaining');
     const xRateLimitReset = res.headers.get('x-rate-limit-reset');
+
+    log(
+      `Rate limit event: limit=${xRateLimitLimit}, remaining=${xRateLimitRemaining}, reset=${xRateLimitReset}`,
+    );
+
     if (xRateLimitRemaining == '0' && xRateLimitReset) {
       const currentTime = new Date().valueOf() / 1000;
       const timeDeltaMs = 1000 * (parseInt(xRateLimitReset) - currentTime);

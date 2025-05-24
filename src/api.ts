@@ -4,6 +4,9 @@ import { ApiError } from './errors';
 import { Platform, PlatformExtensions } from './platform';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
+import debug from 'debug';
+
+const log = debug('twitter-scraper:api');
 
 export interface FetchTransformOptions {
   /**
@@ -54,6 +57,8 @@ export async function requestApi<T>(
   method: 'GET' | 'POST' = 'GET',
   platform: PlatformExtensions = new Platform(),
 ): Promise<RequestApiResult<T>> {
+  log(`Making ${method} request to ${url}`);
+
   const headers = new Headers();
   await auth.installTo(headers, url);
   await platform.randomizeCiphers();
@@ -85,6 +90,7 @@ export async function requestApi<T>(
     await updateCookieJar(auth.cookieJar(), res.headers);
 
     if (res.status === 429) {
+      log('Rate limit hit, waiting for retry...');
       await auth.onRateLimit({
         fetchParameters: fetchParameters,
         response: res,
