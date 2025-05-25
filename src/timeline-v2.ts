@@ -224,7 +224,7 @@ export function parseLegacyTweet(
         retweetedStatusResult?.core?.user_results?.result?.core,
         retweetedStatusResult?.core?.user_results?.result?.legacy,
         retweetedStatusResult?.legacy,
-        retweetedStatusResult?.edit_control?.edit_control_initial
+        retweetedStatusResult?.edit_control?.edit_control_initial,
       );
 
       if (parsedResult.success) {
@@ -265,7 +265,7 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
     result?.core?.user_results?.result?.core,
     result?.core?.user_results?.result?.legacy,
     result?.legacy,
-    result?.edit_control?.edit_control_initial
+    result?.edit_control?.edit_control_initial,
   );
   if (!tweetResult.success) {
     return tweetResult;
