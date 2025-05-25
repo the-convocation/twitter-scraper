@@ -90,6 +90,9 @@ export interface SearchResultRaw {
 export interface TimelineResultRaw {
   rest_id?: string;
   __typename?: string;
+  edit_control?: {
+    edit_control_initial?: EditControlInitialRaw;
+  };
   core?: {
     user_results?: {
       result?: {
