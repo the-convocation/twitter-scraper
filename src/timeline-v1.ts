@@ -96,6 +96,7 @@ export interface TimelineResultRaw {
   core?: {
     user_results?: {
       result?: {
+        __typename?: string;
         is_blue_verified?: boolean;
         core?: CoreUserRaw;
         legacy?: LegacyUserRaw;

@@ -19,6 +19,7 @@ export interface TimelineUserResultRaw {
 
 export interface TimelineEntryItemContentRaw {
   itemType?: string;
+  __typename?: string;
   tweetDisplayType?: string;
   tweetResult?: {
     result?: TimelineResultRaw;
@@ -35,6 +36,8 @@ export interface TimelineEntryItemContentRaw {
 export interface TimelineEntryRaw {
   entryId: string;
   content?: {
+    entryType?: string;
+    __typename?: string;
     cursorType?: string;
     value?: string;
     items?: {
@@ -86,6 +89,7 @@ export interface TimelineV2 {
   data?: {
     user?: {
       result?: {
+        __typename?: string;
         timeline?: {
           timeline?: {
             instructions?: TimelineInstruction[];
@@ -294,6 +298,16 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
 
 const expectedEntryTypes = ['tweet', 'profile-conversation'];
 
+function getTimelineInstructionEntries(
+  instruction: TimelineInstruction,
+): TimelineEntryRaw[] {
+  const entries = instruction.entries ?? [];
+  if (instruction.entry) {
+    entries.push(instruction.entry);
+  }
+  return entries;
+}
+
 export function parseTimelineTweetsV2(
   timeline: TimelineV2,
 ): QueryTweetsResponse {
@@ -303,8 +317,7 @@ export function parseTimelineTweetsV2(
   const instructions =
     timeline.data?.user?.result?.timeline?.timeline?.instructions ?? [];
   for (const instruction of instructions) {
-    const entries = instruction.entries ?? [];
-
+    const entries = getTimelineInstructionEntries(instruction);
     for (const entry of entries) {
       const entryContent = entry.content;
       if (!entryContent) continue;
@@ -402,7 +415,7 @@ export function parseThreadedConversation(
     [];
 
   for (const instruction of instructions) {
-    const entries = instruction.entries ?? [];
+    const entries = getTimelineInstructionEntries(instruction);
     for (const entry of entries) {
       const entryContent = entry.content?.itemContent;
       if (entryContent) {
