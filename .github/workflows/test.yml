@@ -1,7 +1,4 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
-
-name: Node.js CI
+name: Node.js Test
 
 on:
   workflow_dispatch:
@@ -34,5 +31,3 @@ jobs:
           TWITTER_PASSWORD: ${{ secrets.TWITTER_PASSWORD }}
           TWITTER_EMAIL: ${{ secrets.TWITTER_EMAIL }}
         run: yarn test
-      - name: Build
-        run: yarn build
