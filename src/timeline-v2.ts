@@ -151,7 +151,6 @@ export function parseLegacyTweet(
 
   // The edit tweets array always contains the original tweet, even if it has not been edited
   const tweetVersions = editControl?.edit_tweet_ids ?? [tweetId];
-  const editIds = tweetVersions.filter((id) => id !== tweetId);
 
   const name = user.name ?? coreUser?.name;
   const username = user.screen_name ?? coreUser?.screen_name;
@@ -184,7 +183,7 @@ export function parseLegacyTweet(
     videos,
     isQuoted: false,
     isReply: false,
-    isEdited: editIds.length > 1,
+    isEdited: tweetVersions.length > 1,
     versions: tweetVersions,
     isRetweet: false,
     isPin: false,
