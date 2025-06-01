@@ -35,21 +35,34 @@ function FetchTweet() {
     }),
   );
   const loggedIn = useRef(false);
+  const loggingIn = useRef(false);
 
   useEffect(() => {
     async function getTweet() {
-      if (!loggedIn.current) {
-        await scraper.current.login(
-          import.meta.env.VITE_TWITTER_USERNAME,
-          import.meta.env.VITE_TWITTER_PASSWORD,
-          import.meta.env.VITE_TWITTER_EMAIL,
-        );
-        loggedIn.current = true;
+      if (loggedIn.current || loggingIn.current) {
+        return;
       }
 
-      const latestTweet = await scraper.current.getTweet('1585338303800578049');
-      if (latestTweet) {
-        setTweet(latestTweet);
+      loggingIn.current = true;
+
+      try {
+        if (!loggedIn.current) {
+          await scraper.current.login(
+            import.meta.env.VITE_TWITTER_USERNAME,
+            import.meta.env.VITE_TWITTER_PASSWORD,
+            import.meta.env.VITE_TWITTER_EMAIL,
+          );
+          loggedIn.current = true;
+        }
+
+        const latestTweet = await scraper.current.getTweet(
+          '1585338303800578049',
+        );
+        if (latestTweet) {
+          setTweet(latestTweet);
+        }
+      } finally {
+        loggingIn.current = false;
       }
     }
 
