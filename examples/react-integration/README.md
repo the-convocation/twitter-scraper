@@ -1,30 +1,21 @@
-# React + TypeScript + Vite
+# React Example
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Browser usage example in React. Due to Twitter's CORS headers not allowing external websites from calling their APIs,
+this requires using a CORS proxy of some kind.
 
-Currently, two official plugins are available:
+## Running
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+First, copy `.env.example` to a new `.env.local` file, and update the environment variables to point to your
+own account credentials if needed.
 
-## Expanding the ESLint configuration
+In the `cors-proxy` example folder, run the following command:
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+```bash
+yarn start
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+Then, in this folder, run the following command to start the Vite development server:
+
+```bash
+yarn dev
+```

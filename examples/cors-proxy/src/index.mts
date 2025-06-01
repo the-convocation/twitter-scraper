@@ -71,9 +71,9 @@ const handlers: proxy.ProxyOptions = {
 };
 
 const api = express();
-api.use('/', proxy('https://api.twitter.com', handlers));
+api.use('/', proxy('https://api.x.com', handlers));
 api.listen(5174);
 
 const web = express();
-web.use('/', proxy('https://twitter.com', handlers));
+web.use('/', proxy('https://x.com', handlers));
 web.listen(5175);
