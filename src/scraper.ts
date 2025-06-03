@@ -32,6 +32,7 @@ import {
   fetchListTweets,
   getTweetsAndRepliesByUserId,
   getTweetsAndReplies,
+  fetchLikedTweets,
 } from './tweets';
 import fetch from 'cross-fetch';
 import { RateLimitStrategy } from './rate-limit';
@@ -200,6 +201,21 @@ export class Scraper {
     cursor?: string,
   ): Promise<QueryTweetsResponse> {
     return fetchListTweets(listId, maxTweets, cursor, this.auth);
+  }
+
+  /**
+   * Fetch the tweets a user has liked
+   * @param userId The user whose liked tweets should be returned
+   * @param maxTweets The maximum number of tweets to return.
+   * @param cursor The search cursor, which can be passed into further requests for more results.
+   * @returns A page of results, containing a cursor that can be used in further requests.
+   */
+  public fetchLikedTweets(
+    userId: string,
+    maxTweets: number,
+    cursor?: string,
+  ): Promise<QueryTweetsResponse> {
+    return fetchLikedTweets(userId, maxTweets, cursor, this.auth);
   }
 
   /**
