@@ -36,7 +36,7 @@ import {
 import fetch from 'cross-fetch';
 import { RateLimitStrategy } from './rate-limit';
 
-const twUrl = 'https://twitter.com';
+const twUrl = 'https://x.com';
 
 export interface ScraperOptions {
   /**
