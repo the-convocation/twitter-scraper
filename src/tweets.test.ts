@@ -10,7 +10,7 @@ test('scraper can get tweet', async () => {
     hashtags: [],
     mentions: [],
     name: 'A11y',
-    permanentUrl: 'https://twitter.com/XA11y/status/1585338303800578049',
+    permanentUrl: 'https://x.com/XA11y/status/1585338303800578049',
     photos: [],
     text: 'We’re updating Twitter’s sounds to help make them pleasing to more people, including those with sensory sensitivities. Here’s more on how we did it:\nhttps://t.co/7FKWk7NzHM',
     thread: [],
@@ -197,7 +197,7 @@ test('scraper can get tweet quotes without logging in', async () => {
     hashtags: [],
     mentions: [],
     name: 'Vsauce2',
-    permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
+    permanentUrl: 'https://x.com/VsauceTwo/status/1237110546383724547',
     photos: [
       {
         id: '1237110473486729218',
@@ -242,7 +242,7 @@ test('scraper can get tweet quotes and replies', async () => {
     hashtags: [],
     mentions: [],
     name: 'Vsauce2',
-    permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
+    permanentUrl: 'https://x.com/VsauceTwo/status/1237110546383724547',
     photos: [
       {
         id: '1237110473486729218',
@@ -300,7 +300,7 @@ test('scraper can get retweet', async () => {
     hashtags: [],
     mentions: [],
     name: 'federico.',
-    permanentUrl: 'https://twitter.com/federicosmos/status/1776276954435481937',
+    permanentUrl: 'https://x.com/federicosmos/status/1776276954435481937',
     photos: [],
     text: 'https://t.co/qqiu5ntffp',
     thread: [],
@@ -346,7 +346,7 @@ test('scraper can get tweet views', async () => {
     hashtags: [],
     mentions: [],
     name: 'Support',
-    permanentUrl: 'https://twitter.com/Support/status/1606055187348688896',
+    permanentUrl: 'https://x.com/Support/status/1606055187348688896',
     photos: [],
     text: 'Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.\n\nhttps://t.co/hrlMQyXJfx',
     thread: [],

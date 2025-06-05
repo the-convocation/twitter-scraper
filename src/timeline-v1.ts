@@ -290,7 +290,7 @@ function parseTimelineTweet(
       name: mention.name,
     })),
     name: user.name,
-    permanentUrl: `https://twitter.com/${user.screen_name}/status/${tweetId}`,
+    permanentUrl: `https://x.com/${user.screen_name}/status/${tweetId}`,
     photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,

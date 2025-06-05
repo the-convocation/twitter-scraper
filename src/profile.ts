@@ -116,7 +116,7 @@ export function parseProfile(
     name: legacy.name,
     pinnedTweetIds: legacy.pinned_tweet_ids_str,
     tweetsCount: legacy.statuses_count,
-    url: `https://twitter.com/${legacy.screen_name}`,
+    url: `https://x.com/${legacy.screen_name}`,
     userId: legacy.id_str,
     username: legacy.screen_name,
     isBlueVerified: isBlueVerified ?? false,

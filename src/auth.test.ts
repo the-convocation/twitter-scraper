@@ -22,7 +22,10 @@ test('scraper can restore its login state from cookies', async () => {
   const scraper2 = await getScraper({ authMethod: 'anonymous' });
   await expect(scraper2.isLoggedIn()).resolves.toBeFalsy();
 
-  const cookies = await scraper.getCookies();
+  // Serialize since that's the usual usage pattern
+  const cookies = await scraper
+    .getCookies()
+    .then((cookies) => cookies.map((cookie) => cookie.toString()));
   await scraper2.setCookies(cookies);
 
   await expect(scraper2.isLoggedIn()).resolves.toBeTruthy();
