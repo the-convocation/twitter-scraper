@@ -191,12 +191,7 @@ export class TwitterGuestAuth implements TwitterAuth {
   }
 
   protected async getCookies(): Promise<Cookie[]> {
-    const cookies = await Promise.all([
-      this.jar.getCookies(this.getCookieJarUrl()),
-      this.jar.getCookies('https://twitter.com'),
-      this.jar.getCookies('https://x.com'),
-    ]);
-    return cookies.flat();
+    return this.jar.getCookies(this.getCookieJarUrl());
   }
 
   protected async getCookieString(): Promise<string> {
@@ -221,7 +216,7 @@ export class TwitterGuestAuth implements TwitterAuth {
   private getCookieJarUrl(): string {
     return typeof document !== 'undefined'
       ? document.location.toString()
-      : 'https://twitter.com';
+      : 'https://x.com';
   }
 
   /**

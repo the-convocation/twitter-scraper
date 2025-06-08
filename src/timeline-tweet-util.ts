@@ -106,24 +106,21 @@ export function reconstructTweetHtml(
 }
 
 function linkHashtagHtml(hashtag: string) {
-  return `<a href="https://twitter.com/hashtag/${hashtag.replace(
+  return `<a href="https://x.com/hashtag/${hashtag.replace(
     '#',
     '',
   )}">${hashtag}</a>`;
 }
 
 function linkCashtagHtml(cashtag: string) {
-  return `<a href="https://twitter.com/search?q=%24${cashtag.replace(
+  return `<a href="https://x.com/search?q=%24${cashtag.replace(
     '$',
     '',
   )}">${cashtag}</a>`;
 }
 
 function linkUsernameHtml(username: string) {
-  return `<a href="https://twitter.com/${username.replace(
-    '@',
-    '',
-  )}">${username}</a>`;
+  return `<a href="https://x.com/${username.replace('@', '')}">${username}</a>`;
 }
 
 function unwrapTcoUrlHtml(tweet: LegacyTweetRaw, foundedMedia: string[]) {
