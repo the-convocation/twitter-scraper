@@ -1,7 +1,11 @@
 import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
-import { LegacyTweetRaw, QueryTweetsResponse } from './timeline-v1';
+import {
+  ArticleBlockRaw,
+  LegacyTweetRaw,
+  QueryTweetsResponse,
+} from './timeline-v1';
 import {
   parseTimelineTweetsV2,
   TimelineV2,
@@ -31,6 +35,13 @@ export interface Video {
   id: string;
   preview: string;
   url?: string;
+}
+
+export interface Article {
+  id: string;
+  title: string;
+  cover?: Photo;
+  blocks: ArticleBlockRaw[];
 }
 
 export interface PlaceRaw {
@@ -65,6 +76,8 @@ export interface Tweet {
   isReply?: boolean;
   isRetweet?: boolean;
   isSelfThread?: boolean;
+  isArticle?: boolean;
+  article?: Article;
   likes?: number;
   name?: string;
   mentions: Mention[];
