@@ -30,7 +30,7 @@
   "packageManager": "yarn@1.22.19",
   "scripts": {
     "build": "rimraf dist && rollup -c",
-    "prepare": "yarn build",
+    "prepare": "yarn install & yarn build",
     "commit": "cz",
     "docs:generate": "typedoc --options typedoc.json",
     "docs:deploy": "yarn docs:generate && gh-pages -d docs",
