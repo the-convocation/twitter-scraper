@@ -480,36 +480,10 @@ export class Scraper {
    * Set cookies for the current session.
    * @param cookies The cookies to set for the current session.
    */
-  public async setCookies(cookies: (string | Cookie | any)[]): Promise<void> {
+  public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
     const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
     for (const cookie of cookies) {
-      let cookieToSet: string | Cookie;
-      
-      // If it's a plain object (from JSON.parse), convert it to a Cookie instance
-      if (typeof cookie === 'object' && cookie !== null && !(cookie instanceof Cookie) && typeof cookie !== 'string') {
-        // Fix domain issue and name/key property issue
-        const cookieData = { ...cookie };
-        if (cookieData.domain && cookieData.domain.startsWith('.x.com')) {
-          cookieData.domain = 'x.com';
-        }
-        // tough-cookie expects 'key' property, but browser cookies use 'name'
-        if (cookieData.name && !cookieData.key) {
-          cookieData.key = cookieData.name;
-          delete cookieData.name;
-        }
-        
-        const parsedCookie = Cookie.fromJSON(cookieData);
-        if (parsedCookie) {
-          cookieToSet = parsedCookie;
-        } else {
-          console.warn('Failed to parse cookie:', cookie);
-          continue;
-        }
-      } else {
-        cookieToSet = cookie;
-      }
-      
-      await userAuth.cookieJar().setCookie(cookieToSet, twUrl);
+      await userAuth.cookieJar().setCookie(cookie, twUrl);
     }
 
     this.auth = userAuth;
