@@ -2,7 +2,7 @@ import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
 import {
-  ArticleBlockRaw,
+  ArticleContentStateRaw,
   LegacyTweetRaw,
   QueryTweetsResponse,
 } from './timeline-v1';
@@ -41,7 +41,7 @@ export interface Article {
   id: string;
   title: string;
   cover?: Photo;
-  blocks: ArticleBlockRaw[];
+  content_state: ArticleContentStateRaw;
 }
 
 export interface PlaceRaw {

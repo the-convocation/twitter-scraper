@@ -372,7 +372,7 @@ function parseArticle(articleRaw: Readonly<ArticleResultRaw>): Article {
   const article: Article = {
     id: articleRaw.rest_id,
     title: articleRaw.title,
-    blocks: articleRaw.content_state.blocks,
+    content_state: articleRaw.content_state,
   };
 
   if (articleRaw.cover_media) {
