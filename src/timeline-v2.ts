@@ -419,8 +419,10 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   const articleRaw = result?.article?.article_results?.result;
   if (articleRaw) {
     tweetResult.tweet.isArticle = true;
-    tweetResult.tweet.article = parseArticle(articleRaw);
-    tweetResult.tweet.text = parseArticleToMarkdown(articleRaw);
+    if (articleRaw.content_state) {
+      tweetResult.tweet.article = parseArticle(articleRaw);
+      tweetResult.tweet.text = parseArticleToMarkdown(articleRaw);
+    }
   }
 
   const quotedResult = result?.quoted_status_result?.result;
