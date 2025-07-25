@@ -1,6 +1,8 @@
 import { CoreUserRaw, LegacyUserRaw } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import {
+  ArticleEntityValueMediaItemRaw,
+  ArticleResultRaw,
   EditControlInitialRaw,
   LegacyTweetRaw,
   ParseTweetResult,
@@ -8,7 +10,7 @@ import {
   SearchResultRaw,
   TimelineResultRaw,
 } from './timeline-v1';
-import { Tweet } from './tweets';
+import { Article, Tweet } from './tweets';
 import { isFieldDefined } from './type-util';
 
 export interface TimelineUserResultRaw {
@@ -256,6 +258,139 @@ export function parseLegacyTweet(
   return { success: true, tweet: tw };
 }
 
+function parseArticleToMarkdown(article: Readonly<ArticleResultRaw>): string {
+  const { blocks, entityMap } = article.content_state;
+  let markdown = `# ${article.title}\\n\\n`;
+
+  for (const block of blocks) {
+    let text = block.text;
+
+    const sortedEntityRanges = [...block.entityRanges].sort(
+      (a, b) => b.offset - a.offset,
+    ); // Reverse order to prevent messing up the offsets
+    for (const range of sortedEntityRanges) {
+      const entityWrapper = entityMap.find(
+        (e) => String(e.key) === String(range.key),
+      );
+      if (!entityWrapper) continue;
+      const entity = entityWrapper.value;
+
+      const chars = Array.from(text);
+      const originalText = chars
+        .slice(range.offset, range.offset + range.length)
+        .join('');
+      let replacement = originalText;
+
+      let textToWrap = originalText;
+      let trailingNewline = '';
+
+      if (textToWrap.endsWith('\n')) {
+        textToWrap = textToWrap.slice(0, -1);
+        trailingNewline = '\n';
+      }
+
+      if (entity.type === 'LINK' && entity.data.url) {
+        replacement = `[${textToWrap}](${entity.data.url})${trailingNewline}`;
+      }
+
+      const prefix = chars.slice(0, range.offset).join('');
+      const suffix = chars.slice(range.offset + range.length).join('');
+      text = prefix + replacement + suffix;
+    }
+
+    const sortedStyleRanges = [...block.inlineStyleRanges].sort(
+      (a, b) => b.offset - a.offset,
+    );
+    for (const range of sortedStyleRanges) {
+      const chars = Array.from(text);
+      const originalText = chars
+        .slice(range.offset, range.offset + range.length)
+        .join('');
+      let replacement = originalText;
+
+      let textToWrap = originalText;
+      let trailingNewline = '';
+
+      if (textToWrap.endsWith('\n')) {
+        textToWrap = textToWrap.slice(0, -1);
+        trailingNewline = '\n';
+      }
+
+      if (range.style.toLowerCase() === 'bold') {
+        replacement = `**${textToWrap}**${trailingNewline}`;
+      } else if (range.style.toLowerCase() === 'italic') {
+        replacement = `*${textToWrap}*${trailingNewline}`;
+      }
+
+      const prefix = chars.slice(0, range.offset).join('');
+      const suffix = chars.slice(range.offset + range.length).join('');
+      text = prefix + replacement + suffix;
+    }
+
+    switch (block.type) {
+      case 'header-one':
+        markdown += `# ${text}\\n\\n`;
+        break;
+      case 'header-two':
+        markdown += `## ${text}\\n\\n`;
+        break;
+      case 'unordered-list-item':
+        markdown += `* ${text}\\n`;
+        break;
+      case 'atomic':
+        for (const range of block.entityRanges) {
+          const entityWrapper = entityMap.find(
+            (e) => String(e.key) === String(range.key),
+          );
+          if (!entityWrapper) continue;
+          const entity = entityWrapper.value;
+          if (entity?.type === 'MEDIA' && entity.data.mediaItems) {
+            for (const mediaItem of entity.data.mediaItems) {
+              if (mediaItem?.mediaId) {
+                const mediaEntity = article.media_entities?.find(
+                  (m) => m.media_id === mediaItem.mediaId,
+                );
+                if (mediaEntity) {
+                  markdown += `![image](${mediaEntity.media_info.original_img_url})\\n\\n`;
+                }
+              }
+            }
+          }
+        }
+        break;
+      case 'unstyled':
+      default:
+        markdown += `${text}\\n\\n`;
+        break;
+    }
+  }
+
+  return markdown.trim();
+}
+
+function parseArticle(articleRaw: Readonly<ArticleResultRaw>): Article {
+  const article: Article = {
+    id: articleRaw.rest_id,
+    title: articleRaw.title,
+    content_state: articleRaw.content_state,
+  };
+
+  if (articleRaw.cover_media) {
+    const coverMedia = articleRaw.media_entities?.find(
+      (m) => m.media_key === articleRaw.cover_media?.media_key,
+    );
+    if (coverMedia) {
+      article.cover = {
+        id: coverMedia.media_id,
+        url: coverMedia.media_info.original_img_url,
+        alt_text: undefined, // not available
+      };
+    }
+  }
+
+  return article;
+}
+
 function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   const noteTweetResultText =
     result?.note_tweet?.note_tweet_results?.result?.text;
@@ -278,6 +413,15 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
     const views = parseInt(result.views.count);
     if (!isNaN(views)) {
       tweetResult.tweet.views = views;
+    }
+  }
+
+  const articleRaw = result?.article?.article_results?.result;
+  if (articleRaw) {
+    tweetResult.tweet.isArticle = true;
+    if (articleRaw.content_state) {
+      tweetResult.tweet.article = parseArticle(articleRaw);
+      tweetResult.tweet.text = parseArticleToMarkdown(articleRaw);
     }
   }
 

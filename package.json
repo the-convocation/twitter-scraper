@@ -34,7 +34,7 @@
     "docs:generate": "typedoc --options typedoc.json",
     "docs:deploy": "yarn docs:generate && gh-pages -d docs",
     "format": "prettier --write src/**/*.ts",
-    "prepare": "husky install",
+    "prepare": "husky install && yarn build",
     "test": "jest"
   },
   "dependencies": {
