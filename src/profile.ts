@@ -15,8 +15,15 @@ export interface LegacyUserRaw {
   entities?: {
     url?: {
       urls?: {
+        url?: string;
         expanded_url?: string;
+        display_url?: string;
+        indices?: [number, number];
       }[];
+    };
+    description?: {
+      // TODO: Get the proper type of this.
+      urls?: any[];
     };
   };
   favourites_count?: number;
@@ -40,6 +47,43 @@ export interface LegacyUserRaw {
   has_extended_profile?: boolean;
   url?: string;
   can_dm?: boolean;
+  id?: number;
+  // TODO: Get the proper type of this.
+  utc_offset?: any;
+  // TODO: Get the proper type of this.
+  time_zone?: any;
+  // TODO: Get the proper type of this.
+  lang?: any;
+  contributors_enabled?: boolean;
+  is_translator?: boolean;
+  is_translation_enabled?: boolean;
+  profile_background_image_url?: string;
+  profile_background_image_url_https?: string;
+  profile_background_tile?: boolean;
+  profile_image_url?: string;
+  profile_link_color?: string;
+  profile_sidebar_border_color?: string;
+  profile_sidebar_fill_color?: string;
+  profile_text_color?: string;
+  profile_use_background_image?: boolean;
+  default_profile?: boolean;
+  default_profile_image?: boolean;
+  can_secret_dm?: boolean;
+  can_media_tag?: boolean;
+  following?: boolean;
+  follow_request_sent?: boolean;
+  notifications?: boolean;
+  blocking?: boolean;
+  subscribed_by?: boolean;
+  blocked_by?: boolean;
+  want_retweets?: boolean;
+  dm_blocked_by?: boolean;
+  dm_blocking?: boolean;
+  business_profile_state?: string;
+  translator_type?: string;
+  // TODO: Get the proper type of this.
+  withheld_in_countries?: any[];
+  followed_by?: boolean;
 }
 
 /**
