@@ -139,9 +139,12 @@ async function getSearchTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('features', stringify(features));
-  params.set('fieldToggles', stringify(fieldToggles));
-  params.set('variables', stringify(variables));
+  const featuresStr = stringify(features);
+  const fieldTogglesStr = stringify(fieldToggles);
+  const variablesStr = stringify(variables);
+  if (featuresStr) params.set('features', featuresStr);
+  if (fieldTogglesStr) params.set('fieldToggles', fieldTogglesStr);
+  if (variablesStr) params.set('variables', variablesStr);
 
   const res = await requestApi<SearchTimeline>(
     `https://api.x.com/graphql/gkjsKepM6gl_HmFWoWKfgg/SearchTimeline?${params.toString()}`,
