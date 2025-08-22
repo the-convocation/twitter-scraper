@@ -36,6 +36,7 @@ import {
 } from './tweets';
 import fetch from 'cross-fetch';
 import { RateLimitStrategy } from './rate-limit';
+import { DirectMessages, getDirectMessages } from './direct-messages';
 
 const twUrl = 'https://x.com';
 
@@ -412,6 +413,10 @@ export class Scraper {
     } else {
       return getTweetAnonymous(id, this.auth);
     }
+  }
+
+  public getDirectMessages(): Promise<DirectMessages> {
+    return getDirectMessages(this.auth);
   }
 
   /**
