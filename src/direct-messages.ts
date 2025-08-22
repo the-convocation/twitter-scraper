@@ -14,8 +14,6 @@ export interface DirectMessageInbox {
   cursor: string;
   inbox_timelines: InboxTimelines;
   entries: Entry[];
-  // TODO: There's actually a lot more data in user that this returns.
-  //  Maybe we want to upgrade LegacyUserRaw to have the complete options.
   users: { [key: string]: LegacyUserRaw };
   conversations: { [key: string]: Conversation };
 }
@@ -55,6 +53,7 @@ export interface Message {
   request_id: string;
   conversation_id: string;
   message_data: MessageData;
+  message_reactions: MessageReaction[];
 }
 
 export interface MessageData {
@@ -65,6 +64,16 @@ export interface MessageData {
   text: string;
   edit_count?: number;
   entities?: MessageDataEntities;
+}
+
+export interface MessageReaction {
+  id: string;
+  time: string;
+  conversation_id: string;
+  message_id: string;
+  reaction_key: string;
+  emoji_reaction: string;
+  sender_id: string;
 }
 
 export interface MessageDataEntities {
