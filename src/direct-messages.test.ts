@@ -1,10 +1,10 @@
 import { getScraper } from './test-utils';
 import * as util from 'node:util';
 
-test('scraper can get direct messages when authenticated', async () => {
+test('scraper can get direct message inbox when authenticated', async () => {
   const scraper = await getScraper();
 
-  const directMessages = await scraper.getDirectMessages();
+  const directMessages = await scraper.getDirectMessageInbox();
 
   expect(directMessages).toBeDefined();
 
@@ -13,9 +13,9 @@ test('scraper can get direct messages when authenticated', async () => {
   expect(typeof directMessages).toBe('object');
 });
 
-test('getDirectMessages throws error when not authenticated', async () => {
+test('getDirectMessageInbox throws error when not authenticated', async () => {
   const scraper = await getScraper({ authMethod: 'anonymous' });
 
   await expect(scraper.isLoggedIn()).resolves.toBeFalsy();
-  await expect(scraper.getDirectMessages()).rejects.toThrow();
+  await expect(scraper.getDirectMessageInbox()).rejects.toThrow();
 });

@@ -3,7 +3,11 @@ import { TwitterAuth } from './auth';
 import { LegacyUserRaw } from './profile';
 import { requestApi } from './api';
 
-export interface DirectMessages {
+export interface DirectMessageInboxResponse {
+  inbox_initial_state: DirectMessageInbox;
+}
+
+export interface DirectMessageInbox {
   last_seen_event_id: string;
   trusted_last_seen_event_id: string;
   untrusted_last_seen_event_id: string;
@@ -82,7 +86,6 @@ export interface WelcomeMessageCreate extends Message {
   welcome_message_id: string;
 }
 
-// TODO: No idea what this means.
 export interface InboxTimelines {
   trusted: Trusted;
   untrusted: Untrusted;
@@ -97,14 +100,14 @@ export interface Untrusted {
   status: string;
 }
 
-export async function fetchDirectMessages(auth: TwitterAuth) {
+export async function fetchDirectMessageInbox(auth: TwitterAuth) {
   if (!(await auth.isLoggedIn())) {
     throw new AuthenticationError(
       'Scraper is not logged-in for fetching direct messages.',
     );
   }
 
-  const res = await requestApi<DirectMessages>(
+  const res = await requestApi<DirectMessageInboxResponse>(
     'https://x.com/i/api/1.1/dm/inbox_initial_state.json',
     auth,
   );
@@ -113,15 +116,17 @@ export async function fetchDirectMessages(auth: TwitterAuth) {
     throw res.err;
   }
 
-  return parseDirectMessages(res.value);
+  return parseDirectMessageInbox(res.value);
 }
 
-export async function parseDirectMessages(direct_messages: DirectMessages) {
-  return direct_messages;
+export async function parseDirectMessageInbox(
+  inbox: DirectMessageInboxResponse,
+) {
+  return inbox.inbox_initial_state;
 }
 
 // This gets the current authenticated user's direct messages. This requires the user to be authenticated.
 // TODO: Handle cursor pagination
-export async function getDirectMessages(auth: TwitterAuth) {
-  return await fetchDirectMessages(auth);
+export async function getDirectMessageInbox(auth: TwitterAuth) {
+  return await fetchDirectMessageInbox(auth);
 }
