@@ -1,11 +1,36 @@
 import { getScraper } from './test-utils';
+import {
+  findConversationsByUserId,
+  DirectMessageInbox,
+} from './direct-messages';
 import * as util from 'node:util';
+
+async function getInboxWithConversations() {
+  const scraper = await getScraper();
+
+  const directMessages = await scraper.getDirectMessageInbox();
+  expect(directMessages.conversations).toBeDefined();
+
+  const conversationIds = Object.keys(directMessages.conversations);
+  expect(conversationIds.length).toBeGreaterThan(0);
+
+  return { scraper, directMessages, conversationIds };
+}
+
+function getFirstConversation(
+  directMessages: DirectMessageInbox,
+  conversationIds: string[],
+) {
+  const firstConversation = directMessages.conversations[conversationIds[0]];
+  expect(firstConversation).toBeDefined();
+
+  return firstConversation;
+}
 
 test('scraper can get direct message inbox when authenticated', async () => {
   const scraper = await getScraper();
 
   const directMessages = await scraper.getDirectMessageInbox();
-
   expect(directMessages).toBeDefined();
 
   console.log(util.inspect(directMessages, true, null, true));
@@ -21,17 +46,17 @@ test('getDirectMessageInbox throws error when not authenticated', async () => {
 });
 
 test('scraper can get direct message conversation', async () => {
-  const scraper = await getScraper();
+  const { scraper, directMessages, conversationIds } =
+    await getInboxWithConversations();
 
-  const directMessages = await scraper.getDirectMessageInbox();
-
-  // get first key of conversations
-  // you must have at least one DM to properly test this.
-  const firstKey = Object.keys(directMessages.conversations)[0];
-  expect(directMessages.conversations[firstKey]).toBeDefined();
+  const firstConversation = getFirstConversation(
+    directMessages,
+    conversationIds,
+  );
+  expect(firstConversation.conversation_id).toBeDefined();
 
   const conversation = await scraper.getDirectMessageConversation(
-    directMessages.conversations[firstKey].conversation_id,
+    firstConversation.conversation_id,
   );
 
   console.log(util.inspect(conversation, true, null, true));
@@ -45,15 +70,16 @@ test('scraper can get direct message conversation', async () => {
 });
 
 test('scraper can paginate through direct message conversation', async () => {
-  const scraper = await getScraper();
+  const { scraper, directMessages, conversationIds } =
+    await getInboxWithConversations();
 
-  const directMessages = await scraper.getDirectMessageInbox();
-  expect(directMessages.conversations).toBeDefined();
+  const firstConversation = getFirstConversation(
+    directMessages,
+    conversationIds,
+  );
+  expect(firstConversation.conversation_id).toBeDefined();
 
-  const firstKey = Object.keys(directMessages.conversations)[0];
-  expect(directMessages.conversations[firstKey]).toBeDefined();
-
-  const conversationId = directMessages.conversations[firstKey].conversation_id;
+  const conversationId = firstConversation.conversation_id;
   const messages = scraper.getDirectMessageConversationMessages(
     conversationId,
     10,
@@ -74,4 +100,34 @@ test('scraper can paginate through direct message conversation', async () => {
       fail('No messages were retrieved');
     }
   }
+});
+
+test('findConversationsByUserId filters conversations by user ID', async () => {
+  const { directMessages, conversationIds } = await getInboxWithConversations();
+
+  const firstConversation = getFirstConversation(
+    directMessages,
+    conversationIds,
+  );
+  expect(firstConversation.participants).toBeDefined();
+  expect(firstConversation.participants.length).toBeGreaterThan(0);
+
+  // in my responses, 0th is the current user and 1st is the other user.
+  const targetUserId = firstConversation.participants[1].user_id;
+
+  const foundConversations = findConversationsByUserId(
+    directMessages,
+    targetUserId,
+  );
+
+  expect(foundConversations).toBeDefined();
+  expect(foundConversations.length).toBeGreaterThan(0);
+
+  // make sure all convos are the right user
+  foundConversations.forEach((conversation) => {
+    const hasUser = conversation.participants.some(
+      (participant) => participant.user_id === targetUserId,
+    );
+    expect(hasUser).toBe(true);
+  });
 });

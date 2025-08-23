@@ -220,3 +220,23 @@ export function getDirectMessageConversationMessages(
     },
   );
 }
+
+export function findConversationsByUserId(
+  inbox: DirectMessageInbox,
+  userId: string,
+): Conversation[] {
+  const conversations: Conversation[] = [];
+
+  for (const conversationId in inbox.conversations) {
+    const conversation = inbox.conversations[conversationId];
+    const hasUser = conversation.participants.some(
+      (participant) => participant.user_id === userId,
+    );
+
+    if (hasUser) {
+      conversations.push(conversation);
+    }
+  }
+
+  return conversations;
+}
