@@ -1,7 +1,7 @@
 import { AuthenticationError } from './errors';
 import { TwitterAuth } from './auth';
 import { LegacyUserRaw } from './profile';
-import { requestApi } from './api';
+import { requestApi, addApiParams } from './api';
 
 import { getDmConversationMessagesGenerator } from './direct-messages-async';
 
@@ -131,8 +131,31 @@ export async function fetchDmInbox(auth: TwitterAuth) {
   }
 
   // TODO: Not sure how the "cursor" works for this. I don't have enough DMs to test.
+  const params = new URLSearchParams();
+  addApiParams(params, false);
+
+  params.set('nsfw_filtering_enabled', 'false');
+  params.set('filter_low_quality', 'true');
+  params.set('include_quality', 'all');
+  params.set('include_ext_profile_image_shape', '1');
+  params.set('dm_secret_conversations_enabled', 'false');
+  params.set('krs_registration_enabled', 'false');
+  params.set('include_ext_limited_action_results', 'true');
+  params.set('dm_users', 'true');
+  params.set('include_groups', 'true');
+  params.set('include_inbox_timelines', 'true');
+  params.set('supports_reactions', 'true');
+  params.set('supports_edit', 'true');
+  params.set('include_ext_edit_control', 'true');
+  params.set('include_ext_business_affiliations_label', 'true');
+  params.set('include_ext_parody_commentary_fan_label', 'true');
+  params.set(
+    'ext',
+    'mediaColor,altText,mediaStats,highlightedLabel,parodyCommentaryFanLabel,voiceInfo,birdwatchPivot,superFollowMetadata,unmentionInfo,editControl,article',
+  );
+
   const res = await requestApi<DmInboxResponse>(
-    'https://x.com/i/api/1.1/dm/inbox_initial_state.json?nsfw_filtering_enabled=false&filter_low_quality=true&include_quality=all&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&include_ext_is_blue_verified=1&include_ext_verified_type=1&include_ext_profile_image_shape=1&skip_status=1&dm_secret_conversations_enabled=false&krs_registration_enabled=false&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_ext_limited_action_results=true&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_ext_views=true&dm_users=true&include_groups=true&include_inbox_timelines=true&include_ext_media_color=true&supports_reactions=true&supports_edit=true&include_ext_edit_control=true&include_ext_business_affiliations_label=true&include_ext_parody_commentary_fan_label=true&ext=mediaColor%2CaltText%2CmediaStats%2ChighlightedLabel%2CparodyCommentaryFanLabel%2CvoiceInfo%2CbirdwatchPivot%2CsuperFollowMetadata%2CunmentionInfo%2CeditControl%2Carticle',
+    `https://x.com/i/api/1.1/dm/inbox_initial_state.json?${params.toString()}`,
     auth,
   );
 
@@ -166,13 +189,32 @@ export async function fetchDmConversation(
     );
   }
 
-  let url = `https://x.com/i/api/1.1/dm/conversation/${conversation_id}.json?context=FETCH_DM_CONVERSATION_HISTORY&include_profile_interstitial_type=1&include_blocking=1&include_blocked_by=1&include_followed_by=1&include_want_retweets=1&include_mute_edge=1&include_can_dm=1&include_can_media_tag=1&include_ext_is_blue_verified=1&include_ext_verified_type=1&include_ext_profile_image_shape=1&skip_status=1&dm_secret_conversations_enabled=false&krs_registration_enabled=false&cards_platform=Web-12&include_cards=1&include_ext_alt_text=true&include_ext_limited_action_results=true&include_quote_count=true&include_reply_count=1&tweet_mode=extended&include_ext_views=true&dm_users=true&include_groups=true&include_inbox_timelines=true&include_ext_media_color=true&supports_reactions=true&supports_edit=true&include_conversation_info=true&ext=mediaColor%2CaltText%2CmediaStats%2ChighlightedLabel%2CparodyCommentaryFanLabel%2CvoiceInfo%2CbirdwatchPivot%2CsuperFollowMetadata%2CunmentionInfo%2CeditControl%2Carticle`;
+  const params = new URLSearchParams();
+  addApiParams(params, false);
+
+  params.set('context', 'FETCH_DM_CONVERSATION_HISTORY');
+  params.set('include_ext_profile_image_shape', '1');
+  params.set('dm_secret_conversations_enabled', 'false');
+  params.set('krs_registration_enabled', 'false');
+  params.set('include_ext_limited_action_results', 'true');
+  params.set('dm_users', 'true');
+  params.set('include_groups', 'true');
+  params.set('include_inbox_timelines', 'true');
+  params.set('supports_reactions', 'true');
+  params.set('supports_edit', 'true');
+  params.set('include_conversation_info', 'true');
+  params.set(
+    'ext',
+    'mediaColor,altText,mediaStats,highlightedLabel,parodyCommentaryFanLabel,voiceInfo,birdwatchPivot,superFollowMetadata,unmentionInfo,editControl,article',
+  );
 
   // `max_id` does the pagination; to get the next "page", you set max_id to the response's min_entry_id.
   // To know when there are no more pages, the response's "status" will return "AT_END".
   if (maxId) {
-    url += `&max_id=${maxId}`;
+    params.set('max_id', maxId);
   }
+
+  const url = `https://x.com/i/api/1.1/dm/conversation/${conversation_id}.json?${params.toString()}`;
 
   const res = await requestApi<DmConversationResponse>(url, auth);
 
