@@ -1,14 +1,10 @@
 import { getScraper } from './test-utils';
-import {
-  findConversationsByUserId,
-  DirectMessageInbox,
-} from './direct-messages';
+import { findDmConversationsByUserId, DmInbox } from './direct-messages';
 import * as util from 'node:util';
 
 async function getInboxWithConversations() {
   const scraper = await getScraper();
-
-  const directMessages = await scraper.getDirectMessageInbox();
+  const directMessages = await scraper.getDmInbox();
   expect(directMessages.conversations).toBeDefined();
 
   const conversationIds = Object.keys(directMessages.conversations);
@@ -18,7 +14,7 @@ async function getInboxWithConversations() {
 }
 
 function getFirstConversation(
-  directMessages: DirectMessageInbox,
+  directMessages: DmInbox,
   conversationIds: string[],
 ) {
   const firstConversation = directMessages.conversations[conversationIds[0]];
@@ -30,7 +26,7 @@ function getFirstConversation(
 test('scraper can get direct message inbox when authenticated', async () => {
   const scraper = await getScraper();
 
-  const directMessages = await scraper.getDirectMessageInbox();
+  const directMessages = await scraper.getDmInbox();
   expect(directMessages).toBeDefined();
 
   console.log(util.inspect(directMessages, true, null, true));
@@ -38,11 +34,11 @@ test('scraper can get direct message inbox when authenticated', async () => {
   expect(typeof directMessages).toBe('object');
 });
 
-test('getDirectMessageInbox throws error when not authenticated', async () => {
+test('getDmInbox throws error when not authenticated', async () => {
   const scraper = await getScraper({ authMethod: 'anonymous' });
 
   await expect(scraper.isLoggedIn()).resolves.toBeFalsy();
-  await expect(scraper.getDirectMessageInbox()).rejects.toThrow();
+  await expect(scraper.getDmInbox()).rejects.toThrow();
 });
 
 test('scraper can get direct message conversation', async () => {
@@ -55,7 +51,7 @@ test('scraper can get direct message conversation', async () => {
   );
   expect(firstConversation.conversation_id).toBeDefined();
 
-  const conversation = await scraper.getDirectMessageConversation(
+  const conversation = await scraper.getDmConversation(
     firstConversation.conversation_id,
   );
 
@@ -80,10 +76,7 @@ test('scraper can paginate through direct message conversation', async () => {
   expect(firstConversation.conversation_id).toBeDefined();
 
   const conversationId = firstConversation.conversation_id;
-  const messages = scraper.getDirectMessageConversationMessages(
-    conversationId,
-    10,
-  );
+  const messages = scraper.getDmMessages(conversationId, 10);
 
   for await (const entry of messages) {
     expect(entry).toBeDefined();
@@ -115,7 +108,7 @@ test('findConversationsByUserId filters conversations by user ID', async () => {
   // in my responses, 0th is the current user and 1st is the other user.
   const targetUserId = firstConversation.participants[1].user_id;
 
-  const foundConversations = findConversationsByUserId(
+  const foundConversations = findDmConversationsByUserId(
     directMessages,
     targetUserId,
   );
