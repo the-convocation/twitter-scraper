@@ -36,7 +36,14 @@ import {
 } from './tweets';
 import fetch from 'cross-fetch';
 import { RateLimitStrategy } from './rate-limit';
-import { DirectMessages, getDirectMessages } from './direct-messages';
+import {
+  ConversationTimeline,
+  DirectMessageInbox,
+  ConversationEntry,
+  getDirectMessageConversation,
+  getDirectMessageConversationMessages,
+  getDirectMessageInbox,
+} from './direct-messages';
 
 const twUrl = 'https://x.com';
 
@@ -415,8 +422,25 @@ export class Scraper {
     }
   }
 
-  public getDirectMessages(): Promise<DirectMessages> {
-    return getDirectMessages(this.auth);
+  public getDirectMessageInbox(): Promise<DirectMessageInbox> {
+    return getDirectMessageInbox(this.auth);
+  }
+
+  public getDirectMessageConversation(
+    conversation_id: string,
+  ): Promise<ConversationTimeline> {
+    return getDirectMessageConversation(conversation_id, this.auth);
+  }
+
+  public getDirectMessageConversationMessages(
+    conversation_id: string,
+    maxMessages = 20,
+  ): AsyncGenerator<ConversationEntry, void> {
+    return getDirectMessageConversationMessages(
+      conversation_id,
+      maxMessages,
+      this.auth,
+    );
   }
 
   /**
