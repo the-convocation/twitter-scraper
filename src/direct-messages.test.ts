@@ -1,6 +1,5 @@
 import { getScraper } from './test-utils';
 import { findDmConversationsByUserId, DmInbox } from './direct-messages';
-import * as util from 'node:util';
 
 async function getInboxWithConversations() {
   const scraper = await getScraper();
@@ -29,8 +28,6 @@ test('scraper can get direct message inbox when authenticated', async () => {
   const directMessages = await scraper.getDmInbox();
   expect(directMessages).toBeDefined();
 
-  console.log(util.inspect(directMessages, true, null, true));
-
   expect(typeof directMessages).toBe('object');
 });
 
@@ -54,8 +51,6 @@ test('scraper can get direct message conversation', async () => {
   const conversation = await scraper.getDmConversation(
     firstConversation.conversation_id,
   );
-
-  console.log(util.inspect(conversation, true, null, true));
 
   expect(conversation.status).toBeDefined();
   expect(conversation.min_entry_id).toBeDefined();
@@ -83,12 +78,8 @@ test('scraper can paginate through direct message conversation', async () => {
 
     if (entry.message) {
       expect(entry.message).toBeDefined();
-
-      console.log(util.inspect(entry.message, true, null, true));
     } else if (entry.welcome_message_create) {
       expect(entry.welcome_message_create).toBeDefined();
-
-      console.log(util.inspect(entry.welcome_message_create, true, null, true));
     } else {
       fail('No messages were retrieved');
     }
