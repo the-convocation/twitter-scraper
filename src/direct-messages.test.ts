@@ -16,6 +16,7 @@ function getFirstConversation(
   directMessages: DmInbox,
   conversationIds: string[],
 ) {
+  // This should be your most recent DM.
   const firstConversation = directMessages.conversations[conversationIds[0]];
   expect(firstConversation).toBeDefined();
 
@@ -71,8 +72,9 @@ test('scraper can paginate through direct message conversation', async () => {
   expect(firstConversation.conversation_id).toBeDefined();
 
   const conversationId = firstConversation.conversation_id;
-  const messages = scraper.getDmMessages(conversationId, 10);
+  const messages = scraper.getDmMessages(conversationId, 30);
 
+  let count = 0;
   for await (const entry of messages) {
     expect(entry).toBeDefined();
 
@@ -83,7 +85,13 @@ test('scraper can paginate through direct message conversation', async () => {
     } else {
       fail('No messages were retrieved');
     }
+
+    count++;
   }
+
+  // Your DM will need at least 20+ messages to test this.
+  // 20 was chosen because that seems to be the max size per response.
+  expect(count).toBeGreaterThan(20);
 });
 
 test('findConversationsByUserId filters conversations by user ID', async () => {
