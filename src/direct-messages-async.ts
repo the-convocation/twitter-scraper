@@ -1,24 +1,29 @@
-import { DmConversationTimeline, DmMessageEntry } from './direct-messages';
+import {
+  DmConversationTimeline,
+  DmMessageEntry,
+  DmCursorOptions,
+} from './direct-messages';
 import { jitter } from './api';
 
 export interface FetchDmConversationMessagesResponse {
   conversation: DmConversationTimeline;
-  next?: string;
+  next?: DmCursorOptions;
 }
 
 export type FetchDmConversationFn = (
   conversationId: string,
   maxMessages: number,
-  cursor: string | undefined,
+  cursor: DmCursorOptions | undefined,
 ) => Promise<FetchDmConversationMessagesResponse>;
 
 export async function* getDmConversationMessagesGenerator(
   conversationId: string,
   maxMessages: number,
+  initialCursor: DmCursorOptions | undefined,
   fetchFunc: FetchDmConversationFn,
 ): AsyncGenerator<DmMessageEntry, void> {
   let nMessages = 0;
-  let cursor: string | undefined = undefined;
+  let cursor = initialCursor;
 
   while (nMessages < maxMessages) {
     const batch: FetchDmConversationMessagesResponse = await fetchFunc(

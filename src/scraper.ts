@@ -40,6 +40,7 @@ import {
   DmConversationTimeline,
   DmInbox,
   DmMessageEntry,
+  DmCursorOptions,
   getDmConversation,
   getDmMessages,
   getDmInbox,
@@ -437,12 +438,14 @@ export class Scraper {
    * Retrieves the direct message conversation for the specified conversation ID.
    *
    * @param conversationId - The unique identifier of the DM conversation to retrieve.
+   * @param cursor - Use `maxId` to get messages before a message ID (older messages), or `minId` to get messages after a message ID (newer messages).
    * @return A promise that resolves to the timeline of the DM conversation.
    */
   public getDmConversation(
     conversationId: string,
+    cursor?: DmCursorOptions,
   ): Promise<DmConversationTimeline> {
-    return getDmConversation(conversationId, this.auth);
+    return getDmConversation(conversationId, cursor, this.auth);
   }
 
   /**
@@ -450,13 +453,15 @@ export class Scraper {
    *
    * @param conversationId - The unique identifier of the conversation to fetch messages from.
    * @param [maxMessages=20] - The maximum number of messages to retrieve per request.
+   * @param cursor - Use `maxId` to get messages before a message ID (older messages), or `minId` to get messages after a message ID (newer messages).
    * @returns An {@link AsyncGenerator} of messages from the provided conversation.
    */
   public getDmMessages(
     conversationId: string,
     maxMessages = 20,
+    cursor?: DmCursorOptions,
   ): AsyncGenerator<DmMessageEntry, void> {
-    return getDmMessages(conversationId, maxMessages, this.auth);
+    return getDmMessages(conversationId, maxMessages, cursor, this.auth);
   }
 
   /**

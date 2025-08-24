@@ -123,6 +123,11 @@ export interface DmTimelineState {
   min_entry_id: string;
 }
 
+export interface DmCursorOptions {
+  maxId?: string;
+  minId?: string;
+}
+
 export async function fetchDmInbox(auth: TwitterAuth) {
   if (!(await auth.isLoggedIn())) {
     throw new AuthenticationError(
@@ -179,8 +184,8 @@ export async function getDmInbox(auth: TwitterAuth) {
 // This gets the current authenticated user's direct conversations.
 // This requires the user to be authenticated.
 export async function fetchDmConversation(
-  conversation_id: string,
-  maxId: string | undefined,
+  conversationId: string,
+  cursor: DmCursorOptions | undefined,
   auth: TwitterAuth,
 ) {
   if (!(await auth.isLoggedIn())) {
@@ -208,13 +213,20 @@ export async function fetchDmConversation(
     'mediaColor,altText,mediaStats,highlightedLabel,parodyCommentaryFanLabel,voiceInfo,birdwatchPivot,superFollowMetadata,unmentionInfo,editControl,article',
   );
 
-  // `max_id` does the pagination; to get the next "page", you set max_id to the response's min_entry_id.
+  // By default, passing no cursor means you get the latest results.
+  // `max_id` does backwards pagination using min_entry_id as the maxId to get older messages.
+  // `min_id` does forward pagination using max_entry_id as the minId to get newer messages.
   // To know when there are no more pages, the response's "status" will return "AT_END".
-  if (maxId) {
-    params.set('max_id', maxId);
+  if (cursor) {
+    if (cursor.maxId) {
+      params.set('max_id', cursor.maxId);
+    }
+    if (cursor.minId) {
+      params.set('min_id', cursor.minId);
+    }
   }
 
-  const url = `https://x.com/i/api/1.1/dm/conversation/${conversation_id}.json?${params.toString()}`;
+  const url = `https://x.com/i/api/1.1/dm/conversation/${conversationId}.json?${params.toString()}`;
 
   const res = await requestApi<DmConversationResponse>(url, auth);
 
@@ -232,26 +244,37 @@ export async function parseDmConversation(
 }
 
 export async function getDmConversation(
-  conversation_id: string,
+  conversationId: string,
+  cursor: DmCursorOptions | undefined,
   auth: TwitterAuth,
 ) {
-  return await fetchDmConversation(conversation_id, undefined, auth);
+  return await fetchDmConversation(conversationId, cursor, auth);
 }
 
 export function getDmMessages(
   conversationId: string,
   maxMessages: number,
+  cursor: DmCursorOptions | undefined,
   auth: TwitterAuth,
 ): AsyncGenerator<DmMessageEntry, void> {
   return getDmConversationMessagesGenerator(
     conversationId,
     maxMessages,
-    async (id: string, _max: number, cursor: string | undefined) => {
+    cursor,
+    async (id, _max, cursor) => {
       const conversation = await fetchDmConversation(id, cursor, auth);
+
+      let next: DmCursorOptions | undefined = undefined;
+
+      if (cursor?.minId && conversation.max_entry_id) {
+        next = { minId: conversation.max_entry_id };
+      } else if (conversation.min_entry_id) {
+        next = { maxId: conversation.min_entry_id };
+      }
 
       return {
         conversation,
-        next: conversation.min_entry_id,
+        next,
       };
     },
   );
