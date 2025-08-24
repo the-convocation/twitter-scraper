@@ -34,7 +34,7 @@ export async function* getDmConversationMessagesGenerator(
 
     const { conversation, next } = batch;
 
-    if (conversation.entries.length === 0) {
+    if (!conversation?.entries || conversation?.entries?.length === 0) {
       break;
     }
 
