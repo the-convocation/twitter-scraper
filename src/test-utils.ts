@@ -1,5 +1,6 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Scraper } from './scraper';
+import { Cookie } from 'tough-cookie';
 
 export interface ScraperTestOptions {
   /**
@@ -54,7 +55,9 @@ export async function getScraper(
   if (options.authMethod === 'password') {
     await scraper.login(username!, password!, email, twoFactorSecret);
   } else if (options.authMethod === 'cookies') {
-    await scraper.setCookies(JSON.parse(cookies!));
+    await scraper.setCookies(
+      JSON.parse(cookies!).map((c: string) => Cookie.fromJSON(c)),
+    );
   }
 
   return scraper;
