@@ -109,8 +109,10 @@ async function getFollowingTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('features', stringify(features));
-  params.set('variables', stringify(variables));
+  const featuresStr = stringify(features);
+  const variablesStr = stringify(variables);
+  if (featuresStr) params.set('features', featuresStr);
+  if (variablesStr) params.set('variables', variablesStr);
 
   const res = await requestApi<RelationshipTimeline>(
     `https://x.com/i/api/graphql/iSicc7LrzWGBgDPL0tM_TQ/Following?${params.toString()}`,
@@ -159,8 +161,10 @@ async function getFollowersTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('features', stringify(features));
-  params.set('variables', stringify(variables));
+  const featuresStr = stringify(features);
+  const variablesStr = stringify(variables);
+  if (featuresStr) params.set('features', featuresStr);
+  if (variablesStr) params.set('variables', variablesStr);
 
   const res = await requestApi<RelationshipTimeline>(
     `https://x.com/i/api/graphql/rRXFSG5vR6drKr5M37YOTw/Followers?${params.toString()}`,

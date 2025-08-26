@@ -36,6 +36,17 @@ import {
 } from './tweets';
 import fetch from 'cross-fetch';
 import { RateLimitStrategy } from './rate-limit';
+import {
+  DmConversationTimeline,
+  DmInbox,
+  DmMessageEntry,
+  DmCursorOptions,
+  getDmConversation,
+  getDmMessages,
+  getDmInbox,
+  findDmConversationsByUserId,
+  DmConversation,
+} from './direct-messages';
 
 const twUrl = 'https://x.com';
 
@@ -412,6 +423,59 @@ export class Scraper {
     } else {
       return getTweetAnonymous(id, this.auth);
     }
+  }
+
+  /**
+   * Retrieves the direct message inbox for the authenticated user.
+   *
+   * @return A promise that resolves to an object representing the direct message inbox.
+   */
+  public getDmInbox(): Promise<DmInbox> {
+    return getDmInbox(this.auth);
+  }
+
+  /**
+   * Retrieves the direct message conversation for the specified conversation ID.
+   *
+   * @param conversationId - The unique identifier of the DM conversation to retrieve.
+   * @param cursor - Use `maxId` to get messages before a message ID (older messages), or `minId` to get messages after a message ID (newer messages).
+   * @return A promise that resolves to the timeline of the DM conversation.
+   */
+  public getDmConversation(
+    conversationId: string,
+    cursor?: DmCursorOptions,
+  ): Promise<DmConversationTimeline> {
+    return getDmConversation(conversationId, cursor, this.auth);
+  }
+
+  /**
+   * Retrieves direct messages from a specific conversation.
+   *
+   * @param conversationId - The unique identifier of the conversation to fetch messages from.
+   * @param [maxMessages=20] - The maximum number of messages to retrieve per request.
+   * @param cursor - Use `maxId` to get messages before a message ID (older messages), or `minId` to get messages after a message ID (newer messages).
+   * @returns An {@link AsyncGenerator} of messages from the provided conversation.
+   */
+  public getDmMessages(
+    conversationId: string,
+    maxMessages = 20,
+    cursor?: DmCursorOptions,
+  ): AsyncGenerator<DmMessageEntry, void> {
+    return getDmMessages(conversationId, maxMessages, cursor, this.auth);
+  }
+
+  /**
+   * Retrieves a list of direct message conversations for a specific user based on their user ID.
+   *
+   * @param inbox - The DM inbox containing all available conversations.
+   * @param userId - The unique identifier of the user whose DM conversations are to be retrieved.
+   * @return An array of DM conversations associated with the specified user ID.
+   */
+  public findDmConversationsByUserId(
+    inbox: DmInbox,
+    userId: string,
+  ): DmConversation[] {
+    return findDmConversationsByUserId(inbox, userId);
   }
 
   /**

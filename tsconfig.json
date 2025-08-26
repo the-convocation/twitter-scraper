@@ -16,6 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "stripInternal": true,
+    "isolatedModules": true,
     "types": ["jest"]
   }
 }

@@ -97,15 +97,18 @@ class ApiRequest<EndpointUrl> {
     // Only include query parameters with values
     if (this.variables) {
       // Stringify with the query keys in sorted order like the Go package
-      params.set('variables', stringify(this.variables));
+      const variablesStr = stringify(this.variables);
+      if (variablesStr) params.set('variables', variablesStr);
     }
 
     if (this.features) {
-      params.set('features', stringify(this.features));
+      const featuresStr = stringify(this.features);
+      if (featuresStr) params.set('features', featuresStr);
     }
 
     if (this.fieldToggles) {
-      params.set('fieldToggles', stringify(this.fieldToggles));
+      const fieldTogglesStr = stringify(this.fieldToggles);
+      if (fieldTogglesStr) params.set('fieldToggles', fieldTogglesStr);
     }
 
     return `${this.url}?${params.toString()}`;

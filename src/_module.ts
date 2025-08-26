@@ -12,6 +12,24 @@ export type {
   FlowTokenResultError,
   FlowTokenResultSuccess,
 } from './auth-user';
+export type {
+  DmInboxResponse,
+  DmInbox,
+  DmConversationResponse,
+  DmConversationTimeline,
+  DmConversation,
+  DmStatus,
+  DmParticipant,
+  DmMessageEntry,
+  DmMessage,
+  DmMessageData,
+  DmReaction,
+  DmMessageEntities,
+  DmMessageUrl,
+  DmWelcomeMessage,
+  DmInboxTimelines,
+  DmTimelineState,
+} from './direct-messages';
 export {
   ApiError,
   AuthenticationError,
