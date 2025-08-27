@@ -397,9 +397,8 @@ test('scraper can get liked tweets', async () => {
 test('scraper can get animated image as video', async () => {
   const scraper = await getScraper({ authMethod: 'anonymous' });
   const tweet = await scraper.getTweet('1947627689285673423');
-  console.log(tweet);
   expect(tweet?.videos).toContainEqual({
     id: '1947626213477961729',
-    preview: 'https://pbs.twimg.com/tweet_video_thumb/GwdbuOGX0AEuVrj.jpg',
+    preview: 'https://video.twimg.com/tweet_video/GwdbuOGX0AEuVrj.mp4',
   });
 });
