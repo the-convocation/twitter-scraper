@@ -25,8 +25,10 @@ export function parseMediaGroups(media: TimelineMediaExtendedRaw[]): {
         url: m.media_url_https,
         alt_text: m.ext_alt_text,
       });
-    } else if (m.type === 'video' || m.type === 'animated_gif') {
+    } else if (m.type === 'video') {
       videos.push(parseVideo(m));
+    } else if (m.type === 'animated_gif') {
+      videos.push(parseGif(m));
     }
 
     const sensitive = m.ext_sensitive_media_warning;
@@ -39,6 +41,26 @@ export function parseMediaGroups(media: TimelineMediaExtendedRaw[]): {
   }
 
   return { sensitiveContent, photos, videos };
+}
+
+function parseGif(
+  m: NonNullableField<TimelineMediaExtendedRaw, 'id_str' | 'media_url_https'>,
+): Video {
+  const gif: Video = {
+    id: m.id_str,
+    preview: m.media_url_https,
+  };
+
+  const variants = m.video_info?.variants ?? [];
+
+  const url = variants.find((v) => v.content_type === 'video/mp4')?.url;
+
+  if (url) {
+    gif.preview = url;
+    gif.url = url;
+  }
+
+  return gif;
 }
 
 function parseVideo(
