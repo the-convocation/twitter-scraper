@@ -120,6 +120,9 @@ export interface UserRaw {
   data: {
     user: {
       result: {
+        __typename?: string;
+        message?: string;
+        reason?: string;
         rest_id?: string;
         is_blue_verified?: boolean;
         legacy: LegacyUserRaw;
@@ -211,6 +214,13 @@ export async function getProfile(
   }
   const { result: user } = value.data.user;
   const { legacy } = user;
+
+  if (user.__typename === 'UserUnavailable' && user?.reason === 'Suspended') {
+    return {
+      success: false,
+      err: new Error('User is suspended.'),
+    };
+  }
 
   if (user.rest_id == null || user.rest_id.length === 0) {
     return {
