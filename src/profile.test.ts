@@ -91,3 +91,10 @@ test('scraper can get profile by screen name', async () => {
   const scraper = await getScraper();
   await scraper.getProfile('GeminiApp');
 });
+
+test('scraper return error on suspended profile', async () => {
+  const scraper = await getScraper();
+  await expect(scraper.getProfile('elon')).rejects.toThrow(
+    'User is suspended.',
+  );
+});
