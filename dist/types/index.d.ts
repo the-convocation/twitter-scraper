@@ -256,59 +256,52 @@ interface FlowSubtaskHandlerApi {
  */
 type FlowSubtaskHandler = (subtaskId: string, previousResponse: TwitterUserAuthFlowResponse, credentials: TwitterUserAuthCredentials, api: FlowSubtaskHandlerApi) => Promise<FlowTokenResult>;
 
+type IndicesTuple = [number, number];
 interface CoreUserRaw {
     created_at?: string;
     name?: string;
     screen_name?: string;
 }
+interface UrlEntity {
+    url?: string;
+    expanded_url?: string;
+    display_url?: string;
+    indices?: IndicesTuple;
+}
 interface LegacyUserRaw {
-    created_at?: string;
+    id?: number;
+    id_str?: string;
+    name?: string;
+    screen_name?: string;
     description?: string;
-    entities?: {
-        url?: {
-            urls?: {
-                url?: string;
-                expanded_url?: string;
-                display_url?: string;
-                indices?: [number, number];
-            }[];
-        };
-        description?: {
-            urls?: any[];
-        };
-    };
+    location?: string;
+    url?: string;
+    created_at?: string;
+    protected?: boolean;
+    verified?: boolean;
     favourites_count?: number;
     followers_count?: number;
     friends_count?: number;
+    listed_count?: number;
     media_count?: number;
     statuses_count?: number;
-    id_str?: string;
-    listed_count?: number;
-    name?: string;
-    location?: string;
-    geo_enabled?: boolean;
-    pinned_tweet_ids_str?: string[];
-    profile_background_color?: string;
+    fast_followers_count?: number;
+    normal_followers_count?: number;
+    entities?: {
+        url?: {
+            urls?: UrlEntity[];
+        };
+        description?: {
+            urls?: UrlEntity[];
+        };
+    };
     profile_banner_url?: string;
     profile_image_url_https?: string;
-    protected?: boolean;
-    screen_name?: string;
-    verified?: boolean;
-    has_custom_timelines?: boolean;
-    has_extended_profile?: boolean;
-    url?: string;
-    can_dm?: boolean;
-    id?: number;
-    utc_offset?: any;
-    time_zone?: any;
-    lang?: any;
-    contributors_enabled?: boolean;
-    is_translator?: boolean;
-    is_translation_enabled?: boolean;
+    profile_image_url?: string;
     profile_background_image_url?: string;
     profile_background_image_url_https?: string;
     profile_background_tile?: boolean;
-    profile_image_url?: string;
+    profile_background_color?: string;
     profile_link_color?: string;
     profile_sidebar_border_color?: string;
     profile_sidebar_fill_color?: string;
@@ -316,21 +309,31 @@ interface LegacyUserRaw {
     profile_use_background_image?: boolean;
     default_profile?: boolean;
     default_profile_image?: boolean;
+    profile_interstitial_type?: string;
+    geo_enabled?: boolean;
+    has_custom_timelines?: boolean;
+    has_extended_profile?: boolean;
+    can_dm?: boolean;
     can_secret_dm?: boolean;
     can_media_tag?: boolean;
+    is_translator?: boolean;
+    is_translation_enabled?: boolean;
+    contributors_enabled?: boolean;
     following?: boolean;
     follow_request_sent?: boolean;
     notifications?: boolean;
     blocking?: boolean;
-    subscribed_by?: boolean;
     blocked_by?: boolean;
+    subscribed_by?: boolean;
     want_retweets?: boolean;
-    dm_blocked_by?: boolean;
-    dm_blocking?: boolean;
     business_profile_state?: string;
     translator_type?: string;
-    withheld_in_countries?: any[];
-    followed_by?: boolean;
+    pinned_tweet_ids_str?: string[];
+    possibly_sensitive?: boolean;
+    withheld_in_countries?: string[];
+    utc_offset?: number | null;
+    time_zone?: string | null;
+    lang?: string | null;
 }
 /**
  * A parsed profile object.
