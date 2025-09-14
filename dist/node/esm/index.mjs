@@ -1409,10 +1409,6 @@ function parseSearchTimelineTweets(timeline) {
         const itemContent = entry.content?.itemContent;
         if (itemContent?.tweetDisplayType === "Tweet") {
           const tweetResultRaw = itemContent.tweet_results?.result;
-          console.log("HELLO TWEET");
-          console.log(
-            JSON.stringify(tweetResultRaw?.core?.user_results?.result)
-          );
           const tweetResult = parseLegacyTweet(
             tweetResultRaw?.core?.user_results?.result?.core,
             tweetResultRaw?.core?.user_results?.result?.legacy,
