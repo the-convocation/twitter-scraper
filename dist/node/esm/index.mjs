@@ -1188,12 +1188,12 @@ function parseLegacyTweet(coreUser, user, tweet, editControl) {
     isPin: false,
     sensitiveContent: false,
     userProfile: {
-      favourites_count: user.favourites_count,
-      followers_count: user.followers_count,
-      friends_count: user.friends_count,
-      listed_count: user.listed_count,
-      media_count: user.media_count,
-      statuses_count: user.statuses_count
+      favouritesCount: user.favourites_count,
+      followersCount: user.followers_count,
+      friendsCount: user.friends_count,
+      listedCount: user.listed_count,
+      mediaCount: user.media_count,
+      statusesCount: user.statuses_count
     }
   };
   if (tweet.created_at) {

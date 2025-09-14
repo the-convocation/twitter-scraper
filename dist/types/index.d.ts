@@ -548,12 +548,12 @@ interface Tweet {
     views?: number;
     sensitiveContent?: boolean;
     userProfile?: {
-        favourites_count?: number;
-        followers_count?: number;
-        friends_count?: number;
-        listed_count?: number;
-        media_count?: number;
-        statuses_count?: number;
+        favouritesCount?: number;
+        followersCount?: number;
+        friendsCount?: number;
+        listedCount?: number;
+        mediaCount?: number;
+        statusesCount?: number;
     };
 }
 type TweetQuery = Partial<Tweet> | ((tweet: Tweet) => boolean | Promise<boolean>);
