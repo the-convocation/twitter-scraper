@@ -86,6 +86,7 @@ export interface SearchResultRaw {
     result?: SearchResultRaw;
   };
   legacy?: LegacyTweetRaw;
+  article?: ArticleRaw;
 }
 
 export interface TimelineResultRaw {
@@ -119,6 +120,79 @@ export interface TimelineResultRaw {
   };
   legacy?: LegacyTweetRaw;
   tweet?: TimelineResultRaw;
+  article?: ArticleRaw;
+}
+
+export interface ArticleRaw {
+  article_results: {
+    result: ArticleResultRaw;
+  };
+}
+
+export interface ArticleResultRaw {
+  rest_id: string;
+  title: string;
+  cover_media?: ArticleCoverMediaRaw;
+  content_state: ArticleContentStateRaw;
+  media_entities?: ArticleMediaEntityRaw[];
+}
+
+export interface ArticleCoverMediaRaw {
+  media_key: string;
+  media_info: {
+    original_img_url: string;
+  };
+}
+
+export interface ArticleContentStateRaw {
+  blocks: ArticleBlockRaw[];
+  entityMap: ArticleEntityRaw[];
+}
+
+export interface ArticleBlockRaw {
+  key: string;
+  text: string;
+  type: string;
+  inlineStyleRanges: {
+    offset: number;
+    length: number;
+    style: string;
+  }[];
+  entityRanges: {
+    key: number;
+    offset: number;
+    length: number;
+  }[];
+}
+
+export interface ArticleEntityValueMediaItemRaw {
+  localMediaId: string;
+  mediaCategory: string;
+  mediaId: string;
+}
+
+export interface ArticleEntityValueRaw {
+  type: string;
+  mutability?: string;
+  data: {
+    url?: string;
+    entityKey?: string;
+    mediaItems?: ArticleEntityValueMediaItemRaw[];
+  };
+}
+
+export interface ArticleEntityRaw {
+  key: number;
+  value: ArticleEntityValueRaw;
+}
+
+export interface ArticleMediaEntityRaw {
+  media_key: string;
+  media_id: string;
+  media_info: {
+    __typename: 'ApiImage' | 'ApiGif' | 'ApiVideo';
+    original_img_url: string;
+  };
 }
 
 export interface LegacyTweetRaw {
