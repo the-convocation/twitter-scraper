@@ -548,6 +548,7 @@ interface Tweet {
     views?: number;
     sensitiveContent?: boolean;
     userProfile?: {
+        createdAt?: string;
         favouritesCount?: number;
         followersCount?: number;
         friendsCount?: number;
