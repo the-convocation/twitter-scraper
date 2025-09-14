@@ -188,9 +188,6 @@ export async function getProfile(
 ): Promise<RequestApiResult<Profile>> {
   const request = apiRequestFactory.createUserByScreenNameRequest();
   request.variables.screen_name = username;
-  request.variables.withSafetyModeUserFields = true;
-  request.features.hidden_profile_subscriptions_enabled = false; // Auth-restricted
-  request.fieldToggles.withAuxiliaryUserLabels = false;
 
   const res = await requestApi<UserRaw>(request.toRequestUrl(), auth);
   if (!res.success) {
@@ -199,10 +196,10 @@ export async function getProfile(
 
   const { value } = res;
   const { errors } = value;
-  if (errors != null && errors.length > 0) {
+  if (!value.data && errors != null && errors.length > 0) {
     return {
       success: false,
-      err: new Error(errors[0].message),
+      err: new Error(errors.map((e) => e.message).join('\n')),
     };
   }
 
