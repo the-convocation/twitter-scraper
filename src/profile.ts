@@ -196,7 +196,11 @@ export async function getProfile(
 
   const { value } = res;
   const { errors } = value;
-  if (!value.data && errors != null && errors.length > 0) {
+  if (
+    (!value.data || !value.data.user || !value.data.user.result) &&
+    errors != null &&
+    errors.length > 0
+  ) {
     return {
       success: false,
       err: new Error(errors.map((e) => e.message).join('\n')),
