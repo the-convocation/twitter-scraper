@@ -1126,7 +1126,7 @@ function getLegacyTweetId(tweet) {
   }
   return tweet.conversation_id_str;
 }
-function parseLegacyTweet(coreUser, user, tweet, editControl) {
+function parseLegacyTweet(coreUser, user, tweet, editControl, avatarUrl) {
   if (tweet == null) {
     return {
       success: false,
@@ -1189,6 +1189,7 @@ function parseLegacyTweet(coreUser, user, tweet, editControl) {
     sensitiveContent: false,
     userProfile: {
       createdAt: user.created_at,
+      profilePictureUrl: avatarUrl,
       favouritesCount: user.favourites_count,
       followersCount: user.followers_count,
       friendsCount: user.friends_count,
@@ -1412,7 +1413,8 @@ function parseSearchTimelineTweets(timeline) {
             tweetResultRaw?.core?.user_results?.result?.core,
             tweetResultRaw?.core?.user_results?.result?.legacy,
             tweetResultRaw?.legacy,
-            tweetResultRaw?.edit_control?.edit_control_initial
+            tweetResultRaw?.edit_control?.edit_control_initial,
+            tweetResultRaw?.core?.user_results?.result?.avatar?.image_url
           );
           if (tweetResult.success) {
             if (!tweetResult.tweet.views && tweetResultRaw?.views?.count) {
@@ -1420,9 +1422,6 @@ function parseSearchTimelineTweets(timeline) {
               if (!isNaN(views)) {
                 tweetResult.tweet.views = views;
               }
-            }
-            if (tweetResultRaw?.core?.user_results?.result?.avatar?.image_url && tweetResult?.tweet?.userProfile) {
-              tweetResult.tweet.userProfile.profilePictureUrl = tweetResultRaw?.core?.user_results?.result?.avatar?.image_url;
             }
             tweets.push(tweetResult.tweet);
           }

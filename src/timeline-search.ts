@@ -51,6 +51,7 @@ export function parseSearchTimelineTweets(
             tweetResultRaw?.core?.user_results?.result?.legacy,
             tweetResultRaw?.legacy,
             tweetResultRaw?.edit_control?.edit_control_initial,
+            tweetResultRaw?.core?.user_results?.result?.avatar?.image_url,
           );
 
           if (tweetResult.success) {
@@ -59,14 +60,6 @@ export function parseSearchTimelineTweets(
               if (!isNaN(views)) {
                 tweetResult.tweet.views = views;
               }
-            }
-
-            if (
-              tweetResultRaw?.core?.user_results?.result?.avatar?.image_url &&
-              tweetResult?.tweet?.userProfile
-            ) {
-              tweetResult.tweet.userProfile.profilePictureUrl =
-                tweetResultRaw?.core?.user_results?.result?.avatar?.image_url;
             }
 
             tweets.push(tweetResult.tweet);
