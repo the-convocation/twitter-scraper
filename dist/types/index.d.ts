@@ -547,6 +547,14 @@ interface Tweet {
     videos: Video[];
     views?: number;
     sensitiveContent?: boolean;
+    userProfile?: {
+        favourites_count?: number;
+        followers_count?: number;
+        friends_count?: number;
+        listed_count?: number;
+        media_count?: number;
+        statuses_count?: number;
+    };
 }
 type TweetQuery = Partial<Tweet> | ((tweet: Tweet) => boolean | Promise<boolean>);
 
