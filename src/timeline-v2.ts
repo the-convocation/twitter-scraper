@@ -124,7 +124,6 @@ export function parseLegacyTweet(
   user?: Readonly<LegacyUserRaw>,
   tweet?: Readonly<LegacyTweetRaw>,
   editControl?: Readonly<EditControlInitialRaw>,
-  avatarUrl?: string,
 ): ParseTweetResult {
   if (tweet == null) {
     return {
@@ -197,7 +196,8 @@ export function parseLegacyTweet(
     isPin: false,
     sensitiveContent: false,
     userProfile: {
-      profilePictureUrl: avatarUrl,
+      profilePictureUrl:
+        user.profile_image_url_https ?? user.profile_banner_url,
       createdAt: user.created_at,
       favouritesCount: user.favourites_count,
       followersCount: user.followers_count,

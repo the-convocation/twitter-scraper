@@ -55,7 +55,6 @@ export function parseSearchTimelineTweets(
             tweetResultRaw?.core?.user_results?.result?.legacy,
             tweetResultRaw?.legacy,
             tweetResultRaw?.edit_control?.edit_control_initial,
-            tweetResultRaw?.core?.user_results?.result?.avatar?.image_url,
           );
 
           if (tweetResult.success) {
