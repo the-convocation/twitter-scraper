@@ -65,6 +65,9 @@ export interface SearchResultRaw {
       result?: {
         is_blue_verified?: boolean;
         core?: CoreUserRaw;
+        avatar?: {
+          image_url?: string;
+        };
         legacy?: LegacyUserRaw;
       };
     };

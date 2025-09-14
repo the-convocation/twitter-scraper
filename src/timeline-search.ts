@@ -61,6 +61,14 @@ export function parseSearchTimelineTweets(
               }
             }
 
+            if (
+              tweetResultRaw?.core?.user_results?.result?.avatar?.image_url &&
+              tweetResult?.tweet?.userProfile
+            ) {
+              tweetResult.tweet.userProfile.profilePictureUrl =
+                tweetResultRaw?.core?.user_results?.result?.avatar?.image_url;
+            }
+
             tweets.push(tweetResult.tweet);
           }
         } else if (entry.content?.cursorType === 'Bottom') {

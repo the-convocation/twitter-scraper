@@ -88,6 +88,7 @@ export interface Tweet {
   views?: number;
   sensitiveContent?: boolean;
   userProfile?: {
+    profilePictureUrl?: string;
     createdAt?: string;
     favouritesCount?: number;
     followersCount?: number;
