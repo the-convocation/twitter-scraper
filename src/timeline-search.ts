@@ -45,6 +45,8 @@ export function parseSearchTimelineTweets(
       for (const entry of entries) {
         const itemContent = entry.content?.itemContent;
         if (itemContent?.tweetDisplayType === 'Tweet') {
+          console.log('HELLO TWEET');
+          console.log(entry);
           const tweetResultRaw = itemContent.tweet_results?.result;
           const tweetResult = parseLegacyTweet(
             tweetResultRaw?.core?.user_results?.result?.core,
