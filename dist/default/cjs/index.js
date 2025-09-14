@@ -1210,8 +1210,8 @@ function parseLegacyTweet(coreUser, user, tweet, editControl, avatarUrl) {
     isPin: false,
     sensitiveContent: false,
     userProfile: {
-      createdAt: user.created_at,
       profilePictureUrl: avatarUrl,
+      createdAt: user.created_at,
       favouritesCount: user.favourites_count,
       followersCount: user.followers_count,
       friendsCount: user.friends_count,
