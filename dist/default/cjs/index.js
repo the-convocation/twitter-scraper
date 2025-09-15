@@ -1210,7 +1210,8 @@ function parseLegacyTweet(coreUser, user, tweet, editControl) {
     isPin: false,
     sensitiveContent: false,
     userProfile: {
-      profilePictureUrl: user.profile_image_url_https ?? user.profile_banner_url,
+      profileImageUrlHttps: user.profile_image_url_https,
+      profileBannerUrl: user.profile_banner_url,
       createdAt: user.created_at,
       favouritesCount: user.favourites_count,
       followersCount: user.followers_count,
