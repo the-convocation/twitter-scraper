@@ -10,6 +10,9 @@ import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { ApiError, AuthenticationError, TwitterApiErrorRaw } from './errors';
 import { updateCookieJar } from './requests';
 
+// NEW: Lqm1 library for x-client-transaction-id
+import { ClientTransaction, handleXMigration } from 'x-client-transaction-id';
+
 const log = debug('twitter-scraper:auth-user');
 
 export interface TwitterUserAuthFlowInitRequest {
@@ -68,115 +71,16 @@ export interface TwitterUserAuthCredentials {
 /**
  * The API interface provided to custom subtask handlers for interacting with the Twitter authentication flow.
  * This interface allows handlers to send flow requests and access the current flow token.
- *
- * The API is passed to each subtask handler and provides methods necessary for implementing
- * custom authentication subtasks. It abstracts away the low-level details of communicating
- * with Twitter's authentication API.
- *
- * @example
- * ```typescript
- * import { Scraper, FlowSubtaskHandler } from "@the-convocation/twitter-scraper";
- *
- * // A custom subtask handler that implements a hypothetical example subtask
- * const exampleHandler: FlowSubtaskHandler = async (subtaskId, response, credentials, api) => {
- *   // Process the example subtask somehow
- *   const data = await processExampleTask();
- *
- *   // Submit the processed data using the provided API
- *   return await api.sendFlowRequest({
- *     flow_token: api.getFlowToken(),
- *     subtask_inputs: [{
- *       subtask_id: subtaskId,
- *       example_data: {
- *         value: data,
- *         link: "next_link"
- *       }
- *     }]
- *   });
- * };
- *
- * const scraper = new Scraper();
- * scraper.registerAuthSubtaskHandler("ExampleSubtask", exampleHandler);
- * ```
  */
 export interface FlowSubtaskHandlerApi {
-  /**
-   * Send a flow request to the Twitter API.
-   * @param request The request object containing flow token and subtask inputs
-   * @returns The result of the flow task
-   */
   sendFlowRequest: (
     request: TwitterUserAuthFlowRequest,
   ) => Promise<FlowTokenResult>;
-  /**
-   * Gets the current flow token.
-   * @returns The current flow token
-   */
   getFlowToken: () => string;
 }
 
 /**
  * A handler function for processing Twitter authentication flow subtasks.
- * Library consumers can implement and register custom handlers for new or
- * existing subtask types using the Scraper.registerAuthSubtaskHandler method.
- *
- * Each subtask handler is called when its corresponding subtask ID is encountered
- * during the authentication flow. The handler receives the subtask ID, the previous
- * response data, the user's credentials, and an API interface for interacting with
- * the authentication flow.
- *
- * Handlers should process their specific subtask and return either a successful response
- * or an error. Success responses typically lead to the next subtask in the flow, while
- * errors will halt the authentication process.
- *
- * @param subtaskId - The identifier of the subtask being handled
- * @param previousResponse - The complete response from the previous authentication flow step
- * @param credentials - The user's authentication credentials including username, password, etc.
- * @param api - An interface providing methods to interact with the authentication flow
- * @returns A promise resolving to either a successful flow response or an error
- *
- * @example
- * ```typescript
- * import { Scraper, FlowSubtaskHandler } from "@the-convocation/twitter-scraper";
- *
- * // Custom handler for a hypothetical verification subtask
- * const verificationHandler: FlowSubtaskHandler = async (
- *   subtaskId,
- *   response,
- *   credentials,
- *   api
- * ) => {
- *   // Extract the verification data from the response
- *   const verificationData = response.subtasks?.[0].exampleData?.value;
- *   if (!verificationData) {
- *     return {
- *       status: 'error',
- *       err: new Error('No verification data found in response')
- *     };
- *   }
- *
- *   // Process the verification data somehow
- *   const result = await processVerification(verificationData);
- *
- *   // Submit the result using the flow API
- *   return await api.sendFlowRequest({
- *     flow_token: api.getFlowToken(),
- *     subtask_inputs: [{
- *       subtask_id: subtaskId,
- *       example_verification: {
- *         value: result,
- *         link: "next_link"
- *       }
- *     }]
- *   });
- * };
- *
- * const scraper = new Scraper();
- * scraper.registerAuthSubtaskHandler("ExampleVerificationSubtask", verificationHandler);
- *
- * // Later, when logging in...
- * await scraper.login("username", "password");
- * ```
  */
 export type FlowSubtaskHandler = (
   subtaskId: string,
@@ -191,6 +95,9 @@ export type FlowSubtaskHandler = (
 export class TwitterUserAuth extends TwitterGuestAuth {
   private readonly subtaskHandlers: Map<string, FlowSubtaskHandler> = new Map();
 
+  // NEW: cache a ClientTransaction generator instance
+  private clientTxn: ClientTransaction | null = null;
+
   constructor(bearerToken: string, options?: Partial<TwitterAuthOptions>) {
     super(bearerToken, options);
     this.initializeDefaultHandlers();
@@ -198,8 +105,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
   /**
    * Register a custom subtask handler or override an existing one
-   * @param subtaskId The ID of the subtask to handle
-   * @param handler The handler function that processes the subtask
    */
   registerSubtaskHandler(subtaskId: string, handler: FlowSubtaskHandler): void {
     this.subtaskHandlers.set(subtaskId, handler);
@@ -422,6 +327,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     credentials: TwitterUserAuthCredentials,
     api: FlowSubtaskHandlerApi,
   ): Promise<FlowTokenResult> {
+    if (!credentials.email) {
+      return {
+        status: 'error',
+        err: new AuthenticationError('Email is required for this subtask'),
+      };
+    }
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
@@ -518,7 +429,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     const totp = new OTPAuth.TOTP({ secret: credentials.twoFactorSecret });
-    let error;
+    let error: unknown;
     for (let attempts = 1; attempts < 4; attempts += 1) {
       try {
         return await api.sendFlowRequest({
@@ -547,6 +458,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     credentials: TwitterUserAuthCredentials,
     api: FlowSubtaskHandlerApi,
   ): Promise<FlowTokenResult> {
+    if (!credentials.email) {
+      return {
+        status: 'error',
+        err: new AuthenticationError('Email is required for this subtask'),
+      };
+    }
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
@@ -573,12 +490,88 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
   }
 
+  // --------- NEW helpers for headers / detection / transaction id ---------
+
+  /** Optionally provide a valid x-xp-forwarded-for if your app can generate one. */
+  // eslint-disable-next-line class-methods-use-this
+  protected getXpffHeader(): string | undefined {
+    // Example: return this.options?.getXpff?.();
+    return undefined;
+  }
+
+  /** Detect Cloudflare/HTML interstitials quickly. */
+  private async isHtmlIntervention(res: Response): Promise<boolean> {
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('text/html')) return true;
+    const peek = await res.clone().text();
+    return (
+      /<title>\s*Attention Required!\s*\|\s*Cloudflare\s*<\/title>/i.test(
+        peek,
+      ) || /<h1[^>]*>\s*Sorry,\s*you have been blocked\s*<\/h1>/i.test(peek)
+    );
+  }
+
+  /** Ensure we have a ready ClientTransaction generator. */
+  private async ensureClientTxn(): Promise<ClientTransaction> {
+    if (this.clientTxn) return this.clientTxn;
+    // Handles x.com migration & returns a document compatible with generator
+    const doc = await handleXMigration();
+    this.clientTxn = await ClientTransaction.create(doc);
+    return this.clientTxn;
+  }
+
+  /** Generate a valid x-client-transaction-id per request (method + path). */
+  private async makeTransactionId(
+    method: string,
+    path: string,
+  ): Promise<string> {
+    const txn = await this.ensureClientTxn();
+    return txn.generateTransactionId(method.toUpperCase(), path);
+  }
+
+  private async buildOnboardingHeaders(
+    token: string,
+    method: string,
+    path: string,
+  ): Promise<Headers> {
+    const headers = new Headers({
+      authorization: `Bearer ${this.bearerToken}`,
+      cookie: await this.getCookieString(),
+      'content-type': 'application/json',
+      accept: '*/*',
+      'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+      // Use a realistic desktop UA (closer to captured traffic)
+      'user-agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+      origin: 'https://x.com',
+      referer: 'https://x.com/',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-site',
+      'x-guest-token': token,
+      'x-twitter-auth-type': 'OAuth2Client',
+      'x-twitter-active-user': 'yes',
+      'x-twitter-client-language': 'en-GB',
+      // CRITICAL: valid per-request transaction id from Lqm1 lib
+      'x-client-transaction-id': await this.makeTransactionId(method, path),
+    });
+
+    const xpff = this.getXpffHeader();
+    if (xpff) headers.set('x-xp-forwarded-for', xpff);
+
+    await this.installCsrfToken(headers);
+    return headers;
+  }
+
+  // --------- /NEW helpers ---------
+
   private async executeFlowTask(
     data: TwitterUserAuthFlowRequest,
   ): Promise<FlowTokenResult> {
     let onboardingTaskUrl = 'https://api.x.com/1.1/onboarding/task.json';
     if ('flow_name' in data) {
-      onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
+      onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${encodeURIComponent(
+        data.flow_name,
+      )}`;
     }
 
     log(`Making POST request to ${onboardingTaskUrl}`);
@@ -590,27 +583,22 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       );
     }
 
-    const headers = new Headers({
-      authorization: `Bearer ${this.bearerToken}`,
-      cookie: await this.getCookieString(),
-      'content-type': 'application/json',
-      'User-Agent':
-        'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
-      'x-guest-token': token,
-      'x-twitter-auth-type': 'OAuth2Client',
-      'x-twitter-active-user': 'yes',
-      'x-twitter-client-language': 'en',
-    });
-    await this.installCsrfToken(headers);
+    // Generate headers with a valid transaction id for POST + path
+    const { pathname } = new URL(onboardingTaskUrl);
+    const headers = await this.buildOnboardingHeaders(token, 'POST', pathname);
 
     let res: Response;
+    let attempts = 0;
+
     do {
+      attempts += 1;
+
       const fetchParameters: FetchParameters = [
         onboardingTaskUrl,
         {
-          credentials: 'include',
+          // NOTE: run server-side; avoid public CORS proxies
           method: 'POST',
-          headers: headers,
+          headers,
           body: JSON.stringify(data),
         },
       ];
@@ -621,26 +609,61 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         if (!(err instanceof Error)) {
           throw err;
         }
-
-        return {
-          status: 'error',
-          err: err,
-        };
+        return { status: 'error', err };
       }
 
       await updateCookieJar(this.jar, res.headers);
 
       if (res.status === 429) {
         log('Rate limit hit, waiting before retrying...');
-        await this.onRateLimit({
-          fetchParameters: fetchParameters,
-          response: res,
-        });
+        await this.onRateLimit({ fetchParameters, response: res });
+        // New transaction id on retry
+        headers.set(
+          'x-client-transaction-id',
+          await this.makeTransactionId('POST', pathname),
+        );
+        continue;
       }
-    } while (res.status === 429);
+
+      // If CF/HTML or 401/403/400, retry once with a fresh transaction id
+      if (
+        (res.status === 403 || res.status === 401 || res.status === 400) &&
+        (await this.isHtmlIntervention(res.clone())) &&
+        attempts < 2
+      ) {
+        log(
+          '403/HTML block detected; regenerating x-client-transaction-id and retrying once.',
+        );
+        headers.set(
+          'x-client-transaction-id',
+          await this.makeTransactionId('POST', pathname),
+        );
+        continue;
+      }
+
+      break;
+    } while (true);
 
     if (!res.ok) {
+      if (await this.isHtmlIntervention(res.clone())) {
+        return {
+          status: 'error',
+          err: new AuthenticationError(
+            'Blocked by Cloudflare (HTML challenge). Ensure valid x-client-transaction-id and server-side requests.',
+          ),
+        };
+      }
       return { status: 'error', err: await ApiError.fromResponse(res) };
+    }
+
+    // Guard: sometimes 200 with HTML body
+    if (await this.isHtmlIntervention(res.clone())) {
+      return {
+        status: 'error',
+        err: new AuthenticationError(
+          'Blocked by Cloudflare (HTML challenge). Check headers and environment.',
+        ),
+      };
     }
 
     const flow: TwitterUserAuthFlowResponse = await res.json();

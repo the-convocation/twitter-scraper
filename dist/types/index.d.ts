@@ -147,112 +147,13 @@ interface TwitterUserAuthCredentials {
 /**
  * The API interface provided to custom subtask handlers for interacting with the Twitter authentication flow.
  * This interface allows handlers to send flow requests and access the current flow token.
- *
- * The API is passed to each subtask handler and provides methods necessary for implementing
- * custom authentication subtasks. It abstracts away the low-level details of communicating
- * with Twitter's authentication API.
- *
- * @example
- * ```typescript
- * import { Scraper, FlowSubtaskHandler } from "@the-convocation/twitter-scraper";
- *
- * // A custom subtask handler that implements a hypothetical example subtask
- * const exampleHandler: FlowSubtaskHandler = async (subtaskId, response, credentials, api) => {
- *   // Process the example subtask somehow
- *   const data = await processExampleTask();
- *
- *   // Submit the processed data using the provided API
- *   return await api.sendFlowRequest({
- *     flow_token: api.getFlowToken(),
- *     subtask_inputs: [{
- *       subtask_id: subtaskId,
- *       example_data: {
- *         value: data,
- *         link: "next_link"
- *       }
- *     }]
- *   });
- * };
- *
- * const scraper = new Scraper();
- * scraper.registerAuthSubtaskHandler("ExampleSubtask", exampleHandler);
- * ```
  */
 interface FlowSubtaskHandlerApi {
-    /**
-     * Send a flow request to the Twitter API.
-     * @param request The request object containing flow token and subtask inputs
-     * @returns The result of the flow task
-     */
     sendFlowRequest: (request: TwitterUserAuthFlowRequest) => Promise<FlowTokenResult>;
-    /**
-     * Gets the current flow token.
-     * @returns The current flow token
-     */
     getFlowToken: () => string;
 }
 /**
  * A handler function for processing Twitter authentication flow subtasks.
- * Library consumers can implement and register custom handlers for new or
- * existing subtask types using the Scraper.registerAuthSubtaskHandler method.
- *
- * Each subtask handler is called when its corresponding subtask ID is encountered
- * during the authentication flow. The handler receives the subtask ID, the previous
- * response data, the user's credentials, and an API interface for interacting with
- * the authentication flow.
- *
- * Handlers should process their specific subtask and return either a successful response
- * or an error. Success responses typically lead to the next subtask in the flow, while
- * errors will halt the authentication process.
- *
- * @param subtaskId - The identifier of the subtask being handled
- * @param previousResponse - The complete response from the previous authentication flow step
- * @param credentials - The user's authentication credentials including username, password, etc.
- * @param api - An interface providing methods to interact with the authentication flow
- * @returns A promise resolving to either a successful flow response or an error
- *
- * @example
- * ```typescript
- * import { Scraper, FlowSubtaskHandler } from "@the-convocation/twitter-scraper";
- *
- * // Custom handler for a hypothetical verification subtask
- * const verificationHandler: FlowSubtaskHandler = async (
- *   subtaskId,
- *   response,
- *   credentials,
- *   api
- * ) => {
- *   // Extract the verification data from the response
- *   const verificationData = response.subtasks?.[0].exampleData?.value;
- *   if (!verificationData) {
- *     return {
- *       status: 'error',
- *       err: new Error('No verification data found in response')
- *     };
- *   }
- *
- *   // Process the verification data somehow
- *   const result = await processVerification(verificationData);
- *
- *   // Submit the result using the flow API
- *   return await api.sendFlowRequest({
- *     flow_token: api.getFlowToken(),
- *     subtask_inputs: [{
- *       subtask_id: subtaskId,
- *       example_verification: {
- *         value: result,
- *         link: "next_link"
- *       }
- *     }]
- *   });
- * };
- *
- * const scraper = new Scraper();
- * scraper.registerAuthSubtaskHandler("ExampleVerificationSubtask", verificationHandler);
- *
- * // Later, when logging in...
- * await scraper.login("username", "password");
- * ```
  */
 type FlowSubtaskHandler = (subtaskId: string, previousResponse: TwitterUserAuthFlowResponse, credentials: TwitterUserAuthCredentials, api: FlowSubtaskHandlerApi) => Promise<FlowTokenResult>;
 

@@ -8,6 +8,7 @@ var fetch = require('cross-fetch');
 var typebox = require('@sinclair/typebox');
 var value = require('@sinclair/typebox/value');
 var OTPAuth = require('otpauth');
+var xClientTransactionId = require('x-client-transaction-id');
 var stringify = require('json-stable-stringify');
 
 function _interopNamespaceDefault(e) {
@@ -392,12 +393,12 @@ class TwitterUserAuth extends TwitterGuestAuth {
   constructor(bearerToken, options) {
     super(bearerToken, options);
     this.subtaskHandlers = /* @__PURE__ */ new Map();
+    // NEW: cache a ClientTransaction generator instance
+    this.clientTxn = null;
     this.initializeDefaultHandlers();
   }
   /**
    * Register a custom subtask handler or override an existing one
-   * @param subtaskId The ID of the subtask to handle
-   * @param handler The handler function that processes the subtask
    */
   registerSubtaskHandler(subtaskId, handler) {
     this.subtaskHandlers.set(subtaskId, handler);
@@ -586,6 +587,12 @@ class TwitterUserAuth extends TwitterGuestAuth {
     });
   }
   async handleEnterAlternateIdentifierSubtask(subtaskId, _prev, credentials, api) {
+    if (!credentials.email) {
+      return {
+        status: "error",
+        err: new AuthenticationError("Email is required for this subtask")
+      };
+    }
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
@@ -680,6 +687,12 @@ class TwitterUserAuth extends TwitterGuestAuth {
     throw error;
   }
   async handleAcid(subtaskId, _prev, credentials, api) {
+    if (!credentials.email) {
+      return {
+        status: "error",
+        err: new AuthenticationError("Email is required for this subtask")
+      };
+    }
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
@@ -699,10 +712,65 @@ class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: []
     });
   }
+  // --------- NEW helpers for headers / detection / transaction id ---------
+  /** Optionally provide a valid x-xp-forwarded-for if your app can generate one. */
+  // eslint-disable-next-line class-methods-use-this
+  getXpffHeader() {
+    return void 0;
+  }
+  /** Detect Cloudflare/HTML interstitials quickly. */
+  async isHtmlIntervention(res) {
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("text/html")) return true;
+    const peek = await res.clone().text();
+    return /<title>\s*Attention Required!\s*\|\s*Cloudflare\s*<\/title>/i.test(
+      peek
+    ) || /<h1[^>]*>\s*Sorry,\s*you have been blocked\s*<\/h1>/i.test(peek);
+  }
+  /** Ensure we have a ready ClientTransaction generator. */
+  async ensureClientTxn() {
+    if (this.clientTxn) return this.clientTxn;
+    const doc = await xClientTransactionId.handleXMigration();
+    this.clientTxn = await xClientTransactionId.ClientTransaction.create(doc);
+    return this.clientTxn;
+  }
+  /** Generate a valid x-client-transaction-id per request (method + path). */
+  async makeTransactionId(method, path) {
+    const txn = await this.ensureClientTxn();
+    return txn.generateTransactionId(method.toUpperCase(), path);
+  }
+  async buildOnboardingHeaders(token, method, path) {
+    const headers = new headersPolyfill.Headers({
+      authorization: `Bearer ${this.bearerToken}`,
+      cookie: await this.getCookieString(),
+      "content-type": "application/json",
+      accept: "*/*",
+      "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+      // Use a realistic desktop UA (closer to captured traffic)
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+      origin: "https://x.com",
+      referer: "https://x.com/",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-site",
+      "x-guest-token": token,
+      "x-twitter-auth-type": "OAuth2Client",
+      "x-twitter-active-user": "yes",
+      "x-twitter-client-language": "en-GB",
+      // CRITICAL: valid per-request transaction id from Lqm1 lib
+      "x-client-transaction-id": await this.makeTransactionId(method, path)
+    });
+    const xpff = this.getXpffHeader();
+    if (xpff) headers.set("x-xp-forwarded-for", xpff);
+    await this.installCsrfToken(headers);
+    return headers;
+  }
+  // --------- /NEW helpers ---------
   async executeFlowTask(data) {
     let onboardingTaskUrl = "https://api.x.com/1.1/onboarding/task.json";
     if ("flow_name" in data) {
-      onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
+      onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${encodeURIComponent(
+        data.flow_name
+      )}`;
     }
     log(`Making POST request to ${onboardingTaskUrl}`);
     const token = this.guestToken;
@@ -711,23 +779,16 @@ class TwitterUserAuth extends TwitterGuestAuth {
         "Authentication token is null or undefined."
       );
     }
-    const headers = new headersPolyfill.Headers({
-      authorization: `Bearer ${this.bearerToken}`,
-      cookie: await this.getCookieString(),
-      "content-type": "application/json",
-      "User-Agent": "Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36",
-      "x-guest-token": token,
-      "x-twitter-auth-type": "OAuth2Client",
-      "x-twitter-active-user": "yes",
-      "x-twitter-client-language": "en"
-    });
-    await this.installCsrfToken(headers);
+    const { pathname } = new URL(onboardingTaskUrl);
+    const headers = await this.buildOnboardingHeaders(token, "POST", pathname);
     let res;
+    let attempts = 0;
     do {
+      attempts += 1;
       const fetchParameters = [
         onboardingTaskUrl,
         {
-          credentials: "include",
+          // NOTE: run server-side; avoid public CORS proxies
           method: "POST",
           headers,
           body: JSON.stringify(data)
@@ -739,22 +800,48 @@ class TwitterUserAuth extends TwitterGuestAuth {
         if (!(err instanceof Error)) {
           throw err;
         }
-        return {
-          status: "error",
-          err
-        };
+        return { status: "error", err };
       }
       await updateCookieJar(this.jar, res.headers);
       if (res.status === 429) {
         log("Rate limit hit, waiting before retrying...");
-        await this.onRateLimit({
-          fetchParameters,
-          response: res
-        });
+        await this.onRateLimit({ fetchParameters, response: res });
+        headers.set(
+          "x-client-transaction-id",
+          await this.makeTransactionId("POST", pathname)
+        );
+        continue;
       }
-    } while (res.status === 429);
+      if ((res.status === 403 || res.status === 401 || res.status === 400) && await this.isHtmlIntervention(res.clone()) && attempts < 2) {
+        log(
+          "403/HTML block detected; regenerating x-client-transaction-id and retrying once."
+        );
+        headers.set(
+          "x-client-transaction-id",
+          await this.makeTransactionId("POST", pathname)
+        );
+        continue;
+      }
+      break;
+    } while (true);
     if (!res.ok) {
+      if (await this.isHtmlIntervention(res.clone())) {
+        return {
+          status: "error",
+          err: new AuthenticationError(
+            "Blocked by Cloudflare (HTML challenge). Ensure valid x-client-transaction-id and server-side requests."
+          )
+        };
+      }
       return { status: "error", err: await ApiError.fromResponse(res) };
+    }
+    if (await this.isHtmlIntervention(res.clone())) {
+      return {
+        status: "error",
+        err: new AuthenticationError(
+          "Blocked by Cloudflare (HTML challenge). Check headers and environment."
+        )
+      };
     }
     const flow = await res.json();
     if (flow?.flow_token == null) {
