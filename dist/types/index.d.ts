@@ -144,16 +144,10 @@ interface TwitterUserAuthCredentials {
     email?: string;
     twoFactorSecret?: string;
 }
-/**
- * The API interface provided to custom subtask handlers for interacting with the Twitter authentication flow.
- */
 interface FlowSubtaskHandlerApi {
     sendFlowRequest: (request: TwitterUserAuthFlowRequest) => Promise<FlowTokenResult>;
     getFlowToken: () => string;
 }
-/**
- * A handler function for processing Twitter authentication flow subtasks.
- */
 type FlowSubtaskHandler = (subtaskId: string, previousResponse: TwitterUserAuthFlowResponse, credentials: TwitterUserAuthCredentials, api: FlowSubtaskHandlerApi) => Promise<FlowTokenResult>;
 
 type IndicesTuple = [number, number];
