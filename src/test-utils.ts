@@ -1,6 +1,9 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Scraper } from './scraper';
 import { Cookie } from 'tough-cookie';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 export interface ScraperTestOptions {
   /**

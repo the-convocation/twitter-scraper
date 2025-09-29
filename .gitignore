@@ -117,3 +117,6 @@ docs/
 
 # NPM lockfile
 package-lock.json
+
+.env*.local
+*.har
