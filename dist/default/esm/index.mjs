@@ -375,8 +375,6 @@ class TwitterUserAuth extends TwitterGuestAuth {
   }
   /**
    * Register a custom subtask handler or override an existing one
-   * @param subtaskId The ID of the subtask to handle
-   * @param handler The handler function that processes the subtask
    */
   registerSubtaskHandler(subtaskId, handler) {
     this.subtaskHandlers.set(subtaskId, handler);
@@ -482,19 +480,23 @@ class TwitterUserAuth extends TwitterGuestAuth {
     await this.installCsrfToken(headers);
   }
   async initLogin() {
-    this.removeCookie("twitter_ads_id=");
-    this.removeCookie("ads_prefs=");
-    this.removeCookie("_twitter_sess=");
-    this.removeCookie("zipbox_forms_auth_token=");
-    this.removeCookie("lang=");
-    this.removeCookie("bouncer_reset_cookie=");
-    this.removeCookie("twid=");
-    this.removeCookie("twitter_ads_idb=");
-    this.removeCookie("email_uid=");
-    this.removeCookie("external_referer=");
-    this.removeCookie("ct0=");
-    this.removeCookie("aa_u=");
-    this.removeCookie("__cf_bm=");
+    this.removeCookie("twitter_ads_id");
+    this.removeCookie("ads_prefs");
+    this.removeCookie("_twitter_sess");
+    this.removeCookie("zipbox_forms_auth_token");
+    this.removeCookie("lang");
+    this.removeCookie("bouncer_reset_cookie");
+    this.removeCookie("twid");
+    this.removeCookie("twitter_ads_idb");
+    this.removeCookie("email_uid");
+    this.removeCookie("external_referer");
+    this.removeCookie("ct0");
+    this.removeCookie("aa_u");
+    this.removeCookie("__cf_bm");
+    this.removeCookie("guest_id");
+    this.removeCookie("guest_id_ads");
+    this.removeCookie("guest_id_marketing");
+    this.removeCookie("personalization_id");
     return await this.executeFlowTask({
       flow_name: "login",
       input_flow_data: {
@@ -690,23 +692,40 @@ class TwitterUserAuth extends TwitterGuestAuth {
         "Authentication token is null or undefined."
       );
     }
-    const headers = new Headers({
-      authorization: `Bearer ${this.bearerToken}`,
-      cookie: await this.getCookieString(),
-      "content-type": "application/json",
-      "User-Agent": "Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36",
-      "x-guest-token": token,
-      "x-twitter-auth-type": "OAuth2Client",
-      "x-twitter-active-user": "yes",
-      "x-twitter-client-language": "en"
-    });
-    await this.installCsrfToken(headers);
+    const platform = new Platform();
+    await platform.randomizeCiphers();
+    const headers = new Headers();
+    await this.installTo(headers);
+    headers.set("x-guest-token", token);
+    headers.set("x-twitter-auth-type", "OAuth2Client");
+    headers.set("x-twitter-active-user", "yes");
+    headers.set("x-twitter-client-language", "en-GB");
+    headers.set(
+      "user-agent",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+    );
+    headers.set("accept", "*/*");
+    headers.set("accept-language", "en-GB,en-US;q=0.9,en;q=0.8");
+    headers.set("accept-encoding", "gzip, deflate, br, zstd");
+    headers.set("origin", "https://x.com");
+    headers.set("referer", "https://x.com/");
+    headers.set("sec-fetch-dest", "empty");
+    headers.set("sec-fetch-mode", "cors");
+    headers.set("sec-fetch-site", "same-site");
+    headers.set(
+      "sec-ch-ua",
+      '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"'
+    );
+    headers.set("sec-ch-ua-mobile", "?0");
+    headers.set("sec-ch-ua-platform", '"macOS"');
+    headers.set("content-type", "application/json");
     let res;
     do {
       const fetchParameters = [
         onboardingTaskUrl,
         {
           credentials: "include",
+          // in Node this is ignored; cookies come from our explicit header/jar
           method: "POST",
           headers,
           body: JSON.stringify(data)
