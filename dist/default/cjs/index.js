@@ -759,6 +759,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       // CRITICAL: valid per-request transaction id from Lqm1 lib
       "x-client-transaction-id": await this.makeTransactionId(method, path)
     });
+    console.log(headers);
     const xpff = this.getXpffHeader();
     if (xpff) headers.set("x-xp-forwarded-for", xpff);
     await this.installCsrfToken(headers);
