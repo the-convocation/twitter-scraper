@@ -1,5 +1,5 @@
 import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import { requestApi } from './api';
+import { generateTransactionId, generateXPFFHeader, requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
@@ -321,6 +321,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   async installTo(headers: Headers): Promise<void> {
     headers.set('authorization', `Bearer ${this.bearerToken}`);
     headers.set('cookie', await this.getCookieString());
+    if (this.guestToken) {
+      headers.set('x-guest-token', this.guestToken);
+    }
     await this.installCsrfToken(headers);
   }
 
@@ -590,18 +593,38 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       );
     }
 
+    const transactionId = await generateTransactionId(
+      onboardingTaskUrl,
+      this,
+      'POST',
+    );
+    const xpffHeader = await generateXPFFHeader(token);
     const headers = new Headers({
-      authorization: `Bearer ${this.bearerToken}`,
-      cookie: await this.getCookieString(),
+      accept: '*/*',
+      'accept-language': 'en-US,en;q=0.9',
       'content-type': 'application/json',
-      'User-Agent':
-        'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
+      'cache-control': 'no-cache',
+      pragma: 'no-cache',
+      priority: 'u=0, i',
+      'sec-ch-ua':
+        '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'sec-fetch-dest': 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'none',
+      'sec-fetch-user': '?1',
+      'upgrade-insecure-requests': '1',
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
       'x-guest-token': token,
       'x-twitter-auth-type': 'OAuth2Client',
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
+      'x-client-transaction-id': transactionId,
+      'x-xp-forwarded-for': xpffHeader,
     });
-    await this.installCsrfToken(headers);
+    await this.installTo(headers);
 
     let res: Response;
     do {
