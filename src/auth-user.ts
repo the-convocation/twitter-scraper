@@ -8,7 +8,6 @@ import { requestApi } from './api';
 import { FetchParameters } from './api-types';
 import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { ApiError, AuthenticationError, TwitterApiErrorRaw } from './errors';
-import { Platform } from './platform';
 import { updateCookieJar } from './requests';
 
 const log = debug('twitter-scraper:auth-user');
@@ -66,106 +65,119 @@ export interface TwitterUserAuthCredentials {
   twoFactorSecret?: string;
 }
 
-/* ---------------- helpers ---------------- */
-
-function randomTxnId(bytes = 32): string {
-  // produce a base64-ish string similar in length/shape to what frontend sends
-  const buf = new Uint8Array(bytes);
-  for (let i = 0; i < bytes; i++) buf[i] = Math.floor(Math.random() * 256);
-  // btoa over binary => map to string first
-  let s = '';
-  for (let i = 0; i < buf.length; i++) s += String.fromCharCode(buf[i]);
-  return Buffer.from(s, 'binary').toString('base64');
-}
-
-function normalizeXApiUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.toLowerCase();
-    if (host === 'corsproxy.io' || host.endsWith('.corsproxy.io')) {
-      const q = u.search?.replace(/^\?/, '');
-      if (q && (q.startsWith('http://') || q.startsWith('https://'))) return q;
-      if (u.pathname?.length > 1) {
-        const pathTarget = u.pathname.slice(1);
-        if (
-          pathTarget.startsWith('http://') ||
-          pathTarget.startsWith('https://')
-        )
-          return pathTarget;
-      }
-    }
-  } catch {}
-  return url;
-}
-
-function assertXHost(urlStr: string): URL {
-  const u = new URL(urlStr);
-  const host = u.hostname.toLowerCase();
-  if (!(host === 'api.x.com' || host === 'x.com' || host.endsWith('.x.com'))) {
-    throw new AuthenticationError(
-      `Login flow must POST directly to x.com; got host "${host}". Proxies are blocked by Cloudflare.`,
-    );
-  }
-  return u;
-}
-
-async function buildBrowserishHeaders(
-  base: Headers,
-  token: string,
-): Promise<Headers> {
-  // start with what installTo() placed (auth, cookie, csrf)
-  const headers = new Headers(base);
-
-  const browserish: Record<string, string> = {
-    'x-guest-token': token,
-    'x-twitter-auth-type': 'OAuth2Client',
-    'x-twitter-active-user': 'yes',
-    'x-twitter-client-language': 'en-GB',
-    'x-client-transaction-id': randomTxnId(),
-
-    'user-agent':
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-    accept: '*/*',
-    'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-    'accept-encoding': 'gzip, deflate, br, zstd',
-    origin: 'https://x.com',
-    referer: 'https://x.com/',
-    'sec-fetch-dest': 'empty',
-    'sec-fetch-mode': 'cors',
-    'sec-fetch-site': 'same-site',
-    'sec-ch-ua':
-      '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"macOS"',
-    'content-type': 'application/json',
-  };
-
-  const extra = new Headers(browserish);
-  extra.forEach((v, k) => headers.set(k, v));
-  return headers;
-}
-
-async function isCloudflareBlock(res: Response): Promise<boolean> {
-  if (res.status !== 403) return false;
-  const ct = (res.headers.get('content-type') || '').toLowerCase();
-  if (!ct.includes('text/html')) return false;
-  try {
-    const text = await res.clone().text();
-    return /\bCloudflare\b/i.test(text) && /Attention Required!/i.test(text);
-  } catch {
-    return false;
-  }
-}
-
-/* ---------------- class ---------------- */
-
+/**
+ * The API interface provided to custom subtask handlers for interacting with the Twitter authentication flow.
+ * This interface allows handlers to send flow requests and access the current flow token.
+ *
+ * The API is passed to each subtask handler and provides methods necessary for implementing
+ * custom authentication subtasks. It abstracts away the low-level details of communicating
+ * with Twitter's authentication API.
+ *
+ * @example
+ * ```typescript
+ * import { Scraper, FlowSubtaskHandler } from "@the-convocation/twitter-scraper";
+ *
+ * // A custom subtask handler that implements a hypothetical example subtask
+ * const exampleHandler: FlowSubtaskHandler = async (subtaskId, response, credentials, api) => {
+ *   // Process the example subtask somehow
+ *   const data = await processExampleTask();
+ *
+ *   // Submit the processed data using the provided API
+ *   return await api.sendFlowRequest({
+ *     flow_token: api.getFlowToken(),
+ *     subtask_inputs: [{
+ *       subtask_id: subtaskId,
+ *       example_data: {
+ *         value: data,
+ *         link: "next_link"
+ *       }
+ *     }]
+ *   });
+ * };
+ *
+ * const scraper = new Scraper();
+ * scraper.registerAuthSubtaskHandler("ExampleSubtask", exampleHandler);
+ * ```
+ */
 export interface FlowSubtaskHandlerApi {
+  /**
+   * Send a flow request to the Twitter API.
+   * @param request The request object containing flow token and subtask inputs
+   * @returns The result of the flow task
+   */
   sendFlowRequest: (
     request: TwitterUserAuthFlowRequest,
   ) => Promise<FlowTokenResult>;
+  /**
+   * Gets the current flow token.
+   * @returns The current flow token
+   */
   getFlowToken: () => string;
 }
 
+/**
+ * A handler function for processing Twitter authentication flow subtasks.
+ * Library consumers can implement and register custom handlers for new or
+ * existing subtask types using the Scraper.registerAuthSubtaskHandler method.
+ *
+ * Each subtask handler is called when its corresponding subtask ID is encountered
+ * during the authentication flow. The handler receives the subtask ID, the previous
+ * response data, the user's credentials, and an API interface for interacting with
+ * the authentication flow.
+ *
+ * Handlers should process their specific subtask and return either a successful response
+ * or an error. Success responses typically lead to the next subtask in the flow, while
+ * errors will halt the authentication process.
+ *
+ * @param subtaskId - The identifier of the subtask being handled
+ * @param previousResponse - The complete response from the previous authentication flow step
+ * @param credentials - The user's authentication credentials including username, password, etc.
+ * @param api - An interface providing methods to interact with the authentication flow
+ * @returns A promise resolving to either a successful flow response or an error
+ *
+ * @example
+ * ```typescript
+ * import { Scraper, FlowSubtaskHandler } from "@the-convocation/twitter-scraper";
+ *
+ * // Custom handler for a hypothetical verification subtask
+ * const verificationHandler: FlowSubtaskHandler = async (
+ *   subtaskId,
+ *   response,
+ *   credentials,
+ *   api
+ * ) => {
+ *   // Extract the verification data from the response
+ *   const verificationData = response.subtasks?.[0].exampleData?.value;
+ *   if (!verificationData) {
+ *     return {
+ *       status: 'error',
+ *       err: new Error('No verification data found in response')
+ *     };
+ *   }
+ *
+ *   // Process the verification data somehow
+ *   const result = await processVerification(verificationData);
+ *
+ *   // Submit the result using the flow API
+ *   return await api.sendFlowRequest({
+ *     flow_token: api.getFlowToken(),
+ *     subtask_inputs: [{
+ *       subtask_id: subtaskId,
+ *       example_verification: {
+ *         value: result,
+ *         link: "next_link"
+ *       }
+ *     }]
+ *   });
+ * };
+ *
+ * const scraper = new Scraper();
+ * scraper.registerAuthSubtaskHandler("ExampleVerificationSubtask", verificationHandler);
+ *
+ * // Later, when logging in...
+ * await scraper.login("username", "password");
+ * ```
+ */
 export type FlowSubtaskHandler = (
   subtaskId: string,
   previousResponse: TwitterUserAuthFlowResponse,
@@ -173,6 +185,9 @@ export type FlowSubtaskHandler = (
   api: FlowSubtaskHandlerApi,
 ) => Promise<FlowTokenResult>;
 
+/**
+ * A user authentication token manager.
+ */
 export class TwitterUserAuth extends TwitterGuestAuth {
   private readonly subtaskHandlers: Map<string, FlowSubtaskHandler> = new Map();
 
@@ -181,6 +196,11 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     this.initializeDefaultHandlers();
   }
 
+  /**
+   * Register a custom subtask handler or override an existing one
+   * @param subtaskId The ID of the subtask to handle
+   * @param handler The handler function that processes the subtask
+   */
   registerSubtaskHandler(subtaskId: string, handler: FlowSubtaskHandler): void {
     this.subtaskHandlers.set(subtaskId, handler);
   }
@@ -222,7 +242,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'https://api.x.com/1.1/account/verify_credentials.json',
       this,
     );
-    if (!res.success) return false;
+    if (!res.success) {
+      return false;
+    }
+
     const { value: verify } = res;
     return verify && !verify.errors?.length;
   }
@@ -242,16 +265,17 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       twoFactorSecret,
     };
 
-    // Warm up: visit login page to establish cookies (may set ct0/guest/cf cookies)
-    await this.preLoginWarmup();
-
     let next: FlowTokenResult = await this.initLogin();
     while (next.status === 'success' && next.response.subtasks?.length) {
       const flowToken = next.response.flow_token;
-      if (flowToken == null) throw new Error('flow_token not found.');
+      if (flowToken == null) {
+        // Should never happen
+        throw new Error('flow_token not found.');
+      }
 
       const subtaskId = next.response.subtasks[0].subtask_id;
       const handler = this.subtaskHandlers.get(subtaskId);
+
       if (handler) {
         next = await handler(subtaskId, next.response, credentials, {
           sendFlowRequest: this.executeFlowTask.bind(this),
@@ -261,11 +285,16 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         throw new Error(`Unknown subtask ${subtaskId}`);
       }
     }
-    if (next.status === 'error') throw next.err;
+    if (next.status === 'error') {
+      throw next.err;
+    }
   }
 
   async logout(): Promise<void> {
-    if (!this.hasToken()) return;
+    if (!this.hasToken()) {
+      return;
+    }
+
     try {
       await requestApi<void>(
         'https://api.x.com/1.1/account/logout.json',
@@ -273,6 +302,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         'POST',
       );
     } catch (error) {
+      // Ignore errors during logout but still clean up state
       console.warn('Error during logout:', error);
     } finally {
       this.deleteToken();
@@ -283,7 +313,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   async installCsrfToken(headers: Headers): Promise<void> {
     const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
-    if (xCsrfToken) headers.set('x-csrf-token', xCsrfToken.value);
+    if (xCsrfToken) {
+      headers.set('x-csrf-token', xCsrfToken.value);
+    }
   }
 
   async installTo(headers: Headers): Promise<void> {
@@ -292,51 +324,30 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     await this.installCsrfToken(headers);
   }
 
-  private async preLoginWarmup(): Promise<void> {
-    const platform = new Platform();
-    await platform.randomizeCiphers();
-
-    const hdrs = new Headers();
-    await this.installTo(hdrs);
-    const headers = await buildBrowserishHeaders(hdrs, this.guestToken!);
-
-    const warmupUrl = 'https://x.com/i/flow/login';
-
-    const fetchParameters: FetchParameters = [
-      warmupUrl,
-      {
-        method: 'GET',
-        headers,
-        redirect: 'follow' as any, // some polyfills use string type
-      },
-    ];
-
-    try {
-      const res = await this.fetch(...fetchParameters);
-      await updateCookieJar(this.jar, (res as Response).headers);
-
-      if (await isCloudflareBlock(res)) {
-        // We cannot solve JS challenges without a real browser.
-        throw new AuthenticationError(
-          'Cloudflare presented a challenge for x.com login warmup. A real browser context is required to obtain cookies. Import cookies from a browser session and retry.',
-        );
-      }
-    } catch (e) {
-      // Non-fatal: proceed; executeFlowTask will still run and error clearly if blocked
-      log(`preLoginWarmup warning: ${String(e)}`);
-    }
-  }
-
   private async initLogin(): Promise<FlowTokenResult> {
-    // Keep cookies stable. Only clear ct0 to force a fresh csrf if needed.
-    this.removeCookie('ct0');
+    // Reset certain session-related cookies because Twitter complains sometimes if we don't
+    this.removeCookie('twitter_ads_id=');
+    this.removeCookie('ads_prefs=');
+    this.removeCookie('_twitter_sess=');
+    this.removeCookie('zipbox_forms_auth_token=');
+    this.removeCookie('lang=');
+    this.removeCookie('bouncer_reset_cookie=');
+    this.removeCookie('twid=');
+    this.removeCookie('twitter_ads_idb=');
+    this.removeCookie('email_uid=');
+    this.removeCookie('external_referer=');
+    this.removeCookie('ct0=');
+    this.removeCookie('aa_u=');
+    this.removeCookie('__cf_bm=');
 
     return await this.executeFlowTask({
       flow_name: 'login',
       input_flow_data: {
         flow_context: {
           debug_overrides: {},
-          start_location: { location: 'unknown' },
+          start_location: {
+            location: 'unknown',
+          },
         },
       },
       subtask_versions: {
@@ -396,7 +407,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          js_instrumentation: { response: '{}', link: 'next_link' },
+          js_instrumentation: {
+            response: '{}',
+            link: 'next_link',
+          },
         },
       ],
     });
@@ -413,7 +427,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_text: { text: credentials.email, link: 'next_link' },
+          enter_text: {
+            text: credentials.email,
+            link: 'next_link',
+          },
         },
       ],
     });
@@ -434,7 +451,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
             setting_responses: [
               {
                 key: 'user_identifier',
-                response_data: { text_data: { result: credentials.username } },
+                response_data: {
+                  text_data: { result: credentials.username },
+                },
               },
             ],
             link: 'next_link',
@@ -455,7 +474,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_password: { password: credentials.password, link: 'next_link' },
+          enter_password: {
+            password: credentials.password,
+            link: 'next_link',
+          },
         },
       ],
     });
@@ -472,7 +494,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          check_logged_in_account: { link: 'AccountDuplicationCheck_false' },
+          check_logged_in_account: {
+            link: 'AccountDuplicationCheck_false',
+          },
         },
       ],
     });
@@ -492,8 +516,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         ),
       };
     }
+
     const totp = new OTPAuth.TOTP({ secret: credentials.twoFactorSecret });
-    let error: unknown;
+    let error;
     for (let attempts = 1; attempts < 4; attempts += 1) {
       try {
         return await api.sendFlowRequest({
@@ -501,7 +526,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           subtask_inputs: [
             {
               subtask_id: subtaskId,
-              enter_text: { link: 'next_link', text: totp.generate() },
+              enter_text: {
+                link: 'next_link',
+                text: totp.generate(),
+              },
             },
           ],
         });
@@ -524,7 +552,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_text: { text: credentials.email, link: 'next_link' },
+          enter_text: {
+            text: credentials.email,
+            link: 'next_link',
+          },
         },
       ],
     });
@@ -550,10 +581,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
     }
 
-    const normalizedUrl = normalizeXApiUrl(onboardingTaskUrl);
-    const targetUrl = assertXHost(normalizedUrl).toString();
-
-    log(`Making POST request to ${targetUrl}`);
+    log(`Making POST request to ${onboardingTaskUrl}`);
 
     const token = this.guestToken;
     if (token == null) {
@@ -562,21 +590,27 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       );
     }
 
-    const platform = new Platform();
-    await platform.randomizeCiphers();
-
-    const base = new Headers();
-    await this.installTo(base); // authorization, cookie, x-csrf-token
-    const headers = await buildBrowserishHeaders(base, token);
+    const headers = new Headers({
+      authorization: `Bearer ${this.bearerToken}`,
+      cookie: await this.getCookieString(),
+      'content-type': 'application/json',
+      'User-Agent':
+        'Mozilla/5.0 (Linux; Android 11; Nokia G20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.88 Mobile Safari/537.36',
+      'x-guest-token': token,
+      'x-twitter-auth-type': 'OAuth2Client',
+      'x-twitter-active-user': 'yes',
+      'x-twitter-client-language': 'en',
+    });
+    await this.installCsrfToken(headers);
 
     let res: Response;
     do {
       const fetchParameters: FetchParameters = [
-        targetUrl,
+        onboardingTaskUrl,
         {
           credentials: 'include',
           method: 'POST',
-          headers,
+          headers: headers,
           body: JSON.stringify(data),
         },
       ];
@@ -584,42 +618,39 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       try {
         res = await this.fetch(...fetchParameters);
       } catch (err) {
-        if (!(err instanceof Error)) throw err;
-        return { status: 'error', err };
+        if (!(err instanceof Error)) {
+          throw err;
+        }
+
+        return {
+          status: 'error',
+          err: err,
+        };
       }
 
-      await updateCookieJar(this.jar, (res as Response).headers);
+      await updateCookieJar(this.jar, res.headers);
 
-      if ((res as Response).status === 429) {
+      if (res.status === 429) {
         log('Rate limit hit, waiting before retrying...');
-        await this.onRateLimit({ fetchParameters, response: res });
+        await this.onRateLimit({
+          fetchParameters: fetchParameters,
+          response: res,
+        });
       }
-    } while ((res as Response).status === 429);
+    } while (res.status === 429);
 
-    // Detect Cloudflare block and surface a clear error with guidance
-    if ((res as Response).status === 403 && (await isCloudflareBlock(res))) {
-      return {
-        status: 'error',
-        err: new AuthenticationError(
-          'Cloudflare blocked the login request (JS challenge). Perform the login in a real browser (e.g., Playwright/Puppeteer), export cookies (ct0, _twitter_sess, guest_id, personalization_id, and any cf_*), import them into the CookieJar, then retry.',
-        ),
-      };
+    if (!res.ok) {
+      return { status: 'error', err: await ApiError.fromResponse(res) };
     }
 
-    if (!(res as Response).ok) {
-      return {
-        status: 'error',
-        err: await ApiError.fromResponse(res as Response),
-      };
-    }
-
-    const flow: TwitterUserAuthFlowResponse = await (res as Response).json();
+    const flow: TwitterUserAuthFlowResponse = await res.json();
     if (flow?.flow_token == null) {
       return {
         status: 'error',
         err: new AuthenticationError('flow_token not found.'),
       };
     }
+
     if (flow.errors?.length) {
       return {
         status: 'error',
@@ -628,6 +659,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         ),
       };
     }
+
     if (typeof flow.flow_token !== 'string') {
       return {
         status: 'error',
@@ -645,6 +677,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       };
     }
 
-    return { status: 'success', response: flow };
+    return {
+      status: 'success',
+      response: flow,
+    };
   }
 }
