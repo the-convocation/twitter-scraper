@@ -392,8 +392,9 @@ class TwitterUserAuth extends TwitterGuestAuth {
   constructor(bearerToken, options) {
     super(bearerToken, options);
     this.subtaskHandlers = /* @__PURE__ */ new Map();
-    // NEW: cache a ClientTransaction generator instance
+    // Cache a ClientTransaction generator instance
     this.clientTxn = null;
+    this.opts = options;
     this.initializeDefaultHandlers();
   }
   /**
@@ -438,9 +439,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       "https://api.x.com/1.1/account/verify_credentials.json",
       this
     );
-    if (!res.success) {
-      return false;
-    }
+    if (!res.success) return false;
     const { value: verify } = res;
     return verify && !verify.errors?.length;
   }
@@ -455,9 +454,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
     let next = await this.initLogin();
     while (next.status === "success" && next.response.subtasks?.length) {
       const flowToken = next.response.flow_token;
-      if (flowToken == null) {
-        throw new Error("flow_token not found.");
-      }
+      if (flowToken == null) throw new Error("flow_token not found.");
       const subtaskId = next.response.subtasks[0].subtask_id;
       const handler = this.subtaskHandlers.get(subtaskId);
       if (handler) {
@@ -469,14 +466,10 @@ class TwitterUserAuth extends TwitterGuestAuth {
         throw new Error(`Unknown subtask ${subtaskId}`);
       }
     }
-    if (next.status === "error") {
-      throw next.err;
-    }
+    if (next.status === "error") throw next.err;
   }
   async logout() {
-    if (!this.hasToken()) {
-      return;
-    }
+    if (!this.hasToken()) return;
     try {
       await requestApi(
         "https://api.x.com/1.1/account/logout.json",
@@ -493,9 +486,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
   async installCsrfToken(headers) {
     const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === "ct0");
-    if (xCsrfToken) {
-      headers.set("x-csrf-token", xCsrfToken.value);
-    }
+    if (xCsrfToken) headers.set("x-csrf-token", xCsrfToken.value);
   }
   async installTo(headers) {
     headers.set("authorization", `Bearer ${this.bearerToken}`);
@@ -521,9 +512,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       input_flow_data: {
         flow_context: {
           debug_overrides: {},
-          start_location: {
-            location: "unknown"
-          }
+          start_location: { location: "unknown" }
         }
       },
       subtask_versions: {
@@ -577,30 +566,23 @@ class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          js_instrumentation: {
-            response: "{}",
-            link: "next_link"
-          }
+          js_instrumentation: { response: "{}", link: "next_link" }
         }
       ]
     });
   }
   async handleEnterAlternateIdentifierSubtask(subtaskId, _prev, credentials, api) {
-    if (!credentials.email) {
+    if (!credentials.email)
       return {
         status: "error",
         err: new AuthenticationError("Email is required for this subtask")
       };
-    }
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_text: {
-            text: credentials.email,
-            link: "next_link"
-          }
+          enter_text: { text: credentials.email, link: "next_link" }
         }
       ]
     });
@@ -615,9 +597,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
             setting_responses: [
               {
                 key: "user_identifier",
-                response_data: {
-                  text_data: { result: credentials.username }
-                }
+                response_data: { text_data: { result: credentials.username } }
               }
             ],
             link: "next_link"
@@ -632,10 +612,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_password: {
-            password: credentials.password,
-            link: "next_link"
-          }
+          enter_password: { password: credentials.password, link: "next_link" }
         }
       ]
     });
@@ -646,9 +623,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          check_logged_in_account: {
-            link: "AccountDuplicationCheck_false"
-          }
+          check_logged_in_account: { link: "AccountDuplicationCheck_false" }
         }
       ]
     });
@@ -671,10 +646,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
           subtask_inputs: [
             {
               subtask_id: subtaskId,
-              enter_text: {
-                link: "next_link",
-                text: totp.generate()
-              }
+              enter_text: { link: "next_link", text: totp.generate() }
             }
           ]
         });
@@ -686,21 +658,17 @@ class TwitterUserAuth extends TwitterGuestAuth {
     throw error;
   }
   async handleAcid(subtaskId, _prev, credentials, api) {
-    if (!credentials.email) {
+    if (!credentials.email)
       return {
         status: "error",
         err: new AuthenticationError("Email is required for this subtask")
       };
-    }
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_text: {
-            text: credentials.email,
-            link: "next_link"
-          }
+          enter_text: { text: credentials.email, link: "next_link" }
         }
       ]
     });
@@ -711,13 +679,27 @@ class TwitterUserAuth extends TwitterGuestAuth {
       subtask_inputs: []
     });
   }
-  // --------- NEW helpers for headers / detection / transaction id ---------
-  /** Optionally provide a valid x-xp-forwarded-for if your app can generate one. */
-  // eslint-disable-next-line class-methods-use-this
+  // --------- Helpers: headers / detection / transaction id ---------
+  /** Pull XPFF from options if provided. */
   getXpffHeader() {
+    if (typeof this.opts?.getXpff === "function") {
+      const v = this.opts.getXpff();
+      if (v) return v;
+    }
+    if (this.opts?.xpff) return this.opts.xpff;
     return void 0;
   }
-  /** Detect Cloudflare/HTML interstitials quickly. */
+  /** For onboarding, XPFF is effectively required. Throw a clear error if missing. */
+  getRequiredXpff() {
+    const xpff = this.getXpffHeader();
+    if (!xpff) {
+      throw new AuthenticationError(
+        'x-xp-forwarded-for (XPFF) is required for onboarding. Provide it via options { xpff: "..."} or { getXpff(): string }.'
+      );
+    }
+    return xpff;
+  }
+  /** Detect Cloudflare HTML block pages. */
   async isHtmlIntervention(res) {
     const ct = res.headers.get("content-type") || "";
     if (ct.includes("text/html")) return true;
@@ -745,26 +727,29 @@ class TwitterUserAuth extends TwitterGuestAuth {
       "content-type": "application/json",
       accept: "*/*",
       "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-      // Use a realistic desktop UA (closer to captured traffic)
+      // Realistic desktop UA
       "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
       origin: "https://x.com",
       referer: "https://x.com/",
+      // Add client hints that show up in real traffic
+      "sec-ch-ua": '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"macOS"',
+      "sec-fetch-dest": "empty",
       "sec-fetch-mode": "cors",
       "sec-fetch-site": "same-site",
       "x-guest-token": token,
       "x-twitter-auth-type": "OAuth2Client",
       "x-twitter-active-user": "yes",
       "x-twitter-client-language": "en-GB",
-      // CRITICAL: valid per-request transaction id from Lqm1 lib
+      // CRITICAL: generated per-request transaction id
       "x-client-transaction-id": await this.makeTransactionId(method, path)
     });
-    console.log(headers);
-    const xpff = this.getXpffHeader();
-    if (xpff) headers.set("x-xp-forwarded-for", xpff);
+    headers.set("x-xp-forwarded-for", this.getRequiredXpff());
     await this.installCsrfToken(headers);
     return headers;
   }
-  // --------- /NEW helpers ---------
+  // --------- /helpers ---------
   async executeFlowTask(data) {
     let onboardingTaskUrl = "https://api.x.com/1.1/onboarding/task.json";
     if ("flow_name" in data) {
@@ -788,7 +773,6 @@ class TwitterUserAuth extends TwitterGuestAuth {
       const fetchParameters = [
         onboardingTaskUrl,
         {
-          // NOTE: run server-side; avoid public CORS proxies
           method: "POST",
           headers,
           body: JSON.stringify(data)
@@ -797,9 +781,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       try {
         res = await this.fetch(...fetchParameters);
       } catch (err) {
-        if (!(err instanceof Error)) {
-          throw err;
-        }
+        if (!(err instanceof Error)) throw err;
         return { status: "error", err };
       }
       await updateCookieJar(this.jar, res.headers);
@@ -829,7 +811,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
         return {
           status: "error",
           err: new AuthenticationError(
-            "Blocked by Cloudflare (HTML challenge). Ensure valid x-client-transaction-id and server-side requests."
+            "Blocked by Cloudflare (HTML challenge). Provide a valid x-xp-forwarded-for (XPFF) and ensure server-side execution."
           )
         };
       }
@@ -839,7 +821,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
       return {
         status: "error",
         err: new AuthenticationError(
-          "Blocked by Cloudflare (HTML challenge). Check headers and environment."
+          "Blocked by Cloudflare (HTML challenge). Check headers (x-client-transaction-id & XPFF) and run from a server runtime."
         )
       };
     }
@@ -872,10 +854,7 @@ class TwitterUserAuth extends TwitterGuestAuth {
         err: new AuthenticationError("Authentication error: DenyLoginSubtask")
       };
     }
-    return {
-      status: "success",
-      response: flow
-    };
+    return { status: "success", response: flow };
   }
 }
 

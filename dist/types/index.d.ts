@@ -145,11 +145,16 @@ interface TwitterUserAuthCredentials {
     twoFactorSecret?: string;
 }
 /**
- * The API interface provided to custom subtask handlers for interacting with the Twitter authentication flow.
- * This interface allows handlers to send flow requests and access the current flow token.
+ * The API interface provided to subtask handlers to interact with the flow.
  */
 interface FlowSubtaskHandlerApi {
+    /**
+     * Send a flow request to the Twitter API.
+     */
     sendFlowRequest: (request: TwitterUserAuthFlowRequest) => Promise<FlowTokenResult>;
+    /**
+     * Get the current flow token.
+     */
     getFlowToken: () => string;
 }
 /**
