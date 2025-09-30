@@ -199,9 +199,9 @@ await scraper.login(username, password, email);
 cycleTLSExit();
 ```
 
-**Note:** The `/cycletls` entrypoint is Node.js only and will not work in browser environments. It's provided as a separate optional entrypoint to avoid bundling golang dependencies in environments where they cannot run.
+**Note:** The `/cycletls` entrypoint is Node.js only and will not work in browser environments. It's provided as a separate optional entrypoint to avoid bundling binaries in environments where they cannot run.
 
-See the [cycletls-cloudflare example](./examples/cycletls-cloudflare/) for a complete working example.
+See the [cycletls example](./examples/cycletls/) for a complete working example.
 
 ### Rate limiting
 The Twitter API heavily rate-limits clients, requiring that the scraper has its own
