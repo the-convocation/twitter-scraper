@@ -4,11 +4,11 @@ This example demonstrates how to use the `@the-convocation/twitter-scraper/cycle
 
 ## Problem
 
-Twitter's authentication endpoints may be protected by Cloudflare's advanced bot detection, which analyzes TLS fingerprints to detect non-browser clients. Standard Node.js TLS handshakes can trigger `403 Forbidden` errors during login.
+Twitter's authentication endpoints may be protected by Cloudflare's bot detection, which analyzes TLS fingerprints to detect non-browser clients. Standard Node.js TLS handshakes can trigger `403 Forbidden` errors during login.
 
 ## Solution
 
-This example uses [CycleTLS](https://github.com/Danny-Dasilva/CycleTLS), which leverages golang to mimic Chrome browser TLS fingerprints, allowing requests to pass through Cloudflare's protection.
+This example uses [CycleTLS](https://github.com/Danny-Dasilva/CycleTLS) to mimic Chrome browser TLS fingerprints, allowing requests to pass through Cloudflare's protection.
 
 ## Installation
 
@@ -18,7 +18,7 @@ yarn install
 
 ## Configuration
 
-Create a `.env` file in the root of the repository (two levels up) with your Twitter credentials:
+Create a `.env` file in this directory with your Twitter credentials:
 
 ```
 TWITTER_USERNAME=your_username
@@ -46,9 +46,3 @@ const scraper = new Scraper({
 ```
 
 This replaces the default fetch implementation with one that uses Chrome-like TLS fingerprints, bypassing Cloudflare's detection.
-
-## Important Notes
-
-- **Node.js only**: The `/cycletls` entrypoint requires Node.js and will not work in browsers
-- **Cleanup required**: Always call `cycleTLSExit()` when done to cleanup golang resources
-- **Optional dependency**: `cycletls` must be explicitly installed alongside the main package
