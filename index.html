@@ -64,7 +64,7 @@ supported directly by interceptors):</p>
 </code><button type="button">Copy</button></pre>
 
 <a id="bypassing-cloudflare-bot-detection" class="tsd-anchor"></a><h3 class="tsd-anchor-link">Bypassing Cloudflare bot detection<a href="#bypassing-cloudflare-bot-detection" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>In some cases, Twitter's authentication endpoints may be protected by Cloudflare's advanced bot detection, resulting in <code>403 Forbidden</code> errors during login. This typically happens because standard Node.js TLS fingerprints are detected as non-browser clients.</p>
-<p>To bypass this protection, you can use the optional CycleTLS integration, which uses golang to mimic Chrome browser TLS fingerprints:</p>
+<p>To bypass this protection, you can use the optional CycleTLS <code>fetch</code> integration to mimic Chrome browser TLS fingerprints:</p>
 <p><strong>Installation:</strong></p>
 <pre><code class="sh"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">cycletls</span><br/><span class="hl-7"># or</span><br/><span class="hl-0">yarn</span><span class="hl-1"> </span><span class="hl-2">add</span><span class="hl-1"> </span><span class="hl-2">cycletls</span>
 </code><button type="button">Copy</button></pre>
