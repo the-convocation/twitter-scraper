@@ -172,7 +172,7 @@ const scraper = new Scraper({
 
 In some cases, Twitter's authentication endpoints may be protected by Cloudflare's advanced bot detection, resulting in `403 Forbidden` errors during login. This typically happens because standard Node.js TLS fingerprints are detected as non-browser clients.
 
-To bypass this protection, you can use the optional CycleTLS integration, which uses golang to mimic Chrome browser TLS fingerprints:
+To bypass this protection, you can use the optional CycleTLS `fetch` integration to mimic Chrome browser TLS fingerprints:
 
 **Installation:**
 
