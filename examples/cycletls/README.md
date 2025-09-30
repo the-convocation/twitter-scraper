@@ -41,7 +41,7 @@ import { Scraper } from '@the-convocation/twitter-scraper';
 import { cycleTLSFetch, cycleTLSExit } from '@the-convocation/twitter-scraper/cycletls';
 
 const scraper = new Scraper({
-  fetch: cycleTLSFetch as any,
+  fetch: cycleTLSFetch,
 });
 ```
 
