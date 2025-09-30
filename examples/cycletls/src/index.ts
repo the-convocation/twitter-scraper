@@ -4,6 +4,9 @@ import {
   cycleTLSFetch,
   cycleTLSExit,
 } from '@the-convocation/twitter-scraper/cycletls';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
 
 /**
  * Example: Using CycleTLS to bypass Cloudflare bot detection
@@ -27,7 +30,7 @@ assert(username && password && email, 'Missing required environment variables');
 
 // Create scraper with CycleTLS fetch
 const scraper = new Scraper({
-  fetch: cycleTLSFetch as any,
+  fetch: cycleTLSFetch,
 });
 
 const main = async () => {
