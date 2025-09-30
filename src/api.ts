@@ -285,8 +285,11 @@ export async function requestApi<T>(
   const transactionId = await generateTransactionId(url, auth, method);
   headers.set('x-client-transaction-id', transactionId);
 
-  const guestToken = headers.get('x-guest-token');
-  const xpffHeader = await generateXPFFHeader(guestToken || '0');
+  const guestId = await auth
+    .getCookies()
+    .then((cookies) => cookies.find((cookie) => cookie.key === 'guest_id'))
+    .then((cookie) => cookie?.value || '0');
+  const xpffHeader = await generateXPFFHeader(guestId);
   headers.set('x-xp-forwarded-for', xpffHeader);
 
   let res: Response;
