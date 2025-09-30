@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "packageManager": "yarn@1.22.19",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@the-convocation/twitter-scraper": "file:../../",
+    "cycletls": "^2.0.4",
+    "tsx": "^4.15.5"
+  }
+}

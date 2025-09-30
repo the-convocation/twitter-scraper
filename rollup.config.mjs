@@ -58,4 +58,38 @@ export default [
       format: 'es',
     },
   },
+  // CycleTLS build (Node-only)
+  {
+    input: 'src/_cycletls.ts',
+    external: ['cycletls'],
+    plugins: [
+      esbuild({
+        define: {
+          PLATFORM_NODE: 'true',
+          PLATFORM_NODE_JEST: 'false',
+        },
+      }),
+    ],
+    output: [
+      {
+        file: 'dist/cycletls/cjs/index.cjs',
+        format: 'cjs',
+        sourcemap: true,
+      },
+      {
+        file: 'dist/cycletls/esm/index.mjs',
+        format: 'es',
+        sourcemap: true,
+      },
+    ],
+  },
+  {
+    input: 'src/_cycletls.ts',
+    external: ['cycletls'],
+    plugins: [dts()],
+    output: {
+      file: 'dist/cycletls/index.d.ts',
+      format: 'es',
+    },
+  },
 ];
