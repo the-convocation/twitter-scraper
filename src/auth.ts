@@ -33,6 +33,8 @@ export interface TwitterAuth {
    */
   cookieJar(): CookieJar;
 
+  getCookies(): Promise<Cookie[]>;
+
   /**
    * Returns if a user is logged-in to Twitter through this instance.
    * @returns `true` if a user is logged-in; otherwise `false`.
@@ -190,7 +192,20 @@ export class TwitterGuestAuth implements TwitterAuth {
     headers.set('cookie', await this.getCookieString());
   }
 
-  protected async getCookies(): Promise<Cookie[]> {
+  protected async setCookie(key: string, value: string): Promise<void> {
+    const cookie = Cookie.parse(`${key}=${value}`);
+    if (!cookie) {
+      throw new Error('Failed to parse cookie.');
+    }
+
+    await this.jar.setCookie(cookie, this.getCookieJarUrl());
+
+    if (typeof document !== 'undefined') {
+      document.cookie = cookie.toString();
+    }
+  }
+
+  public async getCookies(): Promise<Cookie[]> {
     return this.jar.getCookies(this.getCookieJarUrl());
   }
 
@@ -256,6 +271,10 @@ export class TwitterGuestAuth implements TwitterAuth {
 
     this.guestToken = newGuestToken;
     this.guestCreatedAt = new Date();
+
+    await this.setCookie('gt', newGuestToken);
+
+    log(`Updated guest token: ${newGuestToken}`);
   }
 
   /**
