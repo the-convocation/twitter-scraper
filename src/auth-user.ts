@@ -1,5 +1,5 @@
 import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import { generateTransactionId, generateXPFFHeader, requestApi } from './api';
+import { requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
@@ -322,7 +322,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     headers.set('authorization', `Bearer ${this.bearerToken}`);
     const cookie = await this.getCookieString();
     headers.set('cookie', cookie);
-    log(`Installed cookies: ${cookie}`);
     if (this.guestToken) {
       headers.set('x-guest-token', this.guestToken);
     }
@@ -595,39 +594,28 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       );
     }
 
-    const guestId = await this.getCookies()
-      .then((cookies) => cookies.find((cookie) => cookie.key === 'guest_id'))
-      .then((cookie) => cookie?.value || '0');
-    const transactionId = await generateTransactionId(
-      onboardingTaskUrl,
-      this,
-      'POST',
-    );
-    const xpffHeader = await generateXPFFHeader(guestId);
     const headers = new Headers({
       accept: '*/*',
       'accept-language': 'en-US,en;q=0.9',
       'content-type': 'application/json',
       'cache-control': 'no-cache',
+      origin: 'https://x.com',
       pragma: 'no-cache',
-      priority: 'u=0, i',
+      priority: 'u=1, i',
+      referer: 'https://x.com/',
       'sec-ch-ua':
         '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
       'sec-ch-ua-mobile': '?0',
       'sec-ch-ua-platform': '"Windows"',
-      'sec-fetch-dest': 'document',
-      'sec-fetch-mode': 'navigate',
-      'sec-fetch-site': 'none',
-      'sec-fetch-user': '?1',
-      'upgrade-insecure-requests': '1',
+      'sec-fetch-dest': 'empty',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin',
       'user-agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
       'x-guest-token': token,
       'x-twitter-auth-type': 'OAuth2Client',
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
-      'x-client-transaction-id': transactionId,
-      'x-xp-forwarded-for': xpffHeader,
     });
     await this.installTo(headers);
 

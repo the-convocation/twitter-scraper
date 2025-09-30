@@ -4,10 +4,7 @@ import { ApiError } from './errors';
 import { Platform, PlatformExtensions } from './platform';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import { ClientTransaction } from 'x-client-transaction-id';
 import debug from 'debug';
-import fetch from 'cross-fetch';
-import { Sha256 } from '@aws-crypto/sha256-browser';
 
 const log = debug('twitter-scraper:api');
 
@@ -40,228 +37,12 @@ export async function jitter(maxMs: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, jitter));
 }
 
-// @ts-expect-error type annotation
-let linkedom: typeof import('linkedom') | undefined;
-async function linkedomImport() {
-  if (!linkedom) {
-    linkedom = await import('linkedom');
-  }
-  return linkedom;
-}
-
-async function parseHTML(html: string) {
-  const { parseHTML } = await linkedomImport();
-  return parseHTML(html);
-}
-
 /**
  * An API result container.
  */
 export type RequestApiResult<T> =
   | { success: true; value: T }
   | { success: false; err: Error };
-
-// Copied from https://github.com/Lqm1/x-client-transaction-id/blob/main/utils.ts with minor tweaks
-async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
-  // Set headers to mimic a browser request
-  const headers = {
-    accept:
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-    'accept-language': 'ja',
-    'cache-control': 'no-cache',
-    pragma: 'no-cache',
-    priority: 'u=0, i',
-    'sec-ch-ua':
-      '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"Windows"',
-    'sec-fetch-dest': 'document',
-    'sec-fetch-mode': 'navigate',
-    'sec-fetch-site': 'none',
-    'sec-fetch-user': '?1',
-    'upgrade-insecure-requests': '1',
-    'user-agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-  };
-
-  // Fetch X.com homepage
-  const response = await fetchFn('https://x.com', {
-    headers,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch X homepage: ${response.statusText}`);
-  }
-
-  const htmlText = await response.text();
-
-  // Parse HTML using linkedom
-  let dom = await parseHTML(htmlText);
-  let document = dom.window.document;
-
-  // Check for migration redirection links
-  const migrationRedirectionRegex = new RegExp(
-    '(http(?:s)?://(?:www\\.)?(twitter|x){1}\\.com(/x)?/migrate([/?])?tok=[a-zA-Z0-9%\\-_]+)+',
-    'i',
-  );
-
-  const metaRefresh = document.querySelector("meta[http-equiv='refresh']");
-  const metaContent = metaRefresh
-    ? metaRefresh.getAttribute('content') || ''
-    : '';
-
-  const migrationRedirectionUrl =
-    migrationRedirectionRegex.exec(metaContent) ||
-    migrationRedirectionRegex.exec(htmlText);
-
-  if (migrationRedirectionUrl) {
-    // Follow redirection URL
-    const redirectResponse = await fetch(migrationRedirectionUrl[0]);
-
-    if (!redirectResponse.ok) {
-      throw new Error(
-        `Failed to follow migration redirection: ${redirectResponse.statusText}`,
-      );
-    }
-
-    const redirectHtml = await redirectResponse.text();
-    dom = await parseHTML(redirectHtml);
-    document = dom.window.document;
-  }
-
-  // Handle migration form if present
-  const migrationForm =
-    document.querySelector("form[name='f']") ||
-    document.querySelector("form[action='https://x.com/x/migrate']");
-
-  if (migrationForm) {
-    const url =
-      migrationForm.getAttribute('action') || 'https://x.com/x/migrate';
-    const method = migrationForm.getAttribute('method') || 'POST';
-
-    // Collect form input fields
-    const requestPayload = new FormData();
-
-    const inputFields = migrationForm.querySelectorAll('input');
-    for (const element of Array.from(inputFields)) {
-      const name = element.getAttribute('name');
-      const value = element.getAttribute('value');
-      if (name && value) {
-        requestPayload.append(name, value);
-      }
-    }
-
-    // Submit form using POST request
-    const formResponse = await fetch(url, {
-      method: method,
-      body: requestPayload,
-      headers,
-    });
-
-    if (!formResponse.ok) {
-      throw new Error(
-        `Failed to submit migration form: ${formResponse.statusText}`,
-      );
-    }
-
-    const formHtml = await formResponse.text();
-    dom = await parseHTML(formHtml);
-    document = dom.window.document;
-  }
-
-  // Return final DOM document
-  return document;
-}
-
-export async function generateTransactionId(
-  url: string,
-  auth: TwitterAuth,
-  method: 'GET' | 'POST',
-) {
-  const parsedUrl = new URL(url);
-  const path = parsedUrl.pathname;
-
-  log(`Generating transaction ID for ${method} ${path}`);
-  const document = await handleXMigration(auth.fetch.bind(auth));
-  const transaction = await ClientTransaction.create(document);
-  const transactionId = await transaction.generateTransactionId(method, path);
-  log(`Transaction ID: ${transactionId}`);
-
-  return transactionId;
-}
-
-// https://stackoverflow.com/a/40031979
-function buf2hex(buffer: ArrayBuffer): string {
-  return [...new Uint8Array(buffer)]
-    .map((x) => x.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// Adapted from https://github.com/dsekz/twitter-x-xp-forwarded-for-header
-export class XPFFHeaderGenerator {
-  constructor(private readonly seed: string) {}
-
-  private async deriveKey(guestId: string): Promise<Uint8Array> {
-    const combined = `${this.seed}${guestId}`;
-    const hash = new Sha256();
-    hash.update(combined);
-    const result = await hash.digest();
-    return result;
-  }
-
-  async generateHeader(plaintext: string, guestId: string): Promise<string> {
-    log(`Generating XPFF key for guest ID: ${guestId}`);
-    const key = await this.deriveKey(guestId);
-    const nonce = crypto.getRandomValues(new Uint8Array(12));
-    const cipher = await crypto.subtle.importKey(
-      'raw',
-      key,
-      { name: 'AES-GCM' },
-      false,
-      ['encrypt'],
-    );
-    const encrypted = await crypto.subtle.encrypt(
-      {
-        name: 'AES-GCM',
-        iv: nonce,
-      },
-      cipher,
-      new TextEncoder().encode(plaintext),
-    );
-
-    // Combine nonce and encrypted data
-    const combined = new Uint8Array(nonce.length + encrypted.byteLength);
-    combined.set(nonce);
-    combined.set(new Uint8Array(encrypted), nonce.length);
-    const result = buf2hex(combined);
-
-    log(`XPFF header generated for guest ID ${guestId}: ${result}`);
-
-    return result;
-  }
-}
-
-const xpffBaseKey =
-  '0e6be1f1e21ffc33590b888fd4dc81b19713e570e805d4e5df80a493c9571a05';
-
-function xpffPlain(): string {
-  const timestamp = Date.now();
-  return JSON.stringify({
-    navigator_properties: {
-      hasBeenActive: 'true',
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
-      webdriver: 'false',
-    },
-    created_at: timestamp,
-  });
-}
-
-export async function generateXPFFHeader(guestId: string): Promise<string> {
-  const generator = new XPFFHeaderGenerator(xpffBaseKey);
-  const plaintext = xpffPlain();
-  return generator.generateHeader(plaintext, guestId);
-}
 
 /**
  * Used internally to send HTTP requests to the Twitter API.
@@ -281,16 +62,6 @@ export async function requestApi<T>(
 
   await auth.installTo(headers, url);
   await platform.randomizeCiphers();
-
-  const transactionId = await generateTransactionId(url, auth, method);
-  headers.set('x-client-transaction-id', transactionId);
-
-  const guestId = await auth
-    .getCookies()
-    .then((cookies) => cookies.find((cookie) => cookie.key === 'guest_id'))
-    .then((cookie) => cookie?.value || '0');
-  const xpffHeader = await generateXPFFHeader(guestId);
-  headers.set('x-xp-forwarded-for', xpffHeader);
 
   let res: Response;
   do {
