@@ -21,7 +21,7 @@ export async function initCycleTLSFetch() {
 /**
  * Cleanup the CycleTLS instance. Call this when you're done making requests.
  */
-export function exitCycleTLS() {
+export function cycleTLSExit() {
   if (cycleTLSInstance) {
     log('Exiting CycleTLS...');
     cycleTLSInstance.exit();
