@@ -2,7 +2,7 @@ import { getScraper } from './test-utils';
 
 const testLogin = process.env['TWITTER_PASSWORD'] ? test : test.skip;
 
-testLogin.only(
+testLogin(
   'scraper can log in',
   async () => {
     const scraper = await getScraper({ authMethod: 'password' });

@@ -2,6 +2,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Scraper } from './scraper';
 import { Cookie } from 'tough-cookie';
 import dotenv from 'dotenv';
+import { cycleTLSFetch } from './cycletls-fetch';
 
 dotenv.config({ path: '.env.local' });
 
@@ -45,6 +46,7 @@ export async function getScraper(
   }
 
   const scraper = new Scraper({
+    fetch: cycleTLSFetch,
     transform: {
       request: (input, init) => {
         if (agent) {
