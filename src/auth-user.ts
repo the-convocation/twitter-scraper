@@ -1,5 +1,5 @@
 import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import { requestApi } from './api';
+import { flexParseJson, requestApi } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
@@ -325,6 +325,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     if (this.guestToken) {
       headers.set('x-guest-token', this.guestToken);
     }
+    headers.set(
+      'user-agent',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    );
     await this.installCsrfToken(headers);
   }
 
@@ -659,7 +663,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       return { status: 'error', err: await ApiError.fromResponse(res) };
     }
 
-    const flow: TwitterUserAuthFlowResponse = await res.json();
+    const flow: TwitterUserAuthFlowResponse = await flexParseJson(res);
     if (flow?.flow_token == null) {
       return {
         status: 'error',
