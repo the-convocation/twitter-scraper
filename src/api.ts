@@ -105,12 +105,23 @@ export async function requestApi<T>(
     };
   }
 
-  const value: T = await res.json();
+  const value: T = await flexParseJson(res);
   if (res.headers.get('x-rate-limit-incoming') == '0') {
     auth.deleteToken();
     return { success: true, value };
   } else {
     return { success: true, value };
+  }
+}
+
+export async function flexParseJson<T>(res: Response): Promise<T> {
+  try {
+    return await res.json();
+  } catch {
+    log('Failed to parse response as JSON, trying text parse...');
+    const text = await res.text();
+    log('Response text:', text);
+    return JSON.parse(text);
   }
 }
 

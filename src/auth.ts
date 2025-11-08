@@ -2,7 +2,7 @@ import { Cookie, CookieJar, MemoryCookieStore } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
-import { FetchTransformOptions } from './api';
+import { FetchTransformOptions, flexParseJson } from './api';
 import {
   RateLimitEvent,
   RateLimitStrategy,
@@ -182,6 +182,10 @@ export class TwitterGuestAuth implements TwitterAuth {
 
     headers.set('authorization', `Bearer ${this.bearerToken}`);
     headers.set('x-guest-token', token);
+    headers.set(
+      'user-agent',
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    );
 
     const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
@@ -259,7 +263,7 @@ export class TwitterGuestAuth implements TwitterAuth {
       throw new AuthenticationError(await res.text());
     }
 
-    const o = await res.json();
+    const o = await flexParseJson<any>(res);
     if (o == null || o['guest_token'] == null) {
       throw new AuthenticationError('guest_token not found.');
     }
