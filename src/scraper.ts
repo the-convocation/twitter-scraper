@@ -67,6 +67,16 @@ export interface ScraperOptions {
    * A handling strategy for rate limits (HTTP 429).
    */
   rateLimitStrategy: RateLimitStrategy;
+
+  /**
+   * Experimental features that may be added, changed, or removed at any time. Use with caution.
+   */
+  experimental: {
+    /**
+     * Enables the generation of the `x-xp-forwarded-for` header on requests. This may resolve some errors.
+     */
+    xpff: boolean;
+  };
 }
 
 /**
@@ -595,6 +605,9 @@ export class Scraper {
       fetch: this.options?.fetch,
       transform: this.options?.transform,
       rateLimitStrategy: this.options?.rateLimitStrategy,
+      experimental: {
+        xpff: this.options?.experimental?.xpff,
+      },
     };
   }
 

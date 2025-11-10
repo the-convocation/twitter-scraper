@@ -10,6 +10,7 @@ import {
 } from './rate-limit';
 import { AuthenticationError } from './errors';
 import debug from 'debug';
+import { generateXPFFHeader } from './xpff';
 
 const log = debug('twitter-scraper:auth');
 
@@ -17,6 +18,9 @@ export interface TwitterAuthOptions {
   fetch: typeof fetch;
   transform: Partial<FetchTransformOptions>;
   rateLimitStrategy: RateLimitStrategy;
+  experimental: {
+    xpff?: boolean;
+  };
 }
 
 export interface TwitterAuth {
@@ -33,6 +37,9 @@ export interface TwitterAuth {
    */
   cookieJar(): CookieJar;
 
+  /**
+   * Returns the current cookies.
+   */
   getCookies(): Promise<Cookie[]>;
 
   /**
@@ -187,13 +194,25 @@ export class TwitterGuestAuth implements TwitterAuth {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
     );
 
+    await this.installCsrfToken(headers);
+
+    if (this.options?.experimental?.xpff) {
+      const guestId = await this.guestId();
+      if (guestId != null) {
+        const xpffHeader = await generateXPFFHeader(guestId);
+        headers.set('x-xp-forwarded-for', xpffHeader);
+      }
+    }
+
+    headers.set('cookie', await this.getCookieString());
+  }
+
+  async installCsrfToken(headers: Headers): Promise<void> {
     const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
       headers.set('x-csrf-token', xCsrfToken.value);
     }
-
-    headers.set('cookie', await this.getCookieString());
   }
 
   protected async setCookie(key: string, value: string): Promise<void> {
@@ -236,6 +255,12 @@ export class TwitterGuestAuth implements TwitterAuth {
     return typeof document !== 'undefined'
       ? document.location.toString()
       : 'https://x.com';
+  }
+
+  protected async guestId(): Promise<string | null> {
+    const cookies = await this.getCookies();
+    const guestIdCookie = cookies.find((cookie) => cookie.key === 'guest_id');
+    return guestIdCookie ? guestIdCookie.value : null;
   }
 
   /**
