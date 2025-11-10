@@ -73,6 +73,10 @@ export interface ScraperOptions {
    */
   experimental: {
     /**
+     * Enables the generation of the `x-client-transaction-id` header on requests. This may resolve some errors.
+     */
+    xClientTransactionId: boolean;
+    /**
      * Enables the generation of the `x-xp-forwarded-for` header on requests. This may resolve some errors.
      */
     xpff: boolean;
@@ -606,6 +610,7 @@ export class Scraper {
       transform: this.options?.transform,
       rateLimitStrategy: this.options?.rateLimitStrategy,
       experimental: {
+        xClientTransactionId: this.options?.experimental?.xClientTransactionId,
         xpff: this.options?.experimental?.xpff,
       },
     };

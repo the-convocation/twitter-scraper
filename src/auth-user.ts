@@ -10,6 +10,7 @@ import * as OTPAuth from 'otpauth';
 import { FetchParameters } from './api-types';
 import debug from 'debug';
 import { generateXPFFHeader } from './xpff';
+import { generateTransactionId } from './xctxid';
 
 const log = debug('twitter-scraper:auth-user');
 
@@ -627,6 +628,15 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'x-twitter-client-language': 'en',
     });
     await this.installTo(headers);
+
+    if (this.options?.experimental?.xClientTransactionId) {
+      const transactionId = await generateTransactionId(
+        onboardingTaskUrl,
+        this.fetch.bind(this),
+        'POST',
+      );
+      headers.set('x-client-transaction-id', transactionId);
+    }
 
     let res: Response;
     do {

@@ -1,10 +1,11 @@
 import { FetchParameters } from './api-types';
-import { TwitterAuth } from './auth';
+import { TwitterAuth, TwitterGuestAuth } from './auth';
 import { ApiError } from './errors';
 import { Platform, PlatformExtensions } from './platform';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import debug from 'debug';
+import { generateTransactionId } from './xctxid';
 
 const log = debug('twitter-scraper:api');
 
@@ -62,6 +63,18 @@ export async function requestApi<T>(
 
   await auth.installTo(headers, url);
   await platform.randomizeCiphers();
+
+  if (
+    auth instanceof TwitterGuestAuth &&
+    auth.options?.experimental?.xClientTransactionId
+  ) {
+    const transactionId = await generateTransactionId(
+      url,
+      auth.fetch.bind(auth),
+      method,
+    );
+    headers.set('x-client-transaction-id', transactionId);
+  }
 
   let res: Response;
   do {

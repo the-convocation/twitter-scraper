@@ -19,6 +19,7 @@ export interface TwitterAuthOptions {
   transform: Partial<FetchTransformOptions>;
   rateLimitStrategy: RateLimitStrategy;
   experimental: {
+    xClientTransactionId?: boolean;
     xpff?: boolean;
   };
 }
@@ -126,7 +127,7 @@ export class TwitterGuestAuth implements TwitterAuth {
 
   constructor(
     bearerToken: string,
-    protected readonly options?: Partial<TwitterAuthOptions>,
+    readonly options?: Partial<TwitterAuthOptions>,
   ) {
     this.fetch = withTransform(options?.fetch ?? fetch, options?.transform);
     this.rateLimitStrategy =
