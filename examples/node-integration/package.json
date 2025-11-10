@@ -6,7 +6,8 @@
     "start:cjs": "node src/index.cjs"
   },
   "dependencies": {
-    "@the-convocation/twitter-scraper": "file:../../"
+    "@the-convocation/twitter-scraper": "file:../../",
+    "dotenv": "^17.2.3"
   },
   "devDependencies": {}
 }

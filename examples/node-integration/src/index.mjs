@@ -1,5 +1,8 @@
 import assert from 'node:assert';
+import dotenv from 'dotenv';
 import { Scraper } from '@the-convocation/twitter-scraper';
+
+dotenv.config({ path: '../../.env.local' });
 
 // Debug logging to show that the Node.js build is being loaded
 console.log(
@@ -20,7 +23,12 @@ const email = process.env['TWITTER_EMAIL'];
 
 assert(username && password && email);
 
-const scraper = new Scraper();
+const scraper = new Scraper({
+  experimental: {
+    xClientTransactionId: true,
+    xpff: true,
+  },
+});
 await scraper.login(username, password, email);
 
 const tweet = await scraper.getTweet('1585338303800578049');
