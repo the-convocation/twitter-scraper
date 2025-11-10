@@ -181,15 +181,11 @@ export class TwitterGuestAuth implements TwitterAuth {
       await this.updateGuestToken();
     }
 
-    const token = this.guestToken;
-    if (token == null) {
-      throw new AuthenticationError(
-        'Authentication token is null or undefined.',
-      );
+    if (this.guestToken) {
+      headers.set('x-guest-token', this.guestToken);
     }
 
     headers.set('authorization', `Bearer ${this.bearerToken}`);
-    headers.set('x-guest-token', token);
     headers.set(
       'user-agent',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
@@ -268,6 +264,14 @@ export class TwitterGuestAuth implements TwitterAuth {
    * Updates the authentication state with a new guest token from the Twitter API.
    */
   protected async updateGuestToken() {
+    try {
+      await this.updateGuestTokenCore();
+    } catch (err) {
+      log('Failed to update guest token; this may cause issues:', err);
+    }
+  }
+
+  private async updateGuestTokenCore() {
     const guestActivateUrl = 'https://api.x.com/1.1/guest/activate.json';
 
     const headers = new Headers({
