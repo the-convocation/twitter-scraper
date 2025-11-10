@@ -9,6 +9,7 @@ import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
 import { FetchParameters } from './api-types';
 import debug from 'debug';
+import { generateXPFFHeader } from './xpff';
 
 const log = debug('twitter-scraper:auth-user');
 
@@ -310,26 +311,30 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
   }
 
-  async installCsrfToken(headers: Headers): Promise<void> {
-    const cookies = await this.getCookies();
-    const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
-    if (xCsrfToken) {
-      headers.set('x-csrf-token', xCsrfToken.value);
-    }
-  }
-
   async installTo(headers: Headers): Promise<void> {
     headers.set('authorization', `Bearer ${this.bearerToken}`);
-    const cookie = await this.getCookieString();
-    headers.set('cookie', cookie);
-    if (this.guestToken) {
-      headers.set('x-guest-token', this.guestToken);
-    }
     headers.set(
       'user-agent',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
     );
+
+    if (this.guestToken) {
+      // Guest token is optional for authenticated users
+      headers.set('x-guest-token', this.guestToken);
+    }
+
     await this.installCsrfToken(headers);
+
+    if (this.options?.experimental?.xpff) {
+      const guestId = await this.guestId();
+      if (guestId != null) {
+        const xpffHeader = await generateXPFFHeader(guestId);
+        headers.set('x-xp-forwarded-for', xpffHeader);
+      }
+    }
+
+    const cookie = await this.getCookieString();
+    headers.set('cookie', cookie);
   }
 
   private async initLogin(): Promise<FlowTokenResult> {
