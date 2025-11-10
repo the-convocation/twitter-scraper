@@ -596,14 +596,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     log(`Making POST request to ${onboardingTaskUrl}`);
-
-    const token = this.guestToken;
-    if (token == null) {
-      throw new AuthenticationError(
-        'Authentication token is null or undefined.',
-      );
-    }
-
     const headers = new Headers({
       accept: '*/*',
       'accept-language': 'en-US,en;q=0.9',
@@ -622,7 +614,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'sec-fetch-site': 'same-origin',
       'user-agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-      'x-guest-token': token,
       'x-twitter-auth-type': 'OAuth2Client',
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
