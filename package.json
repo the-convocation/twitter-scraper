@@ -7,7 +7,7 @@
     "scraper",
     "crawler"
   ],
-  "version": "0.19.1",
+  "version": "0.20.0",
   "main": "dist/default/cjs/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
@@ -50,10 +50,12 @@
     "debug": "^4.4.1",
     "headers-polyfill": "^3.1.2",
     "json-stable-stringify": "^1.0.2",
+    "linkedom": "^0.18.12",
     "otpauth": "^9.2.2",
     "set-cookie-parser": "^2.6.0",
     "tough-cookie": "^4.1.2",
-    "tslib": "^2.5.2"
+    "tslib": "^2.5.2",
+    "x-client-transaction-id": "^0.1.9"
   },
   "peerDependencies": {
     "cycletls": "^2.0.5"

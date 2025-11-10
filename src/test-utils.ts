@@ -55,6 +55,10 @@ export async function getScraper(
         return [input, init];
       },
     },
+    experimental: {
+      xClientTransactionId: true,
+      xpff: true,
+    },
   });
 
   if (options.authMethod === 'password') {
