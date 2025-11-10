@@ -30,7 +30,7 @@ async function parseHTML(html: string): Promise<Window & typeof globalThis> {
   }
 }
 
-// Copied from https://github.com/Lqm1/x-client-transaction-id/blob/main/utils.ts with minor tweaks
+// Copied from https://github.com/Lqm1/x-client-transaction-id/blob/main/utils.ts with minor tweaks to support us passing a custom fetch function
 async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
   // Set headers to mimic a browser request
   const headers = {
