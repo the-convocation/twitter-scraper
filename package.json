@@ -42,7 +42,7 @@
     "docs:deploy": "yarn docs:generate && gh-pages -d docs",
     "format": "prettier --write src/**/*.ts examples/**/*.{ts,js,tsx}",
     "prepare": "husky install",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand --forceExit"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.20",
