@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const assert = require('node:assert');
+const dotenv = require('dotenv');
 const { Scraper } = require('@the-convocation/twitter-scraper');
+
+dotenv.config({ path: '../../.env.local' });
 
 // Debug logging to show that the Node.js build is being loaded
 console.log(
@@ -21,7 +24,12 @@ const email = process.env['TWITTER_EMAIL'];
 
 assert(username && password && email);
 
-const scraper = new Scraper();
+const scraper = new Scraper({
+  experimental: {
+    xClientTransactionId: true,
+    xpff: true,
+  },
+});
 
 const main = async () => {
   await scraper.login(username, password, email);
