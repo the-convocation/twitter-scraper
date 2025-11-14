@@ -89,8 +89,14 @@ export interface TwitterAuth {
    * Installs the authentication information into a headers-like object. If needed, the
    * authentication token will be updated from the API automatically.
    * @param headers A Headers instance representing a request's headers.
+   * @param _url The URL being requested (currently unused, reserved for future use).
+   * @param bearerTokenOverride Optional bearer token to use instead of the default one.
    */
-  installTo(headers: Headers, url: string): Promise<void>;
+  installTo(
+    headers: Headers,
+    _url: string,
+    bearerTokenOverride?: string,
+  ): Promise<void>;
 }
 
 /**
@@ -176,16 +182,27 @@ export class TwitterGuestAuth implements TwitterAuth {
     return new Date(this.guestCreatedAt);
   }
 
-  async installTo(headers: Headers): Promise<void> {
-    if (this.shouldUpdate()) {
-      await this.updateGuestToken();
+  async installTo(
+    headers: Headers,
+    _url: string,
+    bearerTokenOverride?: string,
+  ): Promise<void> {
+    // Use the override token if provided, otherwise use the instance's bearer token
+    const tokenToUse = bearerTokenOverride ?? this.bearerToken;
+
+    // Only use guest tokens when not overriding the bearer token
+    // Guest tokens are tied to the bearer token they were generated with
+    if (!bearerTokenOverride) {
+      if (this.shouldUpdate()) {
+        await this.updateGuestToken();
+      }
+
+      if (this.guestToken) {
+        headers.set('x-guest-token', this.guestToken);
+      }
     }
 
-    if (this.guestToken) {
-      headers.set('x-guest-token', this.guestToken);
-    }
-
-    headers.set('authorization', `Bearer ${this.bearerToken}`);
+    headers.set('authorization', `Bearer ${tokenToUse}`);
     headers.set(
       'user-agent',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
@@ -322,23 +339,5 @@ export class TwitterGuestAuth implements TwitterAuth {
         this.guestCreatedAt <
           new Date(new Date().valueOf() - 3 * 60 * 60 * 1000))
     );
-  }
-
-  /**
-   * Temporarily sets a bearer token for a single request.
-   * @param token The bearer token to use.
-   * @internal
-   */
-  setBearerToken(token: string): void {
-    this.bearerToken = token;
-  }
-
-  /**
-   * Gets the current bearer token.
-   * @returns The current bearer token.
-   * @internal
-   */
-  getBearerToken(): string {
-    return this.bearerToken;
   }
 }
