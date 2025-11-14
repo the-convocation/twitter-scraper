@@ -33,6 +33,9 @@ export interface FetchTransformOptions {
 export const bearerToken =
   'AAAAAAAAAAAAAAAAAAAAAFQODgEAAAAAVHTp76lzh3rFzcHbmHVvQxYYpTw%3DckAlMINMjmCwxUcaXbAN4XqJVdgMJaHqNOFgPMK0zN1qLqLQCF';
 
+export const bearerToken2 =
+  'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
+
 export async function jitter(maxMs: number): Promise<void> {
   const jitter = Math.random() * maxMs;
   await new Promise((resolve) => setTimeout(resolve, jitter));

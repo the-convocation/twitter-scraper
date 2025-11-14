@@ -1,5 +1,5 @@
-import { addApiFeatures, requestApi } from './api';
-import { TwitterAuth } from './auth';
+import { addApiFeatures, requestApi, bearerToken2 } from './api';
+import { TwitterAuth, TwitterGuestAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
 import { LegacyTweetRaw, QueryTweetsResponse } from './timeline-v1';
 import {
@@ -399,18 +399,33 @@ export async function getTweetAnonymous(
     apiRequestFactory.createTweetResultByRestIdRequest();
   tweetResultByRestIdRequest.variables.tweetId = id;
 
-  const res = await requestApi<TweetResultByRestId>(
-    tweetResultByRestIdRequest.toRequestUrl(),
-    auth,
-  );
-
-  if (!res.success) {
-    throw res.err;
+  // Temporarily swap to bearerToken2 for this specific endpoint
+  // This matches the behavior observed in the Twitter web client and Go library
+  let originalToken: string | undefined;
+  if (auth instanceof TwitterGuestAuth) {
+    originalToken = auth.getBearerToken();
+    auth.setBearerToken(bearerToken2);
   }
 
-  if (!res.value.data) {
-    return null;
-  }
+  try {
+    const res = await requestApi<TweetResultByRestId>(
+      tweetResultByRestIdRequest.toRequestUrl(),
+      auth,
+    );
 
-  return parseTimelineEntryItemContentRaw(res.value.data, id);
+    if (!res.success) {
+      throw res.err;
+    }
+
+    if (!res.value.data) {
+      return null;
+    }
+
+    return parseTimelineEntryItemContentRaw(res.value.data, id);
+  } finally {
+    // Restore original bearer token
+    if (auth instanceof TwitterGuestAuth && originalToken) {
+      auth.setBearerToken(originalToken);
+    }
+  }
 }
