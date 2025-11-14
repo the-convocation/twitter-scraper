@@ -1,4 +1,4 @@
-import { addApiParams, requestApi } from './api';
+import { addApiParams, requestApi, bearerToken2 } from './api';
 import { TwitterAuth } from './auth';
 import { TimelineV1 } from './timeline-v1';
 
@@ -11,9 +11,14 @@ export async function getTrends(auth: TwitterAuth): Promise<string[]> {
   params.set('include_page_configuration', 'false');
   params.set('entity_tokens', 'false');
 
+  // Use bearerToken2 for trends endpoint
   const res = await requestApi<TimelineV1>(
     `https://api.x.com/2/guide.json?${params.toString()}`,
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
   if (!res.success) {
     throw res.err;

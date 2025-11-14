@@ -121,9 +121,14 @@ export async function fetchTweets(
     userTweetsRequest.variables['cursor'] = cursor;
   }
 
+  // Use bearerToken2 for UserTweets endpoint
   const res = await requestApi<TimelineV2>(
     userTweetsRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
@@ -374,9 +379,15 @@ export async function getTweet(
   const tweetDetailRequest = apiRequestFactory.createTweetDetailRequest();
   tweetDetailRequest.variables.focalTweetId = id;
 
+  // Use bearerToken2 for this specific endpoint (TweetDetail)
+  // This is required for animated GIFs to appear in tweets with mixed media
   const res = await requestApi<ThreadedConversation>(
     tweetDetailRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
