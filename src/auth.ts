@@ -323,4 +323,22 @@ export class TwitterGuestAuth implements TwitterAuth {
           new Date(new Date().valueOf() - 3 * 60 * 60 * 1000))
     );
   }
+
+  /**
+   * Temporarily sets a bearer token for a single request.
+   * @param token The bearer token to use.
+   * @internal
+   */
+  setBearerToken(token: string): void {
+    this.bearerToken = token;
+  }
+
+  /**
+   * Gets the current bearer token.
+   * @returns The current bearer token.
+   * @internal
+   */
+  getBearerToken(): string {
+    return this.bearerToken;
+  }
 }
