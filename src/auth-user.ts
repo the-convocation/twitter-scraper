@@ -312,8 +312,14 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
   }
 
-  async installTo(headers: Headers): Promise<void> {
-    headers.set('authorization', `Bearer ${this.bearerToken}`);
+  async installTo(
+    headers: Headers,
+    _url: string,
+    bearerTokenOverride?: string,
+  ): Promise<void> {
+    // Use the override token if provided, otherwise use the instance's bearer token
+    const tokenToUse = bearerTokenOverride ?? this.bearerToken;
+    headers.set('authorization', `Bearer ${tokenToUse}`);
     headers.set(
       'user-agent',
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
@@ -618,7 +624,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
     });
-    await this.installTo(headers);
+    await this.installTo(headers, onboardingTaskUrl);
 
     if (this.options?.experimental?.xClientTransactionId) {
       const transactionId = await generateTransactionId(

@@ -54,6 +54,9 @@ export type RequestApiResult<T> =
  * @param url - The URL to send the request to.
  * @param auth - The instance of {@link TwitterAuth} that will be used to authorize this request.
  * @param method - The HTTP method used when sending this request.
+ * @param platform - The platform extensions to use.
+ * @param headers - The headers to include in the request.
+ * @param bearerTokenOverride - Optional bearer token to use instead of the default one.
  */
 export async function requestApi<T>(
   url: string,
@@ -61,10 +64,11 @@ export async function requestApi<T>(
   method: 'GET' | 'POST' = 'GET',
   platform: PlatformExtensions = new Platform(),
   headers: Headers = new Headers(),
+  bearerTokenOverride?: string,
 ): Promise<RequestApiResult<T>> {
   log(`Making ${method} request to ${url}`);
 
-  await auth.installTo(headers, url);
+  await auth.installTo(headers, url, bearerTokenOverride);
   await platform.randomizeCiphers();
 
   if (
