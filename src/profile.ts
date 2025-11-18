@@ -1,4 +1,4 @@
-import { requestApi, RequestApiResult } from './api';
+import { requestApi, RequestApiResult, bearerToken2 } from './api';
 import { TwitterAuth } from './auth';
 import { TwitterApiErrorRaw } from './errors';
 import { apiRequestFactory } from './api-data';
@@ -189,7 +189,15 @@ export async function getProfile(
   const request = apiRequestFactory.createUserByScreenNameRequest();
   request.variables.screen_name = username;
 
-  const res = await requestApi<UserRaw>(request.toRequestUrl(), auth);
+  // Use bearerToken2 for UserByScreenName endpoint
+  const res = await requestApi<UserRaw>(
+    request.toRequestUrl(),
+    auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
+  );
   if (!res.success) {
     return res;
   }
