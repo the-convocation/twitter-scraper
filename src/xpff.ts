@@ -4,7 +4,7 @@ const log = debug('twitter-scraper:xpff');
 
 let isoCrypto: Crypto | null = null;
 
-function getCrypto(): Crypto {
+async function getCrypto(): Promise<Crypto> {
   if (isoCrypto != null) {
     return isoCrypto;
   }
@@ -13,10 +13,11 @@ function getCrypto(): Crypto {
   // For earlier versions, we need to import the 'crypto' module.
   if (typeof crypto === 'undefined') {
     log('Global crypto is undefined, importing from crypto module...');
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { webcrypto } = require('crypto');
-    isoCrypto = webcrypto;
-    return webcrypto;
+    const { webcrypto } = await import('crypto');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    isoCrypto = webcrypto as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return webcrypto as any;
   }
   isoCrypto = crypto;
   return crypto;
@@ -24,7 +25,8 @@ function getCrypto(): Crypto {
 
 async function sha256(message: string): Promise<Uint8Array> {
   const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await getCrypto().subtle.digest('SHA-256', msgBuffer);
+  const crypto = await getCrypto();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
   return new Uint8Array(hashBuffer);
 }
 
@@ -48,15 +50,16 @@ export class XPFFHeaderGenerator {
   async generateHeader(plaintext: string, guestId: string): Promise<string> {
     log(`Generating XPFF key for guest ID: ${guestId}`);
     const key = await this.deriveKey(guestId);
-    const nonce = getCrypto().getRandomValues(new Uint8Array(12));
-    const cipher = await getCrypto().subtle.importKey(
+    const crypto = await getCrypto();
+    const nonce = crypto.getRandomValues(new Uint8Array(12));
+    const cipher = await crypto.subtle.importKey(
       'raw',
-      key,
+      key as BufferSource,
       { name: 'AES-GCM' },
       false,
       ['encrypt'],
     );
-    const encrypted = await getCrypto().subtle.encrypt(
+    const encrypted = await crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
         iv: nonce,
@@ -69,7 +72,7 @@ export class XPFFHeaderGenerator {
     const combined = new Uint8Array(nonce.length + encrypted.byteLength);
     combined.set(nonce);
     combined.set(new Uint8Array(encrypted), nonce.length);
-    const result = buf2hex(combined);
+    const result = buf2hex(combined.buffer);
 
     log(`XPFF header generated for guest ID ${guestId}: ${result}`);
 
