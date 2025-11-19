@@ -7,10 +7,9 @@ const log = debug('twitter-scraper:xctxid');
 type LinkeDOM = typeof import('linkedom');
 
 let linkedom: LinkeDOM | null = null;
-function linkedomImport(): LinkeDOM {
+async function linkedomImport(): Promise<LinkeDOM> {
   if (!linkedom) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('linkedom');
+    const mod = await import('linkedom');
     linkedom = mod;
     return mod;
   }
@@ -25,7 +24,7 @@ async function parseHTML(html: string): Promise<Window & typeof globalThis> {
     }
     return defaultView;
   } else {
-    const { DOMParser } = linkedomImport();
+    const { DOMParser } = await linkedomImport();
     return new DOMParser().parseFromString(html, 'text/html').defaultView;
   }
 }
@@ -145,14 +144,15 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
 let ClientTransaction:
   | typeof import('x-client-transaction-id')['ClientTransaction']
   | null = null;
-function clientTransaction(): typeof import('x-client-transaction-id')['ClientTransaction'] {
+async function clientTransaction(): Promise<
+  typeof import('x-client-transaction-id')['ClientTransaction']
+> {
   if (!ClientTransaction) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('x-client-transaction-id');
-    const ctx =
-      mod.ClientTransaction as typeof import('x-client-transaction-id')['ClientTransaction'];
-    ClientTransaction = ctx;
-    return ctx;
+    const mod = await import('x-client-transaction-id');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ClientTransaction = mod.ClientTransaction as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return mod.ClientTransaction as any;
   }
   return ClientTransaction;
 }
@@ -167,7 +167,8 @@ export async function generateTransactionId(
 
   log(`Generating transaction ID for ${method} ${path}`);
   const document = await handleXMigration(fetchFn);
-  const transaction = await clientTransaction().create(document);
+  const ClientTransactionClass = await clientTransaction();
+  const transaction = await ClientTransactionClass.create(document);
   const transactionId = await transaction.generateTransactionId(method, path);
   log(`Transaction ID: ${transactionId}`);
 

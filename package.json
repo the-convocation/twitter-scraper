@@ -7,7 +7,7 @@
     "scraper",
     "crawler"
   ],
-  "version": "0.20.2",
+  "version": "0.20.3",
   "main": "dist/default/cjs/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
@@ -42,7 +42,7 @@
     "docs:deploy": "yarn docs:generate && gh-pages -d docs",
     "format": "prettier --write src/**/*.ts examples/**/*.{ts,js,tsx}",
     "prepare": "husky install",
-    "test": "jest --runInBand --forceExit"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --forceExit"
   },
   "dependencies": {
     "@sinclair/typebox": "^0.32.20",
