@@ -240,16 +240,8 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   async isLoggedIn(): Promise<boolean> {
-    const res = await requestApi<TwitterUserAuthVerifyCredentials>(
-      'https://api.x.com/1.1/account/verify_credentials.json',
-      this,
-    );
-    if (!res.success) {
-      return false;
-    }
-
-    const { value: verify } = res;
-    return verify && !verify.errors?.length;
+    const cookie = await this.getCookieString();
+    return cookie.includes('ct0=');
   }
 
   async login(

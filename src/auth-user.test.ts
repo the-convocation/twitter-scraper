@@ -1,5 +1,6 @@
 import { TwitterUserAuth } from './auth-user';
 import { bearerToken } from './api';
+import { jest } from '@jest/globals';
 
 describe('TwitterUserAuth', () => {
   const mockFetch = jest.fn();
