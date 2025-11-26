@@ -1,4 +1,4 @@
-import { addApiFeatures, requestApi } from './api';
+import { bearerToken2, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { Profile } from './profile';
 import { QueryProfilesResponse } from './timeline-v1';
@@ -7,8 +7,8 @@ import {
   RelationshipTimeline,
   parseRelationshipTimeline,
 } from './timeline-relationship';
-import stringify from 'json-stable-stringify';
 import { AuthenticationError } from './errors';
+import { apiRequestFactory } from './api-data';
 
 export function getFollowing(
   userId: string,
@@ -90,33 +90,22 @@ async function getFollowingTimeline(
     maxItems = 50;
   }
 
-  const variables: Record<string, any> = {
-    userId,
-    count: maxItems,
-    includePromotedContent: false,
-  };
-
-  const features = addApiFeatures({
-    responsive_web_twitter_article_tweet_consumption_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      true,
-    longform_notetweets_inline_media_enabled: true,
-    responsive_web_media_download_video_enabled: false,
-  });
+  const followingRequest = apiRequestFactory.createFollowingRequest();
+  followingRequest.variables.userId = userId;
+  followingRequest.variables.count = maxItems;
+  followingRequest.variables.includePromotedContent = false;
 
   if (cursor != null && cursor != '') {
-    variables['cursor'] = cursor;
+    followingRequest.variables.cursor = cursor;
   }
 
-  const params = new URLSearchParams();
-  const featuresStr = stringify(features);
-  const variablesStr = stringify(variables);
-  if (featuresStr) params.set('features', featuresStr);
-  if (variablesStr) params.set('variables', variablesStr);
-
   const res = await requestApi<RelationshipTimeline>(
-    `https://x.com/i/api/graphql/iSicc7LrzWGBgDPL0tM_TQ/Following?${params.toString()}`,
+    followingRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
@@ -142,33 +131,22 @@ async function getFollowersTimeline(
     maxItems = 50;
   }
 
-  const variables: Record<string, any> = {
-    userId,
-    count: maxItems,
-    includePromotedContent: false,
-  };
-
-  const features = addApiFeatures({
-    responsive_web_twitter_article_tweet_consumption_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      true,
-    longform_notetweets_inline_media_enabled: true,
-    responsive_web_media_download_video_enabled: false,
-  });
+  const followersRequest = apiRequestFactory.createFollowersRequest();
+  followersRequest.variables.userId = userId;
+  followersRequest.variables.count = maxItems;
+  followersRequest.variables.includePromotedContent = false;
 
   if (cursor != null && cursor != '') {
-    variables['cursor'] = cursor;
+    followersRequest.variables.cursor = cursor;
   }
 
-  const params = new URLSearchParams();
-  const featuresStr = stringify(features);
-  const variablesStr = stringify(variables);
-  if (featuresStr) params.set('features', featuresStr);
-  if (variablesStr) params.set('variables', variablesStr);
-
   const res = await requestApi<RelationshipTimeline>(
-    `https://x.com/i/api/graphql/rRXFSG5vR6drKr5M37YOTw/Followers?${params.toString()}`,
+    followersRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
