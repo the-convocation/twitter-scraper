@@ -8,7 +8,6 @@ export default [
       esbuild({
         define: {
           PLATFORM_NODE: 'false',
-          PLATFORM_NODE_JEST: 'false',
         },
       }),
     ],
@@ -31,7 +30,6 @@ export default [
       esbuild({
         define: {
           PLATFORM_NODE: 'true',
-          PLATFORM_NODE_JEST: 'false',
         },
       }),
     ],
@@ -66,7 +64,6 @@ export default [
       esbuild({
         define: {
           PLATFORM_NODE: 'true',
-          PLATFORM_NODE_JEST: 'false',
         },
       }),
     ],
