@@ -158,9 +158,14 @@ export async function fetchTweetsAndReplies(
     userTweetsRequest.variables['cursor'] = cursor;
   }
 
+  // Use bearerToken2 for UserTweetsAndReplies endpoint
   const res = await requestApi<TimelineV2>(
     userTweetsRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
@@ -188,9 +193,14 @@ export async function fetchListTweets(
     listTweetsRequest.variables['cursor'] = cursor;
   }
 
+  // Use bearerToken2 for ListTweet endpoint
   const res = await requestApi<ListTimeline>(
     listTweetsRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
@@ -281,9 +291,14 @@ export async function fetchLikedTweets(
     userTweetsRequest.variables['cursor'] = cursor;
   }
 
+  // Use bearerToken2 for UserLikedTweets endpoint
   const res = await requestApi<TimelineV2>(
     userTweetsRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
