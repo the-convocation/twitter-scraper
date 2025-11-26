@@ -1,4 +1,4 @@
-import { requestApi } from './api';
+import { bearerToken2, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { Profile } from './profile';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
@@ -124,6 +124,10 @@ async function getSearchTimeline(
   const res = await requestApi<SearchTimeline>(
     searchTimelineRequest.toRequestUrl(),
     auth,
+    'GET',
+    undefined,
+    undefined,
+    bearerToken2,
   );
 
   if (!res.success) {
