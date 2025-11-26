@@ -1,4 +1,4 @@
-import { addApiFeatures, requestApi } from './api';
+import { requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { Profile } from './profile';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
@@ -9,8 +9,8 @@ import {
   parseSearchTimelineTweets,
   parseSearchTimelineUsers,
 } from './timeline-search';
-import stringify from 'json-stable-stringify';
 import { AuthenticationError } from './errors';
+import { apiRequestFactory } from './api-data';
 
 /**
  * The categories that can be used in Twitter searches.
@@ -94,60 +94,35 @@ async function getSearchTimeline(
     maxItems = 50;
   }
 
-  const variables: Record<string, any> = {
-    rawQuery: query,
-    count: maxItems,
-    querySource: 'typed_query',
-    product: 'Top',
-  };
-
-  const features = addApiFeatures({
-    longform_notetweets_inline_media_enabled: true,
-    responsive_web_enhance_cards_enabled: false,
-    responsive_web_media_download_video_enabled: false,
-    responsive_web_twitter_article_tweet_consumption_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      true,
-    interactive_text_enabled: false,
-    responsive_web_text_conversations_enabled: false,
-    vibe_api_enabled: false,
-  });
-
-  const fieldToggles: Record<string, any> = {
-    withArticleRichContentState: false,
-  };
+  const searchTimelineRequest = apiRequestFactory.createSearchTimelineRequest();
+  searchTimelineRequest.variables.rawQuery = query;
+  searchTimelineRequest.variables.count = maxItems;
+  searchTimelineRequest.variables.querySource = 'typed_query';
+  searchTimelineRequest.variables.product = 'Top';
 
   if (cursor != null && cursor != '') {
-    variables['cursor'] = cursor;
+    searchTimelineRequest.variables['cursor'] = cursor;
   }
 
   switch (searchMode) {
     case SearchMode.Latest:
-      variables.product = 'Latest';
+      searchTimelineRequest.variables.product = 'Latest';
       break;
     case SearchMode.Photos:
-      variables.product = 'Photos';
+      searchTimelineRequest.variables.product = 'Photos';
       break;
     case SearchMode.Videos:
-      variables.product = 'Videos';
+      searchTimelineRequest.variables.product = 'Videos';
       break;
     case SearchMode.Users:
-      variables.product = 'People';
+      searchTimelineRequest.variables.product = 'People';
       break;
     default:
       break;
   }
 
-  const params = new URLSearchParams();
-  const featuresStr = stringify(features);
-  const fieldTogglesStr = stringify(fieldToggles);
-  const variablesStr = stringify(variables);
-  if (featuresStr) params.set('features', featuresStr);
-  if (fieldTogglesStr) params.set('fieldToggles', fieldTogglesStr);
-  if (variablesStr) params.set('variables', variablesStr);
-
   const res = await requestApi<SearchTimeline>(
-    `https://api.x.com/graphql/gkjsKepM6gl_HmFWoWKfgg/SearchTimeline?${params.toString()}`,
+    searchTimelineRequest.toRequestUrl(),
     auth,
   );
 
