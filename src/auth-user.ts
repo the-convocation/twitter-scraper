@@ -581,16 +581,13 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     });
   }
 
-  private async handleSuccessSubtask(
-    _subtaskId: string,
-    _prev: TwitterUserAuthFlowResponse,
-    _credentials: TwitterUserAuthCredentials,
-    api: FlowSubtaskHandlerApi,
-  ): Promise<FlowTokenResult> {
-    return await this.executeFlowTask({
-      flow_token: api.getFlowToken(),
-      subtask_inputs: [],
-    });
+  private async handleSuccessSubtask(): Promise<FlowTokenResult> {
+    // Login completed successfully, nothing more to do
+    log('Successfully logged in with user credentials.');
+    return {
+      status: 'success',
+      response: {},
+    };
   }
 
   private async executeFlowTask(
