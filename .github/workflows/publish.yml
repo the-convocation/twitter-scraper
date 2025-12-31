@@ -18,6 +18,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
+      - name: Update NPM
+        run: npm install -g npm
       - name: Yarn
         run: npm install -g yarn
       - name: Install
