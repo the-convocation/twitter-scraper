@@ -1,6 +1,5 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Scraper } from './scraper';
-import { Cookie } from 'tough-cookie';
 import dotenv from 'dotenv';
 import { cycleTLSFetch } from './cycletls-fetch';
 
@@ -64,9 +63,18 @@ export async function getScraper(
   if (options.authMethod === 'password') {
     await scraper.login(username!, password!, email, twoFactorSecret);
   } else if (options.authMethod === 'cookies') {
-    await scraper.setCookies(
-      JSON.parse(cookies!).map((c: string) => Cookie.fromJSON(c)),
+    // Convert JSON cookie objects to cookie strings to avoid tough-cookie version mismatches
+    const parsedCookies = JSON.parse(cookies!) as Array<{
+      key: string;
+      value: string;
+      domain?: string;
+      path?: string;
+    }>;
+    const cookieStrings = parsedCookies.map(
+      (c) =>
+        `${c.key}=${c.value}; Domain=${c.domain || '.x.com'}; Path=${c.path || '/'}`,
     );
+    await scraper.setCookies(cookieStrings);
   }
 
   return scraper;
