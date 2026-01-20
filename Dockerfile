@@ -1,5 +1,5 @@
-# Use Node.js 20 LTS
-FROM node:20-slim
+# Use Node.js 22 LTS
+FROM node:22-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

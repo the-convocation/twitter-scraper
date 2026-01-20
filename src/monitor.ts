@@ -72,6 +72,8 @@ async function processJob(scraper: Scraper, job: any) {
 
   } catch (err) {
     console.error(`[Job ${job.job_id}] Failed:`, err);
+    // Update last_run_at even on failure to prevent immediate retry
+    await client.query('UPDATE jobs SET last_run_at = NOW() WHERE job_id = $1', [job.job_id]);
   } finally {
     client.release();
   }
@@ -82,6 +84,10 @@ async function runMonitor() {
   // Note: xClientTransactionId requires Node.js 22+ (ArrayBuffer.transfer)
   const scraper = new Scraper({
     fetch: cycleTLSFetch,
+    experimental: {
+      xClientTransactionId: true,
+      xpff: true,
+    },
   });
 
   const username = process.env.TWITTER_USERNAME;
@@ -136,10 +142,12 @@ async function runMonitor() {
         await processJob(scraper, job);
         
         // Sleep a bit between jobs to be nice to Twitter
-        await sleep(5000); 
+        const sleepTime = Math.floor(Math.random() * 5000) + 5000;
+        await sleep(sleepTime); 
       } else {
-        console.log('No jobs due. Sleeping for 60 seconds...');
-        await sleep(60000);
+        const sleepTime = Math.floor(Math.random() * 180000) + 60000;
+        console.log(`No jobs due. Sleeping for ${Math.floor(sleepTime / 1000)} seconds...`);
+        await sleep(sleepTime);
       }
     }
 
