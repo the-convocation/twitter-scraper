@@ -103,7 +103,7 @@ export async function requestApi<T>(
 
       return {
         success: false,
-        err: new Error('Failed to perform request.'),
+        err: err,
       };
     }
 

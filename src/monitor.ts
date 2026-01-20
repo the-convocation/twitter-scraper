@@ -1,17 +1,15 @@
 import { Pool } from 'pg';
 import { Scraper } from './scraper';
 import { Tweet } from './tweets';
+import { SearchMode } from './search';
 import { cycleTLSFetch, cycleTLSExit } from './cycletls-fetch';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
 const pool = new Pool({
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  user: process.env.POSTGRES_USER || 'postgres',
-  password: process.env.POSTGRES_PASSWORD || 'password',
-  database: process.env.POSTGRES_DB || 'twitter',
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
 // Helper to pause execution
@@ -60,7 +58,7 @@ async function processJob(scraper: Scraper, job: any) {
         count++;
       }
     } else if (job.type === 'search') {
-      const iterator = scraper.searchTweets(job.query, 20, 0); // Top mode
+      const iterator = scraper.searchTweets(job.query, 20, SearchMode.Top);
       for await (const tweet of iterator) {
         await upsertTweet(tweet, criteriaTag, client);
         count++;
@@ -80,24 +78,40 @@ async function processJob(scraper: Scraper, job: any) {
 }
 
 async function runMonitor() {
-  // Initialize Scraper with CycleTLS to bypass Cloudflare
+  // Initialize Scraper with CycleTLS
+  // Note: xClientTransactionId requires Node.js 22+ (ArrayBuffer.transfer)
   const scraper = new Scraper({
     fetch: cycleTLSFetch,
   });
-  
+
   const username = process.env.TWITTER_USERNAME;
   const password = process.env.TWITTER_PASSWORD;
   const email = process.env.TWITTER_EMAIL;
-
-  if (!username || !password) {
-    console.error('Missing TWITTER_USERNAME or TWITTER_PASSWORD in environment');
-    process.exit(1);
-  }
+  const cookies = process.env.TWITTER_COOKIES;
 
   try {
-    console.log('Logging in...');
-    await scraper.login(username, password, email);
-    console.log('Logged in successfully.');
+    // Prefer cookie auth (more reliable), fall back to password
+    if (cookies) {
+      console.log('Authenticating with cookies...');
+      const parsedCookies = JSON.parse(cookies) as Array<{
+        key: string;
+        value: string;
+        domain?: string;
+        path?: string;
+      }>;
+      const cookieStrings = parsedCookies.map(
+        (c) => `${c.key}=${c.value}; Domain=${c.domain || '.x.com'}; Path=${c.path || '/'}`
+      );
+      await scraper.setCookies(cookieStrings);
+      console.log('Authenticated with cookies.');
+    } else if (username && password) {
+      console.log('Logging in with username/password...');
+      await scraper.login(username, password, email);
+      console.log('Logged in successfully.');
+    } else {
+      console.error('Missing TWITTER_COOKIES or TWITTER_USERNAME/TWITTER_PASSWORD in environment');
+      process.exit(1);
+    }
 
     while (true) {
       const client = await pool.connect();

@@ -4,14 +4,9 @@ services:
     env_file:
       - .env.local
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=twitter
+      - DATABASE_URL=postgresql://neondb_owner:npg_hNJyn57adrgx@ep-aged-truth-a1vexyjq-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
       - TARGET_ACCOUNTS=elonmusk,NASA
       - KEYWORDS=mars,crypto
-    depends_on:
-      - postgres
     # Or specify individual environment variables:
     # environment:
     #   - TWITTER_USERNAME=${TWITTER_USERNAME}
@@ -19,19 +14,3 @@ services:
     #   - TWITTER_EMAIL=${TWITTER_EMAIL}
     #   - TWITTER_COOKIES=${TWITTER_COOKIES}
     #   - PROXY_URL=${PROXY_URL}
-
-  postgres:
-    image: postgres:alpine
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=twitter
-    # ports:
-    #   - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-volumes:
-  postgres_data:
