@@ -12,10 +12,6 @@ const log = debug('twitter-scraper:dm');
 
 // ─── Existing types (maintained for backward compatibility) ──────────
 
-export interface DmInboxResponse {
-  inbox_initial_state: DmInbox;
-}
-
 export interface DmInbox {
   last_seen_event_id: string;
   trusted_last_seen_event_id: string;
@@ -25,10 +21,6 @@ export interface DmInbox {
   entries: DmMessageEntry[];
   users: { [key: string]: LegacyUserRaw };
   conversations: { [key: string]: DmConversation };
-}
-
-export interface DmConversationResponse {
-  conversation_timeline: DmConversationTimeline;
 }
 
 export interface DmConversationTimeline {
@@ -217,7 +209,6 @@ interface XChatReadEvent {
 
 /**
  * Fetch the DM inbox using the X Chat GraphQL API.
- * Falls back to the legacy REST endpoint if the account has not migrated.
  */
 export async function fetchDmInbox(auth: TwitterAuth): Promise<DmInbox> {
   if (!(await auth.isLoggedIn())) {
@@ -226,20 +217,7 @@ export async function fetchDmInbox(auth: TwitterAuth): Promise<DmInbox> {
     );
   }
 
-  // Try the new X Chat GraphQL endpoint first
-  try {
-    const inbox = await fetchXChatInbox(auth);
-    if (inbox && Object.keys(inbox.conversations).length > 0) {
-      log('Fetched inbox via X Chat GraphQL API');
-      return inbox;
-    }
-    log('X Chat inbox empty, trying legacy REST API');
-  } catch (err) {
-    log('X Chat GraphQL failed, falling back to legacy REST API:', err);
-  }
-
-  // Fallback: try legacy REST endpoint (for accounts not yet on X Chat)
-  return fetchLegacyDmInbox(auth);
+  return fetchXChatInbox(auth);
 }
 
 /**
@@ -258,39 +236,6 @@ async function fetchXChatInbox(auth: TwitterAuth): Promise<DmInbox> {
   }
 
   return parseXChatInbox(res.value);
-}
-
-/**
- * Fetch inbox using the legacy REST endpoint (dm/inbox_initial_state.json).
- * Used as fallback for accounts not yet migrated to X Chat.
- */
-async function fetchLegacyDmInbox(auth: TwitterAuth): Promise<DmInbox> {
-  const params = new URLSearchParams();
-  params.set('nsfw_filtering_enabled', 'false');
-  params.set('filter_low_quality', 'true');
-  params.set('include_quality', 'all');
-  params.set('dm_secret_conversations_enabled', 'false');
-  params.set('krs_registration_enabled', 'false');
-  params.set('dm_users', 'true');
-  params.set('include_groups', 'true');
-  params.set('include_inbox_timelines', 'true');
-  params.set('supports_reactions', 'true');
-  params.set('supports_edit', 'true');
-  params.set(
-    'ext',
-    'mediaColor,altText,mediaStats,highlightedLabel,voiceInfo,birdwatchPivot,superFollowMetadata,unmentionInfo,editControl,article',
-  );
-
-  const res = await requestApi<DmInboxResponse>(
-    `https://api.x.com/1.1/dm/inbox_initial_state.json?${params.toString()}`,
-    auth,
-  );
-
-  if (!res.success) {
-    throw res.err;
-  }
-
-  return res.value.inbox_initial_state;
 }
 
 /**
@@ -509,23 +454,10 @@ function createEmptyInbox(status: DmStatus = 'AT_END'): DmInbox {
   };
 }
 
-// ─── Legacy parse functions (kept for compatibility) ─────────────────
-
-export async function parseDmInbox(inbox: DmInboxResponse) {
-  return inbox.inbox_initial_state;
-}
-
-export async function parseDmConversation(
-  conversation: DmConversationResponse,
-) {
-  return conversation.conversation_timeline;
-}
-
 // ─── Public API ──────────────────────────────────────────────────────
 
 /**
- * Get the current authenticated user's DM inbox.
- * Uses X Chat GraphQL API with fallback to legacy REST API.
+ * Get the current authenticated user's DM inbox via X Chat GraphQL API.
  */
 export async function getDmInbox(auth: TwitterAuth): Promise<DmInbox> {
   return await fetchDmInbox(auth);
@@ -534,13 +466,11 @@ export async function getDmInbox(auth: TwitterAuth): Promise<DmInbox> {
 /**
  * Fetch a specific DM conversation by ID.
  *
- * For X Chat accounts, this fetches the full inbox and extracts the
- * requested conversation. For legacy accounts, it uses the dedicated
- * conversation endpoint.
+ * Fetches the full X Chat inbox and extracts the requested conversation.
  */
 export async function fetchDmConversation(
   conversationId: string,
-  cursor: DmCursorOptions | undefined,
+  _cursor: DmCursorOptions | undefined,
   auth: TwitterAuth,
 ): Promise<DmConversationTimeline> {
   if (!(await auth.isLoggedIn())) {
@@ -549,73 +479,30 @@ export async function fetchDmConversation(
     );
   }
 
-  // Try X Chat: fetch inbox and extract the target conversation
-  try {
-    const inbox = await fetchXChatInbox(auth);
-    const convo = inbox.conversations[conversationId];
-    if (convo) {
-      const convoEntries = inbox.entries.filter(
-        (e) => e.message?.conversation_id === conversationId,
-      );
-
-      const entryIds = convoEntries
-        .map((e) => e.message?.id ?? '')
-        .filter(Boolean)
-        .sort();
-
-      return {
-        // Always AT_END for X Chat — no cursor-based pagination available
-        status: 'AT_END' as const,
-        min_entry_id: entryIds[0] ?? convo.min_entry_id,
-        max_entry_id: entryIds[entryIds.length - 1] ?? convo.max_entry_id,
-        entries: convoEntries,
-        users: inbox.users,
-        conversations: { [conversationId]: convo },
-      };
-    }
-    log('Conversation %s not found in X Chat inbox', conversationId);
-  } catch (err) {
-    log('X Chat conversation fetch failed, trying legacy:', err);
+  const inbox = await fetchXChatInbox(auth);
+  const convo = inbox.conversations[conversationId];
+  if (!convo) {
+    throw new Error(`Conversation ${conversationId} not found in X Chat inbox`);
   }
 
-  // Fallback: legacy REST endpoint
-  return fetchLegacyDmConversation(conversationId, cursor, auth);
-}
-
-/** Fetch conversation from the legacy REST API. */
-async function fetchLegacyDmConversation(
-  conversationId: string,
-  cursor: DmCursorOptions | undefined,
-  auth: TwitterAuth,
-): Promise<DmConversationTimeline> {
-  const params = new URLSearchParams();
-  params.set('context', 'FETCH_DM_CONVERSATION_HISTORY');
-  params.set('dm_secret_conversations_enabled', 'false');
-  params.set('krs_registration_enabled', 'false');
-  params.set('dm_users', 'true');
-  params.set('include_groups', 'true');
-  params.set('include_inbox_timelines', 'true');
-  params.set('supports_reactions', 'true');
-  params.set('supports_edit', 'true');
-  params.set('include_conversation_info', 'true');
-  params.set(
-    'ext',
-    'mediaColor,altText,mediaStats,highlightedLabel,voiceInfo,birdwatchPivot,superFollowMetadata,unmentionInfo,editControl,article',
+  const convoEntries = inbox.entries.filter(
+    (e) => e.message?.conversation_id === conversationId,
   );
 
-  if (cursor) {
-    if (cursor.maxId) params.set('max_id', cursor.maxId);
-    if (cursor.minId) params.set('min_id', cursor.minId);
-  }
+  const entryIds = convoEntries
+    .map((e) => e.message?.id ?? '')
+    .filter(Boolean)
+    .sort();
 
-  const url = `https://api.x.com/1.1/dm/conversation/${conversationId}.json?${params.toString()}`;
-  const res = await requestApi<DmConversationResponse>(url, auth);
-
-  if (!res.success) {
-    throw res.err;
-  }
-
-  return res.value.conversation_timeline;
+  return {
+    // Always AT_END for X Chat — no cursor-based pagination available
+    status: 'AT_END' as const,
+    min_entry_id: entryIds[0] ?? convo.min_entry_id,
+    max_entry_id: entryIds[entryIds.length - 1] ?? convo.max_entry_id,
+    entries: convoEntries,
+    users: inbox.users,
+    conversations: { [conversationId]: convo },
+  };
 }
 
 export async function getDmConversation(
