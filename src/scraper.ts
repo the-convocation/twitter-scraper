@@ -42,8 +42,6 @@ import {
 import fetch from 'cross-fetch';
 import debug from 'debug';
 import { RateLimitStrategy } from './rate-limit';
-
-const log = debug('twitter-scraper:scraper');
 import {
   DmConversationTimeline,
   DmInbox,
@@ -56,6 +54,7 @@ import {
   DmConversation,
 } from './direct-messages';
 
+const log = debug('twitter-scraper:scraper');
 const twUrl = 'https://x.com';
 
 export interface ScraperOptions {

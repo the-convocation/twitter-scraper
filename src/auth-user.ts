@@ -286,7 +286,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       const subtaskId = next.response.subtasks[0].subtask_id;
 
       // Add a human-like delay between flow steps.
-      // Real browsers take 1-5 seconds between steps (page render, user reading, typing).
+      // Real browsers take 1-3 seconds between steps (page render, user reading, typing).
       // Without this delay, Twitter flags the rapid-fire request pattern as bot activity (error 399).
       const configuredDelay = this.options?.experimental?.flowStepDelay;
       const delay =
@@ -522,18 +522,41 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   /**
+   * Maximum allowed size (in bytes) for the JS instrumentation script.
+   * Twitter's scripts are typically ~50-100KB. Anything significantly larger
+   * may indicate tampering or an unexpected response.
+   */
+  private static readonly JS_INSTRUMENTATION_MAX_SIZE = 512 * 1024; // 512KB
+
+  /**
    * Fetches and executes the JS instrumentation script to generate browser
    * fingerprinting data. The result is written to an input element named
    * 'ui_metrics'.
    *
    * In browser environments, uses a hidden iframe with native DOM APIs.
    * In Node.js, uses linkedom (for DOM) and the vm module (for sandboxed execution).
+   *
+   * @security This method executes **remote JavaScript** fetched from Twitter's servers.
+   * - In browsers, execution is isolated in a disposable iframe.
+   * - In Node.js, execution uses `vm.runInContext`, which is NOT a security sandbox.
+   *   A malicious or compromised script could potentially escape the VM context.
+   *   This is an inherent trade-off of the reverse-engineering approach used by this library.
+   *   The risk is mitigated by: (1) only fetching from Twitter's known instrumentation URLs,
+   *   (2) enforcing a maximum script size limit, and (3) using a minimal sandbox with
+   *   limited globals. However, this should not be considered secure against a targeted attack.
    */
   private async executeJsInstrumentation(url: string): Promise<string> {
     log(`Fetching JS instrumentation from: ${url}`);
     const response = await this.fetch(url);
     const scriptContent = await response.text();
     log(`JS instrumentation script fetched, length: ${scriptContent.length}`);
+
+    if (scriptContent.length > TwitterUserAuth.JS_INSTRUMENTATION_MAX_SIZE) {
+      log(
+        `WARNING: JS instrumentation script exceeds size limit (${scriptContent.length} > ${TwitterUserAuth.JS_INSTRUMENTATION_MAX_SIZE}), skipping execution`,
+      );
+      return '{}';
+    }
 
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       return this.executeJsInstrumentationBrowser(scriptContent);
@@ -590,6 +613,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   /**
    * Execute JS instrumentation in Node.js using linkedom for DOM emulation
    * and the vm module for sandboxed script execution.
+   *
+   * @security Node's `vm` module does NOT provide a true security sandbox.
+   * The executed script has limited globals but could potentially escape the
+   * context. See the parent method's JSDoc for full security considerations.
    */
   private async executeJsInstrumentationNode(
     scriptContent: string,

@@ -27,7 +27,8 @@ const log = debug('twitter-scraper:castle');
  * Each field has a 1-byte header (5-bit index + 3-bit encoding type),
  * followed by encoding-specific body bytes.
  */
-enum FieldEncoding {
+/** @internal Exported for testing */
+export enum FieldEncoding {
   /** No body bytes (field presence alone is the signal) */
   Empty = -1,
   /** Marker field, no body bytes */
@@ -215,8 +216,9 @@ function base64url(data: Uint8Array): string {
 /**
  * Encrypt data using XXTEA (Corrected Block TEA) algorithm.
  * Used for both the overall token encryption and per-field encryption.
+ * @internal Exported for testing
  */
-function xxteaEncrypt(data: Uint8Array, key: number[]): Uint8Array {
+export function xxteaEncrypt(data: Uint8Array, key: number[]): Uint8Array {
   // Pad to 4-byte boundary
   const padLen = Math.ceil(data.length / 4) * 4;
   const padded = new Uint8Array(padLen);
@@ -289,7 +291,8 @@ function fieldEncrypt(
 
 // ─── Timestamp Encoding ─────────────────────────────────────────────────────
 
-function encodeTimestampBytes(ms: number): Uint8Array {
+/** @internal Exported for testing */
+export function encodeTimestampBytes(ms: number): Uint8Array {
   let t = Math.floor(ms / 1000 - TS_EPOCH);
   t = Math.max(Math.min(t, 268435455), 0); // Clamp to 28-bit unsigned
   return be32(t);
@@ -334,7 +337,8 @@ function deriveAndXor(
  * Encode a floating-point value into a compact format with configurable
  * exponent and mantissa bit widths. Used for behavioral metric encoding.
  */
-function customFloatEncode(
+/** @internal Exported for testing */
+export function customFloatEncode(
   expBits: number,
   manBits: number,
   value: number,
@@ -372,7 +376,8 @@ function customFloatEncode(
  * Values 0-15 use a 2-bit exponent / 4-bit mantissa format.
  * Values > 15 use a 4-bit exponent / 3-bit mantissa format.
  */
-function encodeFloatVal(v: number): number {
+/** @internal Exported for testing */
+export function encodeFloatVal(v: number): number {
   const n = Math.max(v, 0);
   if (n <= 15) return 64 | customFloatEncode(2, 4, n + 1);
   return 128 | customFloatEncode(4, 3, n - 14);
@@ -391,7 +396,8 @@ function encodeFloatVal(v: number): number {
  * @param val - The field value (number or byte array)
  * @param initTime - Init timestamp (required for EncryptedBytes encoding)
  */
-function encodeField(
+/** @internal Exported for testing */
+export function encodeField(
   index: number,
   encoding: FieldEncoding,
   val: number | Uint8Array,

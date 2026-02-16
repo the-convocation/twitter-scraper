@@ -254,8 +254,13 @@ export class TwitterGuestAuth implements TwitterAuth {
     // Chrome priority hint - present on all API requests
     headers.set('priority', 'u=1, i');
 
-    // Set content-type for GraphQL requests if not already set
-    if (!headers.has('content-type') && url.includes('/graphql/')) {
+    // Set content-type for GraphQL requests if not already set.
+    // Only match the known API base URLs (api.x.com and x.com/i/api).
+    if (
+      !headers.has('content-type') &&
+      (url.includes('api.x.com/graphql/') ||
+        url.includes('x.com/i/api/graphql/'))
+    ) {
       headers.set('content-type', 'application/json');
     }
 

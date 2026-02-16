@@ -143,9 +143,23 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
 // Cache for the x.com document to avoid repeated fetches.
 // The document is needed to generate transaction IDs but doesn't change frequently.
 // We cache the Promise (not the result) to prevent concurrent calls from all fetching separately.
+//
+// NOTE: This cache is module-level and shared across ALL Scraper instances in the process.
+// If multiple Scraper instances use different fetch functions or auth contexts, they will
+// still share the same cached document. This is acceptable because the document content
+// (JS bundle hashes for transaction ID generation) is the same regardless of auth state.
 let cachedDocumentPromise: Promise<Document> | null = null;
 let cachedDocumentTimestamp = 0;
 const DOCUMENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Clear the cached x.com document. Useful for testing or when the cached
+ * document may be stale (e.g., after a long-running process).
+ */
+export function clearDocumentCache(): void {
+  cachedDocumentPromise = null;
+  cachedDocumentTimestamp = 0;
+}
 
 async function getCachedDocument(fetchFn: typeof fetch): Promise<Document> {
   const now = Date.now();
