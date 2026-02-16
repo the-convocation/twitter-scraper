@@ -356,7 +356,10 @@ test('scraper can get tweet thread', async () => {
 
 test('scraper can get liked tweets', async () => {
   const scraper = await getScraper();
-  const liked = scraper.getLikedTweets(process.env['TWITTER_USERNAME']!, 10);
+  const liked = scraper.getLikedTweets(
+    process.env['TWITTER_USERNAME'] ?? '',
+    10,
+  );
   const tweet = await liked.next();
   expect(tweet.value).not.toBeUndefined();
   expect(tweet.done).toBeFalsy();

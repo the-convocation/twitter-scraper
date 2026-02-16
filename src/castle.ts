@@ -418,7 +418,10 @@ function encodeField(
       break;
     }
     case FieldEncoding.EncryptedBytes: {
-      const enc = fieldEncrypt(val as Uint8Array, index, initTime!);
+      if (initTime == null) {
+        throw new Error('initTime is required for EncryptedBytes encoding');
+      }
+      const enc = fieldEncrypt(val as Uint8Array, index, initTime);
       body = concat(u8(enc.length), enc);
       break;
     }

@@ -1,10 +1,5 @@
 import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import {
-  CHROME_SEC_CH_UA,
-  CHROME_USER_AGENT,
-  flexParseJson,
-  requestApi,
-} from './api';
+import { CHROME_SEC_CH_UA, CHROME_USER_AGENT, flexParseJson } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
@@ -42,10 +37,6 @@ export interface TwitterUserAuthFlowResponse {
   flow_token?: string;
   status?: string;
   subtasks?: TwitterUserAuthSubtask[];
-}
-
-interface TwitterUserAuthVerifyCredentials {
-  errors?: TwitterApiErrorRaw[];
 }
 
 const TwitterUserAuthSubtask = Type.Object({
@@ -1096,22 +1087,4 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       response: flow,
     };
   }
-}
-
-/**
- * Generates a random ct0 CSRF token (160 hex characters).
- * Uses a platform-agnostic approach that works in both Node.js and browsers
- * without requiring dynamic imports.
- */
-function generateCt0(): string {
-  // Try Web Crypto API first (available in browsers and modern Node.js)
-  if (typeof globalThis.crypto?.getRandomValues === 'function') {
-    const bytes = new Uint8Array(80);
-    globalThis.crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  }
-  // Fallback to Math.random (sufficient for CSRF double-submit pattern)
-  return Array.from({ length: 160 }, () =>
-    Math.floor(Math.random() * 16).toString(16),
-  ).join('');
 }

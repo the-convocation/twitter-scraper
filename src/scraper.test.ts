@@ -1,4 +1,3 @@
-import { ErrorRateLimitStrategy } from './rate-limit';
 import { Scraper } from './scraper';
 
 test('scraper uses request transform when provided', async () => {
