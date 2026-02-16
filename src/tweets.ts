@@ -414,6 +414,7 @@ export async function getTweet(
   }
 
   const tweets = parseThreadedConversation(res.value);
+
   return tweets.find((tweet) => tweet.id === id) ?? null;
 }
 

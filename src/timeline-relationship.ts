@@ -80,6 +80,19 @@ export function parseRelationshipTimeline(
               profile.userId = userResultRaw.rest_id;
             }
 
+            // FIX: Twitter moved screen_name from legacy to core
+            if (!profile.username && userResultRaw.core?.screen_name) {
+              profile.username = userResultRaw.core.screen_name;
+              profile.url = `https://x.com/${profile.username}`;
+            }
+
+            // FIX: Twitter moved created_at from legacy to core
+            if (!profile.joined && userResultRaw.core?.created_at) {
+              profile.joined = new Date(
+                Date.parse(userResultRaw.core.created_at),
+              );
+            }
+
             profiles.push(profile);
           }
         } else if (entry.content?.cursorType === 'Bottom') {

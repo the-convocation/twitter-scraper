@@ -160,7 +160,7 @@ export async function fetchDmInbox(auth: TwitterAuth) {
   );
 
   const res = await requestApi<DmInboxResponse>(
-    `https://x.com/i/api/1.1/dm/inbox_initial_state.json?${params.toString()}`,
+    `https://api.x.com/1.1/dm/inbox_initial_state.json?${params.toString()}`,
     auth,
   );
 
@@ -226,7 +226,7 @@ export async function fetchDmConversation(
     }
   }
 
-  const url = `https://x.com/i/api/1.1/dm/conversation/${conversationId}.json?${params.toString()}`;
+  const url = `https://api.x.com/1.1/dm/conversation/${conversationId}.json?${params.toString()}`;
 
   const res = await requestApi<DmConversationResponse>(url, auth);
 
