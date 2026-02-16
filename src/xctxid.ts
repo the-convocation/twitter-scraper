@@ -1,6 +1,6 @@
 import fetch from 'cross-fetch';
 import debug from 'debug';
-import { CHROME_USER_AGENT } from './api';
+import { CHROME_SEC_CH_UA, CHROME_USER_AGENT } from './api';
 
 const log = debug('twitter-scraper:xctxid');
 
@@ -40,8 +40,7 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
     'cache-control': 'no-cache',
     pragma: 'no-cache',
     priority: 'u=0, i',
-    'sec-ch-ua':
-      '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
+    'sec-ch-ua': CHROME_SEC_CH_UA,
     'sec-ch-ua-mobile': '?0',
     'sec-ch-ua-platform': '"Windows"',
     'sec-fetch-dest': 'document',
@@ -84,7 +83,7 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
 
   if (migrationRedirectionUrl) {
     // Follow redirection URL
-    const redirectResponse = await fetch(migrationRedirectionUrl[0]);
+    const redirectResponse = await fetchFn(migrationRedirectionUrl[0]);
 
     if (!redirectResponse.ok) {
       throw new Error(
@@ -120,7 +119,7 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
     }
 
     // Submit form using POST request
-    const formResponse = await fetch(url, {
+    const formResponse = await fetchFn(url, {
       method: method,
       body: requestPayload,
       headers,

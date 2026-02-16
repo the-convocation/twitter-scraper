@@ -40,7 +40,10 @@ import {
   fetchLikedTweets,
 } from './tweets';
 import fetch from 'cross-fetch';
+import debug from 'debug';
 import { RateLimitStrategy } from './rate-limit';
+
+const log = debug('twitter-scraper:scraper');
 import {
   DmConversationTimeline,
   DmInbox,
@@ -612,8 +615,8 @@ export class Scraper {
         cookieString.includes('ct0') &&
         !cookieString.includes('auth_token')
       ) {
-        console.warn(
-          'Warning: auth_token cookie is missing. This is required for authenticated API access. ' +
+        log(
+          'auth_token cookie is missing. This is required for authenticated API access. ' +
             'The auth_token is an HttpOnly cookie that cannot be accessed via document.cookie. ' +
             'Export it using a browser extension (e.g., EditThisCookie) or DevTools Application tab.',
         );

@@ -193,13 +193,17 @@ export class TwitterGuestAuth implements TwitterAuth {
     return new Date(this.guestCreatedAt);
   }
 
-  async installTo(
+  /**
+   * Install only authentication credentials (bearer token, guest token, cookies)
+   * without browser fingerprint or platform headers. Useful for callers that
+   * build their own header set (e.g. the login flow).
+   */
+  protected async installAuthCredentials(
     headers: Headers,
-    url: string,
     bearerTokenOverride?: string,
   ): Promise<void> {
-    // Use the override token if provided, otherwise use the instance's bearer token
     const tokenToUse = bearerTokenOverride ?? this.bearerToken;
+    headers.set('authorization', `Bearer ${tokenToUse}`);
 
     // Only use guest tokens when not overriding the bearer token
     // Guest tokens are tied to the bearer token they were generated with
@@ -213,7 +217,15 @@ export class TwitterGuestAuth implements TwitterAuth {
       }
     }
 
-    headers.set('authorization', `Bearer ${tokenToUse}`);
+    headers.set('cookie', await this.getCookieString());
+  }
+
+  async installTo(
+    headers: Headers,
+    url: string,
+    bearerTokenOverride?: string,
+  ): Promise<void> {
+    await this.installAuthCredentials(headers, bearerTokenOverride);
 
     headers.set('user-agent', CHROME_USER_AGENT);
 
@@ -256,8 +268,6 @@ export class TwitterGuestAuth implements TwitterAuth {
         headers.set('x-xp-forwarded-for', xpffHeader);
       }
     }
-
-    headers.set('cookie', await this.getCookieString());
   }
 
   async installCsrfToken(headers: Headers): Promise<void> {

@@ -58,18 +58,19 @@ class ThriftReader {
     return val;
   }
 
-  /** Read an unsigned 32-bit big-endian integer. */
+  /** Read a signed 32-bit big-endian integer. */
   readI32(): number {
-    const val = this.view.getUint32(this.offset);
+    const val = this.view.getInt32(this.offset);
     this.offset += 4;
     return val;
   }
 
   /** Read a 64-bit integer as a decimal string (avoids precision loss). */
   readI64AsString(): string {
-    const hi = this.readI32();
-    const lo = this.readI32();
-    // Combine as unsigned 64-bit integer string
+    // Read as unsigned halves to correctly combine into a 64-bit value
+    const hi = this.view.getUint32(this.offset);
+    const lo = this.view.getUint32(this.offset + 4);
+    this.offset += 8;
     if (hi === 0) return lo.toString();
     return (BigInt(hi) * BigInt(4294967296) + BigInt(lo)).toString();
   }

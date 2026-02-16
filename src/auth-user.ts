@@ -9,7 +9,7 @@ import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
 import { FetchParameters } from './api-types';
 import debug from 'debug';
-import { generateXPFFHeader } from './xpff';
+
 import { generateTransactionId } from './xctxid';
 import { generateLocalCastleToken } from './castle';
 
@@ -393,76 +393,18 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     url: string,
     bearerTokenOverride?: string,
   ): Promise<void> {
-    // Use the override token if provided, otherwise use the instance's bearer token
-    const tokenToUse = bearerTokenOverride ?? this.bearerToken;
-    headers.set('authorization', `Bearer ${tokenToUse}`);
-
-    // User-Agent must match the JA3 TLS fingerprint (Chrome 144)
-    headers.set('user-agent', CHROME_USER_AGENT);
-
-    // Standard browser accept headers - required by Twitter API validation
-    if (!headers.has('accept')) {
-      headers.set('accept', '*/*');
-    }
-    headers.set('accept-language', 'en-US,en;q=0.9');
+    // Reuse all shared browser + auth headers from the guest auth base class
+    await super.installTo(headers, url, bearerTokenOverride);
 
     // CRITICAL: Tell Twitter this is an authenticated user session (not guest)
     headers.set('x-twitter-auth-type', 'OAuth2Session');
     headers.set('x-twitter-active-user', 'yes');
     headers.set('x-twitter-client-language', 'en');
 
-    // Chrome Client Hints - important for avoiding bot detection
-    headers.set('sec-ch-ua', CHROME_SEC_CH_UA);
-    headers.set('sec-ch-ua-mobile', '?0');
-    headers.set('sec-ch-ua-platform', '"Windows"');
-
-    // Referer header - required by Cloudflare for GraphQL endpoints
-    headers.set('referer', 'https://x.com/');
-
-    // Origin header - required for cross-origin requests from x.com to api.x.com
-    headers.set('origin', 'https://x.com');
-
-    // Sec-Fetch headers - automatically set by browsers, required for API authentication
-    // Since we send requests from x.com origin to api.x.com, these are "same-site" (not same-origin)
-    headers.set('sec-fetch-site', 'same-site');
-    headers.set('sec-fetch-mode', 'cors');
-    headers.set('sec-fetch-dest', 'empty');
-
-    // Chrome priority hint - present on all API requests
-    headers.set('priority', 'u=1, i');
-
-    // Set content-type for GraphQL requests if not already set
-    if (!headers.has('content-type') && url.includes('/graphql/')) {
-      headers.set('content-type', 'application/json');
-    }
-
-    // Transaction ID for request tracking
-    if (this.options?.experimental?.xClientTransactionId) {
-      const transactionId = await generateTransactionId(
-        url,
-        this.fetch.bind(this),
-        'GET',
-      );
-      headers.set('x-client-transaction-id', transactionId);
-    }
-
-    if (this.guestToken) {
-      // Guest token is optional for authenticated users
-      headers.set('x-guest-token', this.guestToken);
-    }
-
-    await this.installCsrfToken(headers);
-
-    if (this.options?.experimental?.xpff) {
-      const guestId = await this.guestId();
-      if (guestId != null) {
-        const xpffHeader = await generateXPFFHeader(guestId);
-        headers.set('x-xp-forwarded-for', xpffHeader);
-      }
-    }
-
-    const cookie = await this.getCookieString();
-    headers.set('cookie', cookie);
+    // Note: Transaction ID generation is NOT done here. It is handled by
+    // requestApi() (api.ts) which knows the actual HTTP method (GET vs POST).
+    // Generating it here would use the wrong method and be immediately
+    // overwritten by requestApi anyway.
   }
 
   private async initLogin(): Promise<FlowTokenResult> {
@@ -885,10 +827,20 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     log(`Making POST request to ${onboardingTaskUrl}`);
-    log('Request data:', JSON.stringify(data, null, 2));
+    log(
+      'Request data:',
+      JSON.stringify(
+        data,
+        (key, value) => (key === 'password' ? '[REDACTED]' : value),
+        2,
+      ),
+    );
     // Match exact headers observed from real Chrome browser during login flow.
     // Notable absences vs authenticated requests: no cache-control, no pragma,
-    // no x-csrf-token, no x-twitter-auth-type.
+    // no x-csrf-token, no x-twitter-auth-type, no x-xp-forwarded-for.
+    // We use installAuthCredentials() (not installTo()) to get only the auth
+    // essentials (bearer token, guest token, cookies) without browser headers
+    // that would need to be deleted afterwards.
     const headers = new Headers({
       accept: '*/*',
       'accept-language': 'en-US,en;q=0.9',
@@ -906,35 +858,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
     });
-    await this.installTo(headers, onboardingTaskUrl);
-
-    // Remove headers that installTo() sets for authenticated requests but that
-    // real browsers do NOT send during the unauthenticated login flow.
-    // Sending these during login triggers bot detection (error 399).
-    headers.delete('x-twitter-auth-type');
-    headers.delete('x-csrf-token');
-    // x-xp-forwarded-for is a custom IP spoofing header - not sent by real browsers
-    headers.delete('x-xp-forwarded-for');
-    // Also remove the GET transaction ID set by installTo - we generate the POST one below
-    headers.delete('x-client-transaction-id');
-
-    // Debug: log all headers and cookies being sent
-    const headerEntries: string[] = [];
-    headers.forEach((value, name) => {
-      if (name.toLowerCase() === 'cookie') {
-        // Show cookie names but not values for security
-        const cookieNames = value.split(';').map((c) => c.trim().split('=')[0]);
-        headerEntries.push(`  ${name}: [${cookieNames.join(', ')}]`);
-      } else if (
-        name.toLowerCase() === 'authorization' ||
-        name.toLowerCase() === 'x-guest-token'
-      ) {
-        headerEntries.push(`  ${name}: ${value.substring(0, 30)}...`);
-      } else {
-        headerEntries.push(`  ${name}: ${value}`);
-      }
-    });
-    log('Headers being sent:\n' + headerEntries.join('\n'));
+    await this.installAuthCredentials(headers);
 
     // Generate x-client-transaction-id if enabled - real browsers send this during login.
     if (this.options?.experimental?.xClientTransactionId) {
