@@ -41,6 +41,8 @@
     "docs:generate": "typedoc --options typedoc.json",
     "docs:deploy": "yarn docs:generate && gh-pages -d docs",
     "format": "prettier --write src/**/*.ts examples/**/*.{ts,js,tsx}",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "prepare": "husky install",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --forceExit"
   },
