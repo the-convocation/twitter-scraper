@@ -6,11 +6,43 @@
  * login flow to avoid error 399 ("suspicious activity").
  *
  * This generates Castle.io SDK v2.6.0 compatible tokens (version 11).
+ *
+ * Token structure overview:
+ *   1. Collect device/browser fingerprint data (3 parts)
+ *   2. Collect behavioral event data (mouse/keyboard/touch metrics)
+ *   3. Apply layered XOR encryption with timestamp and UUID keys
+ *   4. Prepend header (timestamp, SDK version, publisher key, UUID)
+ *   5. XXTEA-encrypt the entire payload
+ *   6. Base64URL-encode with version prefix and random XOR byte
  */
 
 import debug from 'debug';
 
 const log = debug('twitter-scraper:castle');
+
+// ─── Field Encoding Types ────────────────────────────────────────────────────
+
+/**
+ * How a fingerprint field's value is serialized into the token.
+ * Each field has a 1-byte header (5-bit index + 3-bit encoding type),
+ * followed by encoding-specific body bytes.
+ */
+enum FieldEncoding {
+  /** No body bytes (field presence alone is the signal) */
+  Empty = -1,
+  /** Marker field, no body bytes */
+  Marker = 1,
+  /** Single byte value */
+  Byte = 3,
+  /** XXTEA-encrypted byte array with length prefix */
+  EncryptedBytes = 4,
+  /** 1 or 2 byte value (2 bytes with high bit set if > 127) */
+  CompactInt = 5,
+  /** Single byte, value is Math.round()'d first */
+  RoundedByte = 6,
+  /** Raw bytes appended directly after header */
+  RawAppend = 7,
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -20,28 +52,74 @@ const TWITTER_CASTLE_PK = 'AvRa79bHyJSYSQHnRpcVtzyxetSvFerx';
 /** XXTEA encryption key for the entire token */
 const XXTEA_KEY = [1164413191, 3891440048, 185273099, 2746598870];
 
-/** Per-field XXTEA key constants: key = [fieldIndex, initTime, ...these] */
+/** Per-field XXTEA key tail: field key = [fieldIndex, initTime, ...PER_FIELD_KEY_TAIL] */
 const PER_FIELD_KEY_TAIL = [
   16373134, 643144773, 1762804430, 1186572681, 1164413191,
 ];
 
-/** Timestamp epoch offset (seconds since ~Aug 23 2018) */
+/** Timestamp epoch offset: seconds since ~Aug 23 2018 */
 const TS_EPOCH = 1535e6;
 
-/** SDK version 2.6.0 encoded: (3<<13)|(1<<11)|(6<<6)|0 = 0x6980 */
+/** SDK version 2.6.0 encoded as 16-bit: (3<<13)|(1<<11)|(6<<6)|0 = 0x6980 */
 const SDK_VERSION = 0x6980;
 
 /** Token format version byte (v11) */
 const TOKEN_VERSION = 0x0b;
 
-// Value encoding type IDs
-const B2H = 3;
-const SBA = 4; // SERIALIZED_BYTE_ARRAY
-const B2H_CHK = 5; // B2H_WITH_CHECKS
-const B2H_RND = 6; // B2H_ROUNDED
-const APPEND = 7; // JUST_APPEND
-const EMPTY = -1;
-const UNK = 1;
+/**
+ * Fingerprint part indices — each section is tagged with a part ID
+ * in its size/index header byte.
+ */
+const FP_PART = {
+  DEVICE: 0, // Part 1: hardware/OS/rendering fingerprint
+  BROWSER: 4, // Part 2: browser environment fingerprint
+  TIMING: 7, // Part 3: timing-based fingerprint
+} as const;
+
+// ─── Simulated Browser Profile ──────────────────────────────────────────────
+
+/**
+ * Simulated browser environment values embedded in the fingerprint.
+ * These should match a realistic Chrome-on-Windows configuration.
+ */
+interface BrowserProfile {
+  locale: string;
+  language: string;
+  timezone: string;
+  screenWidth: number;
+  screenHeight: number;
+  /** Available screen width (excludes OS chrome like taskbars) */
+  availableWidth: number;
+  /** Available screen height (excludes OS chrome like taskbars) */
+  availableHeight: number;
+  /** WebGL ANGLE renderer string */
+  gpuRenderer: string;
+  /** Device memory in GB (encoded as value * 10) */
+  deviceMemoryGB: number;
+  /** Logical CPU core count */
+  hardwareConcurrency: number;
+  /** Screen color depth in bits */
+  colorDepth: number;
+  /** CSS device pixel ratio (encoded as value * 10) */
+  devicePixelRatio: number;
+}
+
+/** Default profile: Chrome 144 on Windows 10, NVIDIA GTX 1080 Ti, 1080p */
+const DEFAULT_PROFILE: BrowserProfile = {
+  locale: 'en-US',
+  language: 'en',
+  timezone: 'America/New_York',
+  screenWidth: 1920,
+  screenHeight: 1080,
+  availableWidth: 1920,
+  availableHeight: 1032, // 1080 minus Windows taskbar (~48px)
+  gpuRenderer:
+    'ANGLE (NVIDIA, NVIDIA GeForce GTX 1080 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  deviceMemoryGB: 8,
+  hardwareConcurrency: 24,
+  colorDepth: 24,
+  devicePixelRatio: 1.0,
+};
 
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
@@ -77,8 +155,8 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
   return out;
 }
 
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
+function toHex(input: Uint8Array): string {
+  return Array.from(input)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 }
@@ -94,14 +172,17 @@ function textEnc(s: string): Uint8Array {
   return new TextEncoder().encode(s);
 }
 
+/** Create a Uint8Array from individual byte values */
 function u8(...vals: number[]): Uint8Array {
   return new Uint8Array(vals);
 }
 
+/** Encode a 16-bit value as 2 big-endian bytes */
 function be16(v: number): Uint8Array {
   return u8((v >>> 8) & 0xff, v & 0xff);
 }
 
+/** Encode a 32-bit value as 4 big-endian bytes */
 function be32(v: number): Uint8Array {
   return u8((v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff);
 }
@@ -129,14 +210,20 @@ function base64url(data: Uint8Array): string {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// ─── XXTEA ──────────────────────────────────────────────────────────────────
+// ─── XXTEA Encryption ───────────────────────────────────────────────────────
 
+/**
+ * Encrypt data using XXTEA (Corrected Block TEA) algorithm.
+ * Used for both the overall token encryption and per-field encryption.
+ */
 function xxteaEncrypt(data: Uint8Array, key: number[]): Uint8Array {
+  // Pad to 4-byte boundary
   const padLen = Math.ceil(data.length / 4) * 4;
   const padded = new Uint8Array(padLen);
   padded.set(data);
 
   const n = padLen / 4;
+  // Read as little-endian 32-bit words
   const v = new Uint32Array(n);
   for (let i = 0; i < n; i++) {
     v[i] =
@@ -176,6 +263,7 @@ function xxteaEncrypt(data: Uint8Array, key: number[]): Uint8Array {
     z = v[u];
   }
 
+  // Write back as little-endian bytes
   const out = new Uint8Array(n * 4);
   for (let i = 0; i < n; i++) {
     out[i * 4] = v[i] & 0xff;
@@ -186,13 +274,14 @@ function xxteaEncrypt(data: Uint8Array, key: number[]): Uint8Array {
   return out;
 }
 
+/** Encrypt a fingerprint field's data using per-field XXTEA key */
 function fieldEncrypt(
   data: Uint8Array,
-  index: number,
+  fieldIndex: number,
   initTime: number,
 ): Uint8Array {
   return xxteaEncrypt(data, [
-    index,
+    fieldIndex,
     Math.floor(initTime),
     ...PER_FIELD_KEY_TAIL,
   ]);
@@ -202,7 +291,7 @@ function fieldEncrypt(
 
 function encodeTimestampBytes(ms: number): Uint8Array {
   let t = Math.floor(ms / 1000 - TS_EPOCH);
-  t = Math.max(Math.min(t, 268435455), 0);
+  t = Math.max(Math.min(t, 268435455), 0); // Clamp to 28-bit unsigned
   return be32(t);
 }
 
@@ -222,6 +311,10 @@ function encodeTimestampEncrypted(ms: number): string {
 
 // ─── Key Derivation ─────────────────────────────────────────────────────────
 
+/**
+ * Derive an XOR key from a hex string by slicing, rotating, and XOR-ing.
+ * Used for the two-layer XOR encryption of fingerprint data.
+ */
 function deriveAndXor(
   keyHex: string,
   sliceLen: number,
@@ -235,8 +328,12 @@ function deriveAndXor(
   return xorBytes(data, fromHex(rotated));
 }
 
-// ─── CustomFloat Encoding ───────────────────────────────────────────────────
+// ─── Custom Float Encoding ──────────────────────────────────────────────────
 
+/**
+ * Encode a floating-point value into a compact format with configurable
+ * exponent and mantissa bit widths. Used for behavioral metric encoding.
+ */
 function customFloatEncode(
   expBits: number,
   manBits: number,
@@ -270,45 +367,62 @@ function customFloatEncode(
   return (exp << manBits) | mantissa;
 }
 
+/**
+ * Encode a behavioral float value for the token.
+ * Values 0-15 use a 2-bit exponent / 4-bit mantissa format.
+ * Values > 15 use a 4-bit exponent / 3-bit mantissa format.
+ */
 function encodeFloatVal(v: number): number {
   const n = Math.max(v, 0);
   if (n <= 15) return 64 | customFloatEncode(2, 4, n + 1);
   return 128 | customFloatEncode(4, 3, n - 14);
 }
 
-// ─── FP Value Processing ────────────────────────────────────────────────────
+// ─── Field Serialization ────────────────────────────────────────────────────
 
-function fpVal(
+/**
+ * Serialize a single fingerprint field into its binary representation.
+ *
+ * Format: [header byte] [optional body bytes]
+ * Header: upper 5 bits = field index, lower 3 bits = encoding type
+ *
+ * @param index - Field index (0-31) within the fingerprint part
+ * @param encoding - How the value should be serialized
+ * @param val - The field value (number or byte array)
+ * @param initTime - Init timestamp (required for EncryptedBytes encoding)
+ */
+function encodeField(
   index: number,
-  type: number,
+  encoding: FieldEncoding,
   val: number | Uint8Array,
   initTime?: number,
 ): Uint8Array {
-  // Header byte: field index in upper 5 bits, type in lower 3 bits
-  // Note: EMPTY=-1, 7 & -1 = 7 in both Python and JS bitwise
-  const hdr = u8(((31 & index) << 3) | (7 & type));
+  // Header byte: field index in upper 5 bits, encoding type in lower 3 bits
+  // Note: FieldEncoding.Empty = -1, and 7 & -1 = 7 in JS bitwise
+  const hdr = u8(((31 & index) << 3) | (7 & encoding));
 
-  if (type === EMPTY || type === UNK) return hdr;
+  if (encoding === FieldEncoding.Empty || encoding === FieldEncoding.Marker)
+    return hdr;
 
   let body: Uint8Array;
-  switch (type) {
-    case B2H:
+  switch (encoding) {
+    case FieldEncoding.Byte:
       body = u8(val as number);
       break;
-    case B2H_RND:
+    case FieldEncoding.RoundedByte:
       body = u8(Math.round(val as number));
       break;
-    case B2H_CHK: {
+    case FieldEncoding.CompactInt: {
       const v = val as number;
       body = v <= 127 ? u8(v) : be16((1 << 15) | (32767 & v));
       break;
     }
-    case SBA: {
+    case FieldEncoding.EncryptedBytes: {
       const enc = fieldEncrypt(val as Uint8Array, index, initTime!);
       body = concat(u8(enc.length), enc);
       break;
     }
-    case APPEND:
+    case FieldEncoding.RawAppend:
       body = val instanceof Uint8Array ? val : u8(val as number);
       break;
     default:
@@ -317,8 +431,9 @@ function fpVal(
   return concat(hdr, body);
 }
 
-// ─── Encoding Helpers ───────────────────────────────────────────────────────
+// ─── Bit Encoding Helpers ───────────────────────────────────────────────────
 
+/** Pack a list of set-bit positions into a fixed-size byte array (big-endian) */
 function encodeBits(bits: number[], byteSize: number): Uint8Array {
   const numBytes = byteSize / 8;
   const arr = new Uint8Array(numBytes);
@@ -329,138 +444,55 @@ function encodeBits(bits: number[], byteSize: number): Uint8Array {
   return arr;
 }
 
+/**
+ * Encode screen dimensions. If screen and available dimensions match,
+ * uses a compact 2-byte form with high bit set; otherwise 4 bytes.
+ */
 function screenDimBytes(screen: number, avail: number): Uint8Array {
   const r = 32767 & screen;
   const e = 65535 & avail;
   return r === e ? be16(32768 | r) : concat(be16(r), be16(e));
 }
 
-function boolsToBin(arr: boolean[], t: number): number {
-  const e = arr.length > t ? arr.slice(0, t) : arr;
+/** Convert boolean array to a packed integer bitfield */
+function boolsToBin(arr: boolean[], totalBits: number): number {
+  const e = arr.length > totalBits ? arr.slice(0, totalBits) : arr;
   const c = e.length;
   let r = 0;
   for (let i = c - 1; i >= 0; i--) {
     if (e[i]) r |= 1 << (c - i - 1);
   }
-  if (c < t) r <<= t - c;
+  if (c < totalBits) r <<= totalBits - c;
   return r;
 }
 
-// ─── Fingerprint Part 1 ────────────────────────────────────────────────────
+// ─── Codec Playability ──────────────────────────────────────────────────────
 
-function getFpOne(
-  initTime: number,
-  userAgent: string,
-  locale: string,
-  screenW: number,
-  screenH: number,
-  availW: number,
-  availH: number,
-  gpu: string,
-  timezone: string,
-): Uint8Array {
-  // Compute timezone offset
-  const tzInfo = getTimezoneDiff(timezone);
-
-  // Encrypt user agent separately (uses JUST_APPEND with manual XXTEA)
-  const uaEnc = fieldEncrypt(textEnc(userAgent), 12, initTime);
-  const uaPayload = concat(u8(1), u8(uaEnc.length), uaEnc);
-
-  const fields: Uint8Array[] = [
-    fpVal(0, B2H, 1), // Platform: Win32
-    fpVal(1, B2H, 0), // Vendor: Google Inc
-    fpVal(2, SBA, textEnc(locale), initTime), // Locale
-    fpVal(3, B2H_RND, 80), // Device memory: 8GB*10
-    fpVal(
-      4,
-      APPEND,
-      concat(screenDimBytes(screenW, availW), screenDimBytes(screenH, availH)),
-    ),
-    fpVal(5, B2H_CHK, 24), // Screen depth
-    fpVal(6, B2H_CHK, 24), // Hardware concurrency
-    fpVal(7, B2H_RND, 10), // Pixel ratio: 1.0*10
-    fpVal(8, APPEND, u8(tzInfo.offset, tzInfo.dstDiff)), // Timezone
-    fpVal(9, APPEND, u8(0x02, 0x7d, 0x5f, 0xc9, 0xa7)), // MIME hash
-    fpVal(10, APPEND, u8(0x05, 0x72, 0x93, 0x02, 0x08)), // Plugins hash
-    fpVal(11, APPEND, concat(u8(12), encodeBits([0, 1, 2, 3, 4, 5, 6], 16))), // Browser features
-    fpVal(12, APPEND, uaPayload), // User agent
-    fpVal(13, SBA, textEnc('54b4b5cf'), initTime), // Font render hash
-    fpVal(14, APPEND, concat(u8(3), encodeBits([0, 1, 2], 8))), // Media input
-    // Fields 15 (DoNotTrack) and 16 (JavaEnabled) are NOT included
-    fpVal(17, B2H, 0), // Product sub
-    fpVal(18, SBA, textEnc('c6749e76'), initTime), // Circle render hash
-    fpVal(19, SBA, textEnc(gpu), initTime), // Graphics card
-    fpVal(20, SBA, textEnc('12/31/1969, 7:00:00 PM'), initTime), // Epoch locale
-    fpVal(21, APPEND, concat(u8(8), encodeBits([], 8))), // WebDriver flags (none)
-    fpVal(22, B2H_CHK, 33), // eval.toString().length
-    // Field 23 (NavigatorBuildID) is NOT included
-    fpVal(24, B2H_CHK, 12549), // Max recursion limit
-    fpVal(25, B2H, 0), // Recursion error message enum
-    fpVal(26, B2H, 1), // Recursion error name enum
-    fpVal(27, B2H_CHK, 4644), // Stack trace strlen
-    fpVal(28, APPEND, u8(0x00)), // Touch metric
-    fpVal(29, B2H, 3), // Undefined call err
-    fpVal(30, APPEND, u8(0x5d, 0xc5, 0xab, 0xb5, 0x88)), // Navigator props hash
-    fpVal(31, APPEND, encodePlayability()), // Codec playability
-  ];
-
-  const data = concat(...fields);
-  const sizeIdx = ((7 & 0) << 5) | (31 & fields.length);
-  return concat(u8(sizeIdx), data);
-}
-
-function encodePlayability(): Uint8Array {
-  // webm=2, mp4=2, ogg=0, aac=2, xm4a=1, wav=2, mpeg=2, ogg2=2
-  const codecs = [2, 2, 0, 2, 1, 2, 2, 2];
-  const bits = codecs.map((c) => c.toString(2).padStart(2, '0')).join('');
-  const val = parseInt(bits, 2);
-  return be16(val);
-}
-
-function getTimezoneDiff(tz: string): { offset: number; dstDiff: number } {
-  // Known timezone offsets (offset_minutes/15, dst_diff_minutes/15)
-  const known: Record<string, { offset: number; dstDiff: number }> = {
-    'America/New_York': { offset: 20, dstDiff: 4 },
-    'America/Chicago': { offset: 24, dstDiff: 4 },
-    'America/Los_Angeles': { offset: 32, dstDiff: 4 },
-    'America/Denver': { offset: 28, dstDiff: 4 },
-    'America/Sao_Paulo': { offset: 12, dstDiff: 4 },
-    'America/Mexico_City': { offset: 24, dstDiff: 4 },
-    'Asia/Shanghai': { offset: 246, dstDiff: 0 }, // -480/15 = -32 → unsigned: 256-32=224... hmm
-    'Asia/Tokyo': { offset: 220, dstDiff: 0 },
-    'Europe/London': { offset: 0, dstDiff: 4 },
-    'Europe/Berlin': { offset: 252, dstDiff: 4 },
-    UTC: { offset: 0, dstDiff: 0 },
+/**
+ * Encode media codec support as a 2-byte bitfield.
+ * Values: 0 = unsupported, 1 = maybe, 2 = probably
+ */
+function encodeCodecPlayability(): Uint8Array {
+  const codecs = {
+    webm: 2, // VP8/VP9
+    mp4: 2, // H.264
+    ogg: 0, // Theora (Chrome dropped support)
+    aac: 2, // AAC audio
+    xm4a: 1, // M4A container
+    wav: 2, // PCM audio
+    mpeg: 2, // MP3 audio
+    ogg2: 2, // Vorbis audio
   };
-
-  // Try to compute dynamically
-  try {
-    const now = new Date();
-    const jan = new Date(now.getFullYear(), 0, 1);
-    const jul = new Date(now.getFullYear(), 6, 1);
-
-    const getOff = (d: Date, zone: string) => {
-      const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const local = new Date(d.toLocaleString('en-US', { timeZone: zone }));
-      return (utc.getTime() - local.getTime()) / 60000;
-    };
-
-    const curOff = getOff(now, tz);
-    const janOff = getOff(jan, tz);
-    const julOff = getOff(jul, tz);
-    const diff = Math.abs(janOff - julOff);
-    return {
-      offset: Math.floor(curOff / 15) & 0xff,
-      dstDiff: Math.floor(diff / 15) & 0xff,
-    };
-  } catch {
-    return known[tz] || { offset: 20, dstDiff: 4 };
-  }
+  const bits = Object.values(codecs)
+    .map((c) => c.toString(2).padStart(2, '0'))
+    .join('');
+  return be16(parseInt(bits, 2));
 }
 
-// ─── Fingerprint Part 2 ────────────────────────────────────────────────────
+// ─── Timezone Utilities ─────────────────────────────────────────────────────
 
-const TZ_ENUM: Record<string, number> = {
+/** Known timezone enum values for compact encoding in fingerprint Part 2 */
+const TIMEZONE_ENUM: Record<string, number> = {
   'America/New_York': 0,
   'America/Sao_Paulo': 1,
   'America/Chicago': 2,
@@ -469,191 +501,439 @@ const TZ_ENUM: Record<string, number> = {
   'Asia/Shanghai': 5,
 };
 
-function getFpTwo(
-  timezone: string,
-  locale: string,
-  language: string,
+/**
+ * Compute timezone offset and DST difference for fingerprinting.
+ * Returns values as (minutes / 15) encoded as unsigned bytes.
+ */
+function getTimezoneInfo(tz: string): { offset: number; dstDiff: number } {
+  const knownOffsets: Record<string, { offset: number; dstDiff: number }> = {
+    'America/New_York': { offset: 20, dstDiff: 4 },
+    'America/Chicago': { offset: 24, dstDiff: 4 },
+    'America/Los_Angeles': { offset: 32, dstDiff: 4 },
+    'America/Denver': { offset: 28, dstDiff: 4 },
+    'America/Sao_Paulo': { offset: 12, dstDiff: 4 },
+    'America/Mexico_City': { offset: 24, dstDiff: 4 },
+    'Asia/Shanghai': { offset: 246, dstDiff: 0 },
+    'Asia/Tokyo': { offset: 220, dstDiff: 0 },
+    'Europe/London': { offset: 0, dstDiff: 4 },
+    'Europe/Berlin': { offset: 252, dstDiff: 4 },
+    UTC: { offset: 0, dstDiff: 0 },
+  };
+
+  try {
+    const now = new Date();
+    const jan = new Date(now.getFullYear(), 0, 1);
+    const jul = new Date(now.getFullYear(), 6, 1);
+
+    const getOffset = (date: Date, zone: string) => {
+      const utc = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const local = new Date(date.toLocaleString('en-US', { timeZone: zone }));
+      return (utc.getTime() - local.getTime()) / 60000;
+    };
+
+    const currentOffset = getOffset(now, tz);
+    const janOffset = getOffset(jan, tz);
+    const julOffset = getOffset(jul, tz);
+    const dstDifference = Math.abs(janOffset - julOffset);
+
+    return {
+      offset: Math.floor(currentOffset / 15) & 0xff,
+      dstDiff: Math.floor(dstDifference / 15) & 0xff,
+    };
+  } catch {
+    return knownOffsets[tz] || { offset: 20, dstDiff: 4 };
+  }
+}
+
+// ─── Fingerprint Part 1: Device & Rendering ─────────────────────────────────
+
+/**
+ * Build device/rendering fingerprint fields (Part 1).
+ * Contains hardware info, screen dimensions, browser features,
+ * canvas/WebGL render hashes, and the user agent string.
+ */
+function buildDeviceFingerprint(
   initTime: number,
+  profile: BrowserProfile,
+  userAgent: string,
 ): Uint8Array {
-  const tzField =
-    timezone in TZ_ENUM
-      ? fpVal(1, B2H, TZ_ENUM[timezone])
-      : fpVal(1, SBA, textEnc(timezone), initTime);
+  const tz = getTimezoneInfo(profile.timezone);
+  const { Byte, EncryptedBytes, CompactInt, RoundedByte, RawAppend } =
+    FieldEncoding;
+
+  // Field 12 (user agent) uses manual XXTEA encryption with RawAppend
+  const encryptedUA = fieldEncrypt(textEnc(userAgent), 12, initTime);
+  const uaPayload = concat(u8(1), u8(encryptedUA.length), encryptedUA);
 
   const fields: Uint8Array[] = [
-    fpVal(0, B2H, 0), // Constant
-    tzField, // Timezone
-    fpVal(2, SBA, textEnc(`${locale},${language}`), initTime), // Language array
-    fpVal(6, B2H_CHK, 0), // Expected property strings
-    fpVal(10, APPEND, concat(u8(4), encodeBits([1, 2, 3], 8))), // Castle data bitfield
-    fpVal(12, B2H_CHK, 80), // Negative error length
-    fpVal(13, APPEND, u8(9, 0, 0)), // Driver check
-    fpVal(17, APPEND, concat(u8(0x0d), encodeBits([1, 5, 8, 9, 10], 16))), // Chrome features
-    fpVal(18, UNK, 0), // Device logic expected
-    fpVal(21, APPEND, u8(0, 0, 0, 0)), // Class properties count
-    fpVal(22, SBA, textEnc(locale), initTime), // User locale 2
-    fpVal(23, APPEND, concat(u8(2), encodeBits([0], 8))), // Worker bitset
-    fpVal(24, APPEND, concat(be16(0), be16(randInt(10, 30)))), // Inner/outer dims diff
+    encodeField(0, Byte, 1), // Platform: Win32
+    encodeField(1, Byte, 0), // Vendor: Google Inc.
+    encodeField(2, EncryptedBytes, textEnc(profile.locale), initTime), // Locale
+    encodeField(3, RoundedByte, profile.deviceMemoryGB * 10), // Device memory (GB * 10)
+    encodeField(
+      4,
+      RawAppend,
+      concat(
+        // Screen dimensions (width + height)
+        screenDimBytes(profile.screenWidth, profile.availableWidth),
+        screenDimBytes(profile.screenHeight, profile.availableHeight),
+      ),
+    ),
+    encodeField(5, CompactInt, profile.colorDepth), // Screen color depth
+    encodeField(6, CompactInt, profile.hardwareConcurrency), // CPU logical cores
+    encodeField(7, RoundedByte, profile.devicePixelRatio * 10), // Pixel ratio (* 10)
+    encodeField(8, RawAppend, u8(tz.offset, tz.dstDiff)), // Timezone offset info
+    encodeField(9, RawAppend, u8(0x02, 0x7d, 0x5f, 0xc9, 0xa7)), // MIME type hash
+    encodeField(10, RawAppend, u8(0x05, 0x72, 0x93, 0x02, 0x08)), // Browser plugins hash
+    encodeField(
+      11,
+      RawAppend, // Browser feature flags
+      concat(u8(12), encodeBits([0, 1, 2, 3, 4, 5, 6], 16)),
+    ),
+    encodeField(12, RawAppend, uaPayload), // User agent (encrypted)
+    encodeField(13, EncryptedBytes, textEnc('54b4b5cf'), initTime), // Canvas font hash
+    encodeField(
+      14,
+      RawAppend, // Media input devices
+      concat(u8(3), encodeBits([0, 1, 2], 8)),
+    ),
+    // Fields 15 (DoNotTrack) and 16 (JavaEnabled) intentionally omitted
+    encodeField(17, Byte, 0), // productSub type
+    encodeField(18, EncryptedBytes, textEnc('c6749e76'), initTime), // Canvas circle hash
+    encodeField(19, EncryptedBytes, textEnc(profile.gpuRenderer), initTime), // WebGL renderer
+    encodeField(
+      20,
+      EncryptedBytes, // Epoch locale string
+      textEnc('12/31/1969, 7:00:00 PM'),
+      initTime,
+    ),
+    encodeField(
+      21,
+      RawAppend, // WebDriver flags (none set)
+      concat(u8(8), encodeBits([], 8)),
+    ),
+    encodeField(22, CompactInt, 33), // eval.toString() length
+    // Field 23 (navigator.buildID) intentionally omitted (Chrome doesn't have it)
+    encodeField(24, CompactInt, 12549), // Max recursion depth
+    encodeField(25, Byte, 0), // Recursion error message type
+    encodeField(26, Byte, 1), // Recursion error name type
+    encodeField(27, CompactInt, 4644), // Stack trace string length
+    encodeField(28, RawAppend, u8(0x00)), // Touch support metric
+    encodeField(29, Byte, 3), // Undefined call error type
+    encodeField(30, RawAppend, u8(0x5d, 0xc5, 0xab, 0xb5, 0x88)), // Navigator props hash
+    encodeField(31, RawAppend, encodeCodecPlayability()), // Codec playability
   ];
 
   const data = concat(...fields);
-  const sizeIdx = ((7 & 4) << 5) | (31 & fields.length);
+  const sizeIdx = ((7 & FP_PART.DEVICE) << 5) | (31 & fields.length);
   return concat(u8(sizeIdx), data);
 }
 
-// ─── Fingerprint Part 3 ────────────────────────────────────────────────────
+// ─── Fingerprint Part 2: Browser Environment ────────────────────────────────
 
-function getFpThree(initTime: number): Uint8Array {
-  const minute = new Date(initTime).getUTCMinutes();
+/**
+ * Build browser environment fingerprint (Part 2).
+ * Contains timezone, language info, Chrome-specific feature flags,
+ * and various browser environment checks.
+ */
+function buildBrowserFingerprint(
+  profile: BrowserProfile,
+  initTime: number,
+): Uint8Array {
+  const { Byte, EncryptedBytes, CompactInt, Marker, RawAppend } = FieldEncoding;
+
+  // Use compact enum encoding for known timezones, encrypted string otherwise
+  const timezoneField =
+    profile.timezone in TIMEZONE_ENUM
+      ? encodeField(1, Byte, TIMEZONE_ENUM[profile.timezone])
+      : encodeField(1, EncryptedBytes, textEnc(profile.timezone), initTime);
+
   const fields: Uint8Array[] = [
-    fpVal(3, B2H_CHK, 1), // Time since window open
-    fpVal(4, B2H_CHK, minute), // Castle init time minutes
+    encodeField(0, Byte, 0), // Constant marker
+    timezoneField, // Timezone
+    encodeField(
+      2,
+      EncryptedBytes, // Language list
+      textEnc(`${profile.locale},${profile.language}`),
+      initTime,
+    ),
+    encodeField(6, CompactInt, 0), // Expected property count
+    encodeField(
+      10,
+      RawAppend, // Castle data bitfield
+      concat(u8(4), encodeBits([1, 2, 3], 8)),
+    ),
+    encodeField(12, CompactInt, 80), // Negative error string length
+    encodeField(13, RawAppend, u8(9, 0, 0)), // Driver check values
+    encodeField(
+      17,
+      RawAppend, // Chrome feature flags
+      concat(u8(0x0d), encodeBits([1, 5, 8, 9, 10], 16)),
+    ),
+    encodeField(18, Marker, 0), // Device logic expected
+    encodeField(21, RawAppend, u8(0, 0, 0, 0)), // Class properties count
+    encodeField(22, EncryptedBytes, textEnc(profile.locale), initTime), // User locale (secondary)
+    encodeField(
+      23,
+      RawAppend, // Worker capabilities
+      concat(u8(2), encodeBits([0], 8)),
+    ),
+    encodeField(
+      24,
+      RawAppend, // Inner/outer dimension diff
+      concat(be16(0), be16(randInt(10, 30))),
+    ),
   ];
+
   const data = concat(...fields);
-  const sizeIdx = ((7 & 7) << 5) | (31 & fields.length);
+  const sizeIdx = ((7 & FP_PART.BROWSER) << 5) | (31 & fields.length);
+  return concat(u8(sizeIdx), data);
+}
+
+// ─── Fingerprint Part 3: Timing ─────────────────────────────────────────────
+
+/**
+ * Build timing fingerprint (Part 3).
+ * Contains Castle SDK initialization timing data.
+ */
+function buildTimingFingerprint(initTime: number): Uint8Array {
+  const minute = new Date(initTime).getUTCMinutes();
+
+  const fields: Uint8Array[] = [
+    encodeField(3, FieldEncoding.CompactInt, 1), // Time since window.open (ms)
+    encodeField(4, FieldEncoding.CompactInt, minute), // Castle init time (minutes)
+  ];
+
+  const data = concat(...fields);
+  const sizeIdx = ((7 & FP_PART.TIMING) << 5) | (31 & fields.length);
   return concat(u8(sizeIdx), data);
 }
 
 // ─── Event Log ──────────────────────────────────────────────────────────────
 
+/** DOM event type IDs used in the simulated event log */
+const EventType = {
+  CLICK: 0,
+  FOCUS: 5,
+  BLUR: 6,
+  ANIMATIONSTART: 18,
+  MOUSEMOVE: 21,
+  MOUSELEAVE: 25,
+  MOUSEENTER: 26,
+  RESIZE: 27,
+} as const;
+
+/** Flag bit set on events that include a target element ID */
+const HAS_TARGET_FLAG = 128;
+
+/** Target element ID for "unknown element" */
+const TARGET_UNKNOWN = 63;
+
+/**
+ * Generate a simulated DOM event log.
+ * Produces a realistic-looking sequence of mouse, keyboard, and focus events.
+ */
 function generateEventLog(): Uint8Array {
-  const SIMPLE = [21, 18, 25, 26, 27]; // MOUSEMOVE, ANIMATIONSTART, MOUSELEAVE, MOUSEENTER, RESIZE
-  const TARGET = [0, 6, 5]; // CLICK, BLUR, FOCUS
-  const ALL = [...SIMPLE, ...TARGET];
+  const simpleEvents = [
+    EventType.MOUSEMOVE,
+    EventType.ANIMATIONSTART,
+    EventType.MOUSELEAVE,
+    EventType.MOUSEENTER,
+    EventType.RESIZE,
+  ];
+  const targetedEvents: number[] = [
+    EventType.CLICK,
+    EventType.BLUR,
+    EventType.FOCUS,
+  ];
+  const allEvents = [...simpleEvents, ...targetedEvents];
 
   const count = randInt(30, 70);
-  const events: number[] = [];
+  const eventBytes: number[] = [];
+
   for (let i = 0; i < count; i++) {
-    const id = ALL[randInt(0, ALL.length - 1)];
-    if (TARGET.includes(id)) {
-      events.push(id | 128); // has_target flag
-      events.push(63); // target: unknown element
+    const eventId = allEvents[randInt(0, allEvents.length - 1)];
+    if (targetedEvents.includes(eventId)) {
+      eventBytes.push(eventId | HAS_TARGET_FLAG);
+      eventBytes.push(TARGET_UNKNOWN);
     } else {
-      events.push(id);
+      eventBytes.push(eventId);
     }
   }
 
-  const evtBytes = new Uint8Array(events);
-  // Format: [2-byte total length] [0x00] [2-byte count] [event bytes...]
-  const inner = concat(u8(0), be16(count), evtBytes);
+  // Format: [2-byte total length] [0x00] [2-byte event count] [event bytes...]
+  const inner = concat(u8(0), be16(count), new Uint8Array(eventBytes));
   return concat(be16(inner.length), inner);
 }
 
-// ─── Behavioral Event Values ────────────────────────────────────────────────
+// ─── Behavioral Metrics ─────────────────────────────────────────────────────
 
-function getBehavioralBitfield(): Uint8Array {
-  const bits = new Array(15).fill(false);
-  bits[2] = true; // click > 0
-  bits[3] = true; // keydown > 0
-  bits[5] = true; // backspace
-  bits[6] = true; // not-touch
-  bits[9] = true;
-  bits[11] = true;
-  bits[12] = true;
-  const binNum = boolsToBin(bits, 16);
-  const encoded = (6 << 20) | (2 << 16) | (65535 & binNum);
+/**
+ * Build the behavioral bitfield indicating which input types were detected.
+ * Simulates a user who used mouse and keyboard (no touch).
+ */
+function buildBehavioralBitfield(): Uint8Array {
+  const flags = new Array(15).fill(false);
+  flags[2] = true; // Has click events
+  flags[3] = true; // Has keydown events
+  flags[5] = true; // Has backspace key
+  flags[6] = true; // Not a touch device
+  flags[9] = true; // Has mouse movement
+  flags[11] = true; // Has focus events
+  flags[12] = true; // Has scroll events
+
+  const packedBits = boolsToBin(flags, 16);
+  // Encode with type prefix: (6 << 20) | (2 << 16) | value
+  const encoded = (6 << 20) | (2 << 16) | (65535 & packedBits);
   return u8((encoded >>> 16) & 0xff, (encoded >>> 8) & 0xff, encoded & 0xff);
 }
 
-function getFloatValues(): Uint8Array {
-  const vals = [
-    randFloat(40, 50), // Mouse angle vector
-    -1, // Touch angle vector
-    randFloat(70, 80), // Key same time diff
-    -1,
-    randFloat(60, 70), // Mouse down-up time
-    -1,
+/** Sentinel: metric not available (e.g., touch metrics on desktop) */
+const NO_DATA = -1;
+
+/**
+ * Generate simulated behavioral float metrics.
+ * Each value represents a statistical measurement of user input patterns
+ * (mouse movement angles, key timing, click durations, etc.)
+ */
+function buildFloatMetrics(): Uint8Array {
+  // NO_DATA (-1) encodes as 0x00 (metric not available)
+  const metrics: number[] = [
+    // ── Mouse & key timing ──
+    randFloat(40, 50), //  0: Mouse angle vector mean
+    NO_DATA, //  1: Touch angle vector (no touch device)
+    randFloat(70, 80), //  2: Key same-time difference
+    NO_DATA, //  3: (unused)
+    randFloat(60, 70), //  4: Mouse down-to-up time mean
+    NO_DATA, //  5: (unused)
+    0, //  6: (zero placeholder)
+    0, //  7: Mouse click time difference
+
+    // ── Duration distributions ──
+    randFloat(60, 80), //  8: Mouse down-up duration median
+    randFloat(5, 10), //  9: Mouse down-up duration std deviation
+    randFloat(30, 40), // 10: Key press duration median
+    randFloat(2, 5), // 11: Key press duration std deviation
+
+    // ── Touch metrics (all disabled for desktop) ──
+    NO_DATA,
+    NO_DATA,
+    NO_DATA,
+    NO_DATA, // 12-15
+    NO_DATA,
+    NO_DATA,
+    NO_DATA,
+    NO_DATA, // 16-19
+
+    // ── Mouse trajectory analysis ──
+    randFloat(150, 180), // 20: Mouse movement angle mean
+    randFloat(3, 6), // 21: Mouse movement angle std deviation
+    randFloat(150, 180), // 22: Mouse movement angle mean (500ms window)
+    randFloat(3, 6), // 23: Mouse movement angle std (500ms window)
+    randFloat(0, 2), // 24: Mouse position deviation X
+    randFloat(0, 2), // 25: Mouse position deviation Y
     0,
-    0, // Mouse click time diff
-    randFloat(60, 80), // Mouse down-up median
-    randFloat(5, 10), // Mouse down-up deviation
-    randFloat(30, 40), // Key click down median
-    randFloat(2, 5), // Key click down deviation
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1,
-    -1, // Special key diffs
-    randFloat(150, 180), // Mouse vector angle
-    randFloat(3, 6),
-    randFloat(150, 180), // Mouse vector angle 500
-    randFloat(3, 6),
-    randFloat(0, 2), // Mouse deviation
-    randFloat(0, 2),
+    0, // 26-27: (zero placeholders)
+
+    // ── Touch sequential/gesture metrics (disabled) ──
+    NO_DATA,
+    NO_DATA, // 28-29
+    NO_DATA,
+    NO_DATA, // 30-31
+
+    // ── Key pattern analysis ──
     0,
+    0, // 32-33: Letter-digit transition ratio
     0,
-    -1,
-    -1, // Touch sequential
-    -1,
-    -1, // Touch start-end-cancel
+    0, // 34-35: Digit-invalid transition ratio
     0,
-    0, // Key letter-digit
-    0,
-    0, // Key digit-invalid
-    0,
-    0, // Key double-invalid
+    0, // 36-37: Double-invalid transition ratio
+
+    // ── Mouse vector differences ──
     1.0,
-    0, // Mouse vector diff
+    0, // 38-39: Mouse vector diff (mean, std)
     1.0,
-    0, // Mouse vector diff 2
-    randFloat(0, 4), // Mouse vector diff 500
-    randFloat(0, 3),
-    randFloat(25, 50), // Mouse time diff rounded
-    randFloat(25, 50),
-    randFloat(25, 50), // Mouse vector diff rounded
-    randFloat(25, 30),
-    randFloat(0, 2), // Mouse speed change
-    randFloat(0, 1),
-    randFloat(0, 1), // Mouse vector 500
-    1, // Universal
-    0,
+    0, // 40-41: Mouse vector diff 2 (mean, std)
+    randFloat(0, 4), // 42: Mouse vector diff (500ms mean)
+    randFloat(0, 3), // 43: Mouse vector diff (500ms std)
+
+    // ── Rounded movement metrics ──
+    randFloat(25, 50), // 44: Mouse time diff (rounded mean)
+    randFloat(25, 50), // 45: Mouse time diff (rounded std)
+    randFloat(25, 50), // 46: Mouse vector diff (rounded mean)
+    randFloat(25, 30), // 47: Mouse vector diff (rounded std)
+
+    // ── Speed change analysis ──
+    randFloat(0, 2), // 48: Mouse speed change mean
+    randFloat(0, 1), // 49: Mouse speed change std
+    randFloat(0, 1), // 50: Mouse vector 500ms aggregate
+
+    // ── Trailing ──
+    1, // 51: Universal flag
+    0, // 52: Terminator
   ];
 
-  const out = new Uint8Array(vals.length);
-  for (let i = 0; i < vals.length; i++) {
-    out[i] = vals[i] === -1 ? 0 : encodeFloatVal(vals[i]);
+  const out = new Uint8Array(metrics.length);
+  for (let i = 0; i < metrics.length; i++) {
+    out[i] = metrics[i] === NO_DATA ? 0 : encodeFloatVal(metrics[i]);
   }
   return out;
 }
 
-function getEventInts(): Uint8Array {
-  const ints = [
-    randInt(100, 200), // mousemove
-    randInt(1, 5), // keyup
-    randInt(1, 5), // click
-    0, // touchstart
-    randInt(0, 5), // keydown
-    0, // touchmove
-    0, // mousedown-mouseup
-    0, // vector diff
-    randInt(0, 5), // wheel
-    randInt(0, 11), // unk1
-    randInt(0, 1), // unk2
+/**
+ * Generate simulated event count integers.
+ * Each value represents how many times a specific DOM event type occurred.
+ */
+function buildEventCounts(): Uint8Array {
+  const counts: number[] = [
+    randInt(100, 200), //  0: mousemove events
+    randInt(1, 5), //  1: keyup events
+    randInt(1, 5), //  2: click events
+    0, //  3: touchstart events (none on desktop)
+    randInt(0, 5), //  4: keydown events
+    0, //  5: touchmove events (none)
+    0, //  6: mousedown-mouseup pairs
+    0, //  7: vector diff samples
+    randInt(0, 5), //  8: wheel events
+    randInt(0, 11), //  9: (internal counter)
+    randInt(0, 1), // 10: (internal counter)
   ];
-  return concat(new Uint8Array(ints), u8(ints.length));
+  // Append the count of entries as a trailing byte
+  return concat(new Uint8Array(counts), u8(counts.length));
 }
 
-function getFpEventValues(): Uint8Array {
-  return concat(getBehavioralBitfield(), getFloatValues(), getEventInts());
+/** Combine all behavioral metrics into a single byte sequence */
+function buildBehavioralData(): Uint8Array {
+  return concat(
+    buildBehavioralBitfield(),
+    buildFloatMetrics(),
+    buildEventCounts(),
+  );
 }
 
 // ─── Token Assembly ─────────────────────────────────────────────────────────
 
-function buildHeader(uuid: string, pk: string, initTime: number): Uint8Array {
-  const ts = fromHex(encodeTimestampEncrypted(initTime));
-  const ver = be16(SDK_VERSION);
-  const pkBytes = textEnc(pk);
+function buildTokenHeader(
+  uuid: string,
+  publisherKey: string,
+  initTime: number,
+): Uint8Array {
+  const timestamp = fromHex(encodeTimestampEncrypted(initTime));
+  const version = be16(SDK_VERSION);
+  const pkBytes = textEnc(publisherKey);
   const uuidBytes = fromHex(uuid);
-  return concat(ts, ver, pkBytes, uuidBytes);
+  return concat(timestamp, version, pkBytes, uuidBytes);
 }
 
 /**
  * Generate a Castle.io v11 token for Twitter's login flow.
  *
- * @param userAgent - The user agent string to embed in the fingerprint
+ * The token embeds a simulated browser fingerprint and behavioral data,
+ * encrypted with XXTEA and layered XOR, to satisfy Twitter's anti-bot
+ * checks during the login flow.
+ *
+ * @param userAgent - The user agent string to embed in the fingerprint.
+ *   Should match the UA used for HTTP requests.
  * @returns Object with `token` (the Castle request token) and `cuid` (for __cuid cookie)
  */
 export function generateLocalCastleToken(userAgent: string): {
@@ -661,70 +941,70 @@ export function generateLocalCastleToken(userAgent: string): {
   cuid: string;
 } {
   const now = Date.now();
-  // init_time: 2-30 minutes before current time (simulates page load delay)
-  const initTime = now - randFloat(2 * 60 * 1000, 30 * 60 * 1000);
+  const profile = DEFAULT_PROFILE;
 
-  const locale = 'en-US';
-  const language = 'en';
-  const timezone = 'America/New_York';
-  const screenW = 1920;
-  const screenH = 1080;
-  const availW = 1920;
-  const availH = 1032;
-  const gpu =
-    'ANGLE (NVIDIA, NVIDIA GeForce GTX 1080 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)';
+  // Simulate page load: init_time is 2-30 minutes before current time
+  const initTime = now - randFloat(2 * 60 * 1000, 30 * 60 * 1000);
 
   log('Generating local Castle.io v11 token');
 
-  // 1. Collect fingerprint data
-  const fpOne = getFpOne(
-    initTime,
-    userAgent,
-    locale,
-    screenW,
-    screenH,
-    availW,
-    availH,
-    gpu,
-    timezone,
+  // ── Step 1: Collect fingerprint data ──
+  const deviceFp = buildDeviceFingerprint(initTime, profile, userAgent);
+  const browserFp = buildBrowserFingerprint(profile, initTime);
+  const timingFp = buildTimingFingerprint(initTime);
+  const eventLog = generateEventLog();
+  const behavioral = buildBehavioralData();
+
+  // Concatenate all parts with 0xFF terminator
+  const fingerprintData = concat(
+    deviceFp,
+    browserFp,
+    timingFp,
+    eventLog,
+    behavioral,
+    u8(0xff),
   );
-  const fpTwo = getFpTwo(timezone, locale, language, initTime);
-  const fpThree = getFpThree(initTime);
-  const fpEventLog = generateEventLog();
-  const fpEvents = getFpEventValues();
 
-  const fpData = concat(fpOne, fpTwo, fpThree, fpEventLog, fpEvents, u8(0xff));
-
-  // 2. First XOR encryption (timestamp-derived key)
+  // ── Step 2: First XOR layer (timestamp-derived key) ──
   const sendTime = Date.now();
-  const fpDataKey = encodeTimestampEncrypted(sendTime);
-  const encrypted1 = deriveAndXor(fpDataKey, 4, fpDataKey[3], fpData);
+  const timestampKey = encodeTimestampEncrypted(sendTime);
+  const xorPass1 = deriveAndXor(
+    timestampKey,
+    4,
+    timestampKey[3],
+    fingerprintData,
+  );
 
-  // 3. Second XOR encryption (UUID-derived key)
+  // ── Step 3: Second XOR layer (UUID-derived key) ──
   const tokenUuid = toHex(getRandomBytes(16));
-  const withKeyPrefix = concat(fromHex(fpDataKey), encrypted1);
-  const encrypted2 = deriveAndXor(tokenUuid, 8, tokenUuid[9], withKeyPrefix);
+  const withTimestampPrefix = concat(fromHex(timestampKey), xorPass1);
+  const xorPass2 = deriveAndXor(
+    tokenUuid,
+    8,
+    tokenUuid[9],
+    withTimestampPrefix,
+  );
 
-  // 4. Build header
-  const header = buildHeader(tokenUuid, TWITTER_CASTLE_PK, initTime);
+  // ── Step 4: Build header (timestamp, SDK version, publisher key, UUID) ──
+  const header = buildTokenHeader(tokenUuid, TWITTER_CASTLE_PK, initTime);
 
-  // 5. XXTEA encrypt
-  const plaintext = concat(header, encrypted2);
-  const xteaCipher = xxteaEncrypt(plaintext, XXTEA_KEY);
+  // ── Step 5: XXTEA encrypt the full payload ──
+  const plaintext = concat(header, xorPass2);
+  const encrypted = xxteaEncrypt(plaintext, XXTEA_KEY);
 
-  // 6. Add version and padding bytes
-  const padding = xteaCipher.length - plaintext.length;
-  const withVersion = concat(u8(TOKEN_VERSION, padding), xteaCipher);
+  // ── Step 6: Prepend version and padding info ──
+  const paddingBytes = encrypted.length - plaintext.length;
+  const versioned = concat(u8(TOKEN_VERSION, paddingBytes), encrypted);
 
-  // 7. Final random byte XOR + checksum
+  // ── Step 7: Random-byte XOR + length checksum ──
   const randomByte = getRandomBytes(1)[0];
-  const checksum = (withVersion.length * 2) & 0xff;
-  const payload = concat(withVersion, u8(checksum));
-  const xored = xorBytes(payload, u8(randomByte));
-  const final = concat(u8(randomByte), xored);
+  const checksum = (versioned.length * 2) & 0xff;
+  const withChecksum = concat(versioned, u8(checksum));
+  const xored = xorBytes(withChecksum, u8(randomByte));
+  const finalPayload = concat(u8(randomByte), xored);
 
-  // 8. Base64URL encode
-  const token = base64url(final);
+  // ── Step 8: Base64URL encode ──
+  const token = base64url(finalPayload);
 
   log(`Generated castle token: ${token.length} chars, cuid: ${tokenUuid}`);
 
