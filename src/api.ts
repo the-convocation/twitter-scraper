@@ -36,6 +36,19 @@ export const bearerToken =
 export const bearerToken2 =
   'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
+/**
+ * User-Agent string matching Chrome 144 on Windows 10.
+ * Must be consistent across all requests and match the TLS fingerprint.
+ */
+export const CHROME_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36';
+
+/**
+ * Chrome Client Hints header matching the Chrome 144 user-agent.
+ */
+export const CHROME_SEC_CH_UA =
+  '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"';
+
 export async function jitter(maxMs: number): Promise<void> {
   const jitter = Math.random() * maxMs;
   await new Promise((resolve) => setTimeout(resolve, jitter));
@@ -103,7 +116,7 @@ export async function requestApi<T>(
 
       return {
         success: false,
-        err: new Error('Failed to perform request.'),
+        err,
       };
     }
 

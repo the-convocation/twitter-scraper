@@ -1,5 +1,6 @@
 import fetch from 'cross-fetch';
 import debug from 'debug';
+import { CHROME_USER_AGENT } from './api';
 
 const log = debug('twitter-scraper:xctxid');
 
@@ -40,7 +41,7 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
     pragma: 'no-cache',
     priority: 'u=0, i',
     'sec-ch-ua':
-      '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+      '"Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"',
     'sec-ch-ua-mobile': '?0',
     'sec-ch-ua-platform': '"Windows"',
     'sec-fetch-dest': 'document',
@@ -48,8 +49,7 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
     'sec-fetch-site': 'none',
     'sec-fetch-user': '?1',
     'upgrade-insecure-requests': '1',
-    'user-agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    'user-agent': CHROME_USER_AGENT,
   };
 
   // Fetch X.com homepage
@@ -141,6 +141,33 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
   return document;
 }
 
+// Cache for the x.com document to avoid repeated fetches.
+// The document is needed to generate transaction IDs but doesn't change frequently.
+// We cache the Promise (not the result) to prevent concurrent calls from all fetching separately.
+let cachedDocumentPromise: Promise<Document> | null = null;
+let cachedDocumentTimestamp = 0;
+const DOCUMENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getCachedDocument(fetchFn: typeof fetch): Promise<Document> {
+  const now = Date.now();
+  if (
+    !cachedDocumentPromise ||
+    now - cachedDocumentTimestamp > DOCUMENT_CACHE_TTL
+  ) {
+    log('Fetching fresh x.com document for transaction ID generation');
+    cachedDocumentTimestamp = now;
+    // Store the Promise immediately so concurrent calls share the same fetch
+    cachedDocumentPromise = handleXMigration(fetchFn).catch((err) => {
+      // On failure, clear the cache so the next call retries
+      cachedDocumentPromise = null;
+      throw err;
+    });
+  } else {
+    log('Using cached x.com document for transaction ID generation');
+  }
+  return cachedDocumentPromise;
+}
+
 let ClientTransaction:
   | typeof import('x-client-transaction-id')['ClientTransaction']
   | null = null;
@@ -166,7 +193,8 @@ export async function generateTransactionId(
   const path = parsedUrl.pathname;
 
   log(`Generating transaction ID for ${method} ${path}`);
-  const document = await handleXMigration(fetchFn);
+
+  const document = await getCachedDocument(fetchFn);
   const ClientTransactionClass = await clientTransaction();
   const transaction = await ClientTransactionClass.create(document);
   const transactionId = await transaction.generateTransactionId(method, path);

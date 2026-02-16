@@ -8,7 +8,7 @@ testLogin(
     const scraper = await getScraper({ authMethod: 'password' });
     await expect(scraper.isLoggedIn()).resolves.toBeTruthy();
   },
-  15000,
+  60000,
 );
 
 test('scraper can log in with cookies', async () => {
@@ -41,5 +41,5 @@ testLogin(
 
     await expect(scraper.isLoggedIn()).resolves.toBeFalsy();
   },
-  15000,
+  60000,
 );
