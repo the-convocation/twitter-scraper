@@ -13,7 +13,9 @@ export type {
   FlowTokenResultSuccess,
 } from './auth-user';
 export type {
+  DmInboxResponse,
   DmInbox,
+  DmConversationResponse,
   DmConversationTimeline,
   DmConversation,
   DmStatus,
