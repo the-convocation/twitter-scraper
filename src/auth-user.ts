@@ -522,11 +522,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   /**
-   * Fetches and executes the JS instrumentation script in a sandboxed DOM environment.
-   * Twitter sends a JavaScript file that performs bitwise computations and DOM operations
-   * to generate browser fingerprinting data. The result is written to an input element
-   * named 'ui_metrics'. We execute this using linkedom (for DOM) and Node's vm module
-   * (for sandboxed execution).
+   * Fetches and executes the JS instrumentation script to generate browser
+   * fingerprinting data. The result is written to an input element named
+   * 'ui_metrics'.
+   *
+   * In browser environments, uses a hidden iframe with native DOM APIs.
+   * In Node.js, uses linkedom (for DOM) and the vm module (for sandboxed execution).
    */
   private async executeJsInstrumentation(url: string): Promise<string> {
     log(`Fetching JS instrumentation from: ${url}`);
@@ -534,6 +535,65 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     const scriptContent = await response.text();
     log(`JS instrumentation script fetched, length: ${scriptContent.length}`);
 
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      return this.executeJsInstrumentationBrowser(scriptContent);
+    }
+    return this.executeJsInstrumentationNode(scriptContent);
+  }
+
+  /**
+   * Execute JS instrumentation in a browser environment using a hidden iframe.
+   * The iframe provides natural isolation — the script gets its own document
+   * and window, and we can override setTimeout without affecting the host page.
+   */
+  private executeJsInstrumentationBrowser(scriptContent: string): string {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    try {
+      const iframeWin = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
+      if (!iframeWin || !iframeDoc) {
+        log('WARNING: Could not access iframe document/window');
+        return '{}';
+      }
+
+      // Add the ui_metrics input element that the script writes its result to
+      const input = iframeDoc.createElement('input');
+      input.name = 'ui_metrics';
+      input.type = 'hidden';
+      iframeDoc.body.appendChild(input);
+
+      // Override setTimeout to be synchronous — we need the result immediately
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (iframeWin as any).setTimeout = (fn: any) => fn();
+
+      // Execute the script in the iframe context via <script> tag injection
+      const script = iframeDoc.createElement('script');
+      script.textContent = scriptContent;
+      iframeDoc.body.appendChild(script);
+
+      const value = input.value;
+      if (value) {
+        log(`JS instrumentation result extracted, length: ${value.length}`);
+        return value;
+      }
+
+      log('WARNING: No ui_metrics value found after script execution');
+      return '{}';
+    } finally {
+      document.body.removeChild(iframe);
+    }
+  }
+
+  /**
+   * Execute JS instrumentation in Node.js using linkedom for DOM emulation
+   * and the vm module for sandboxed script execution.
+   */
+  private async executeJsInstrumentationNode(
+    scriptContent: string,
+  ): Promise<string> {
     // Use linkedom to create a DOM environment with the required elements.
     // The script needs: document.createElement, getElementsByName, getElementsByTagName,
     // appendChild, removeChild, parentNode, children, innerText, lastElementChild, etc.
@@ -544,29 +604,24 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     );
 
     // Polyfill getElementsByName if linkedom doesn't implement it.
-    // The JS instrumentation script uses this to find the ui_metrics input element.
     if (typeof doc.getElementsByName !== 'function') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (doc as any).getElementsByName = (name: string) =>
         doc.querySelectorAll(`[name="${name}"]`);
     }
 
-    // Execute the script in a sandboxed VM context (Node.js only).
+    // Execute the script in a sandboxed VM context.
     // The script expects `document` and `window` as globals and uses `setTimeout`
     // to schedule execution. We make setTimeout synchronous since we need the result
     // immediately. The script checks document.readyState to decide between setTimeout
     // and addEventListener('load'/'DOMContentLoaded').
     const vm = await import('vm');
 
-    // Build a window-like object with all the APIs the script needs.
-    // We override setTimeout to be synchronous since we need the result immediately.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const origSetTimeout = (win as any).setTimeout;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (win as any).setTimeout = (fn: any) => fn();
 
-    // Ensure document.readyState is 'complete' so the script uses setTimeout
-    // instead of DOMContentLoaded/load event listeners.
     try {
       Object.defineProperty(doc, 'readyState', {
         value: 'complete',
@@ -587,7 +642,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     const context = vm.createContext(sandbox);
     vm.runInContext(scriptContent, context);
 
-    // Restore setTimeout
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (win as any).setTimeout = origSetTimeout;
 
