@@ -104,6 +104,7 @@ export class Scraper {
   private auth!: TwitterAuth;
   private authTrends!: TwitterAuth;
   private token: string;
+  private readonly subtaskHandlers: Map<string, FlowSubtaskHandler> = new Map();
 
   /**
    * Creates a new Scraper object.
@@ -125,12 +126,25 @@ export class Scraper {
     subtaskId: string,
     subtaskHandler: FlowSubtaskHandler,
   ): void {
+    // Always store so handlers survive auth transitions (guest -> user)
+    this.subtaskHandlers.set(subtaskId, subtaskHandler);
+
     if (this.auth instanceof TwitterUserAuth) {
       this.auth.registerSubtaskHandler(subtaskId, subtaskHandler);
     }
 
     if (this.authTrends instanceof TwitterUserAuth) {
       this.authTrends.registerSubtaskHandler(subtaskId, subtaskHandler);
+    }
+  }
+
+  /**
+   * Applies all stored subtask handlers to the given auth instance.
+   * @internal
+   */
+  private applySubtaskHandlers(auth: TwitterUserAuth): void {
+    for (const [subtaskId, handler] of this.subtaskHandlers) {
+      auth.registerSubtaskHandler(subtaskId, handler);
     }
   }
 
@@ -541,6 +555,7 @@ export class Scraper {
     // Use bearerToken2 for the login flow - this is the same token the Twitter frontend uses.
     // Guest activation and the onboarding/task.json endpoint both require this token.
     const userAuth = new TwitterUserAuth(bearerToken2, this.getAuthOptions());
+    this.applySubtaskHandlers(userAuth);
     await userAuth.login(username, password, email, twoFactorSecret);
     this.auth = userAuth;
     this.authTrends = userAuth;
@@ -576,12 +591,17 @@ export class Scraper {
   public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
     // Use bearerToken2 for authenticated user requests
     const userAuth = new TwitterUserAuth(bearerToken2, this.getAuthOptions());
+    this.applySubtaskHandlers(userAuth);
     for (const cookie of cookies) {
       if (cookie == null) continue;
 
       if (typeof cookie === 'string') {
         // String cookies are parsed by tough-cookie, which normalizes domains correctly
-        await userAuth.cookieJar().setCookie(cookie, 'https://x.com');
+        try {
+          await userAuth.cookieJar().setCookie(cookie, 'https://x.com');
+        } catch (err) {
+          log(`Failed to parse cookie string: ${(err as Error).message}`);
+        }
       } else {
         // Cookie objects from Cookie.fromJSON() preserve the domain literally.
         // tough-cookie's getCookies() won't match ".x.com" against "https://x.com",

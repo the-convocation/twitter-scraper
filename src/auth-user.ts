@@ -237,10 +237,13 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   async isLoggedIn(): Promise<boolean> {
-    const cookie = await this.getCookieString();
+    const cookies = await this.getCookies();
     // Both ct0 (CSRF token) and auth_token (session token) are required for authenticated requests.
     // ct0 alone is NOT sufficient - without auth_token, Twitter returns 401 on all API calls.
-    return cookie.includes('ct0=') && cookie.includes('auth_token=');
+    return (
+      cookies.some((c) => c.key === 'ct0') &&
+      cookies.some((c) => c.key === 'auth_token')
+    );
   }
 
   async login(
@@ -355,7 +358,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           this.guestCreatedAt = new Date();
           // Also set the gt cookie in our jar (as the browser would)
           await this.setCookie('gt', gtMatch[1]);
-          log(`Extracted guest token from HTML: ${gtMatch[1]}`);
+          log(`Extracted guest token from HTML (length: ${gtMatch[1].length})`);
         }
       } catch (err) {
         log('Failed to extract guest token from HTML (non-fatal):', err);
@@ -411,17 +414,17 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     // Reset stale session cookies from previous logins.
     // We preserve __cf_bm (Cloudflare cookie from preflight) and gt (guest token).
     // ct0 should NOT exist during login - real browsers don't have it until authenticated.
-    this.removeCookie('twitter_ads_id');
-    this.removeCookie('ads_prefs');
-    this.removeCookie('_twitter_sess');
-    this.removeCookie('zipbox_forms_auth_token');
-    this.removeCookie('lang');
-    this.removeCookie('bouncer_reset_cookie');
-    this.removeCookie('twid');
-    this.removeCookie('twitter_ads_idb');
-    this.removeCookie('email_uid');
-    this.removeCookie('external_referer');
-    this.removeCookie('aa_u');
+    await this.removeCookie('twitter_ads_id');
+    await this.removeCookie('ads_prefs');
+    await this.removeCookie('_twitter_sess');
+    await this.removeCookie('zipbox_forms_auth_token');
+    await this.removeCookie('lang');
+    await this.removeCookie('bouncer_reset_cookie');
+    await this.removeCookie('twid');
+    await this.removeCookie('twitter_ads_idb');
+    await this.removeCookie('email_uid');
+    await this.removeCookie('external_referer');
+    await this.removeCookie('aa_u');
 
     return await this.executeFlowTask({
       flow_name: 'login',
@@ -488,11 +491,11 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     // Extract the JS instrumentation URL from the subtask response.
     // The script at this URL collects browser metrics (fingerprinting) that Twitter
     // validates. Sending "{}" (empty) triggers bot detection (error 399).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const subtasks = prev.subtasks as any[];
-    const jsSubtask = subtasks?.find(
-      (s: { subtask_id: string }) => s.subtask_id === subtaskId,
-    );
+    const subtasks = prev.subtasks as {
+      subtask_id: string;
+      js_instrumentation?: { url: string };
+    }[];
+    const jsSubtask = subtasks?.find((s) => s.subtask_id === subtaskId);
     const jsUrl: string | undefined = jsSubtask?.js_instrumentation?.url;
 
     let metricsResponse = '{}';
@@ -665,9 +668,13 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       Date: Date,
       JSON: JSON,
       parseInt: parseInt,
+      // Deny access to Node.js internals to limit sandbox escape surface
+      process: undefined,
+      require: undefined,
+      global: undefined,
+      globalThis: undefined,
     };
-    const context = vm.createContext(sandbox);
-    vm.runInContext(scriptContent, context);
+    vm.runInNewContext(scriptContent, sandbox, { timeout: 5000 });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (win as any).setTimeout = origSetTimeout;
@@ -725,8 +732,14 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       log('Failed to generate castle token (continuing without it):', err);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const settingsList: any = {
+    const settingsList: {
+      setting_responses: {
+        key: string;
+        response_data: { text_data: { result: string } };
+      }[];
+      link: string;
+      castle_token?: string;
+    } = {
       setting_responses: [
         {
           key: 'user_identifier',
@@ -767,7 +780,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     await this.setCookie('__cuid', cuid);
 
     log(
-      `Castle token generated locally, length: ${token.length}, cuid: ${cuid}`,
+      `Castle token generated locally, length: ${
+        token.length
+      }, cuid: ${cuid.substring(0, 6)}...`,
     );
 
     return token;
@@ -791,8 +806,11 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const enterPassword: any = {
+    const enterPassword: {
+      password: string;
+      link: string;
+      castle_token?: string;
+    } = {
       password: credentials.password,
       link: 'next_link',
     };
@@ -847,27 +865,30 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     const totp = new OTPAuth.TOTP({ secret: credentials.twoFactorSecret });
-    let error;
+    let lastResult!: FlowTokenResult;
     for (let attempts = 1; attempts < 4; attempts += 1) {
-      try {
-        return await api.sendFlowRequest({
-          flow_token: api.getFlowToken(),
-          subtask_inputs: [
-            {
-              subtask_id: subtaskId,
-              enter_text: {
-                link: 'next_link',
-                text: totp.generate(),
-              },
+      const result = await api.sendFlowRequest({
+        flow_token: api.getFlowToken(),
+        subtask_inputs: [
+          {
+            subtask_id: subtaskId,
+            enter_text: {
+              link: 'next_link',
+              text: totp.generate(),
             },
-          ],
-        });
-      } catch (err) {
-        error = err;
-        await new Promise((resolve) => setTimeout(resolve, 2000 * attempts));
+          },
+        ],
+      });
+
+      if (result.status === 'success') {
+        return result;
       }
+
+      lastResult = result;
+      log(`2FA attempt ${attempts} failed: ${result.err.message}`);
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempts));
     }
-    throw error;
+    return lastResult;
   }
 
   private async handleAcid(
@@ -952,8 +973,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     // Strip flow_name from the body: real browsers only send it in the URL query parameter.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bodyData = { ...data } as any;
+    const bodyData: Record<string, unknown> = { ...data };
     if ('flow_name' in bodyData) {
       delete bodyData.flow_name;
     }
@@ -1078,7 +1098,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     const subtask = flow.subtasks?.length ? flow.subtasks[0] : undefined;
-    Check(TwitterUserAuthSubtask, subtask);
+    if (subtask && !Check(TwitterUserAuthSubtask, subtask as unknown)) {
+      log(
+        'WARNING: Subtask failed schema validation: %s',
+        subtask.subtask_id ?? 'unknown',
+      );
+    }
 
     if (subtask && subtask.subtask_id === 'DenyLoginSubtask') {
       return {

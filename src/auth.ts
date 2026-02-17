@@ -311,7 +311,7 @@ export class TwitterGuestAuth implements TwitterAuth {
     const cookies = await this.jar.getCookies(this.getCookieJarUrl());
     for (const cookie of cookies) {
       if (!cookie.domain || !cookie.path) continue;
-      store.removeCookie(cookie.domain, cookie.path, key);
+      await store.removeCookie(cookie.domain, cookie.path, key);
 
       if (typeof document !== 'undefined') {
         document.cookie = `${cookie.key}=; Max-Age=0; path=${cookie.path}; domain=${cookie.domain}`;
@@ -392,7 +392,7 @@ export class TwitterGuestAuth implements TwitterAuth {
 
     await this.setCookie('gt', newGuestToken);
 
-    log(`Updated guest token: ${newGuestToken}`);
+    log(`Updated guest token (length: ${newGuestToken.length})`);
   }
 
   /**

@@ -53,7 +53,12 @@ const TWITTER_CASTLE_PK = 'AvRa79bHyJSYSQHnRpcVtzyxetSvFerx';
 /** XXTEA encryption key for the entire token */
 const XXTEA_KEY = [1164413191, 3891440048, 185273099, 2746598870];
 
-/** Per-field XXTEA key tail: field key = [fieldIndex, initTime, ...PER_FIELD_KEY_TAIL] */
+/**
+ * Per-field XXTEA key tail: field key = [fieldIndex, initTime, ...PER_FIELD_KEY_TAIL].
+ * XXTEA uses 128-bit (4-word) keys, so only indices 0-3 of the assembled key participate
+ * in encryption. The extra elements here are inert but kept for faithful parity with the
+ * Python SDK source.
+ */
 const PER_FIELD_KEY_TAIL = [
   16373134, 643144773, 1762804430, 1186572681, 1164413191,
 ];
@@ -306,7 +311,7 @@ function xorAndAppendKey(buf: Uint8Array, key: number): string {
 
 function encodeTimestampEncrypted(ms: number): string {
   const tsBytes = encodeTimestampBytes(ms);
-  const slice = parseInt(Math.floor(ms).toString().slice(-3)) || 0;
+  const slice = Math.floor(ms) % 1000;
   const sliceBytes = be16(slice);
   const k = randInt(0, 15);
   return xorAndAppendKey(tsBytes, k) + xorAndAppendKey(sliceBytes, k);
@@ -318,7 +323,10 @@ function encodeTimestampEncrypted(ms: number): string {
  * Derive an XOR key from a hex string by slicing, rotating, and XOR-ing.
  * Used for the two-layer XOR encryption of fingerprint data.
  */
-function deriveAndXor(
+/**
+ * @internal Exported for testing only.
+ */
+export function deriveAndXor(
   keyHex: string,
   sliceLen: number,
   rotChar: string,
@@ -782,6 +790,8 @@ function generateEventLog(): Uint8Array {
  * Simulates a user who used mouse and keyboard (no touch).
  */
 function buildBehavioralBitfield(): Uint8Array {
+  // 15 flags with totalBits=16: the extra bit causes a left-shift-by-1 in boolsToBin,
+  // matching the Python SDK's behavior where the MSB is always 0.
   const flags = new Array(15).fill(false);
   flags[2] = true; // Has click events
   flags[3] = true; // Has keydown events
@@ -1015,7 +1025,12 @@ export function generateLocalCastleToken(userAgent: string): {
   // ── Step 8: Base64URL encode ──
   const token = base64url(finalPayload);
 
-  log(`Generated castle token: ${token.length} chars, cuid: ${tokenUuid}`);
+  log(
+    `Generated castle token: ${token.length} chars, cuid: ${tokenUuid.substring(
+      0,
+      6,
+    )}...`,
+  );
 
   return { token, cuid: tokenUuid };
 }

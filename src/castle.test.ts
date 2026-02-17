@@ -1,6 +1,7 @@
 import {
   generateLocalCastleToken,
   xxteaEncrypt,
+  deriveAndXor,
   encodeField,
   FieldEncoding,
   customFloatEncode,
@@ -307,5 +308,78 @@ describe('Castle.io token generation', () => {
     // Token should be between 500 and 2000 chars (v11 tokens are ~800-1200)
     expect(result.token.length).toBeGreaterThan(500);
     expect(result.token.length).toBeLessThan(2000);
+  });
+
+  it('should produce a valid token envelope structure', () => {
+    const result = generateLocalCastleToken(CHROME_USER_AGENT);
+
+    // Decode base64url → bytes
+    const raw = Buffer.from(result.token, 'base64url');
+
+    // First byte is the random XOR key
+    const randomByte = raw[0];
+
+    // XOR remaining bytes to get withChecksum
+    const withChecksum = new Uint8Array(raw.length - 1);
+    for (let i = 0; i < withChecksum.length; i++) {
+      withChecksum[i] = raw[i + 1] ^ randomByte;
+    }
+
+    // Last byte of withChecksum is the length checksum
+    const checksum = withChecksum[withChecksum.length - 1];
+    const versioned = withChecksum.slice(0, withChecksum.length - 1);
+
+    // First byte of versioned = TOKEN_VERSION (0x0b)
+    expect(versioned[0]).toBe(0x0b);
+
+    // Second byte = padding bytes (XXTEA pads to 4-byte boundary, so 0-3)
+    expect(versioned[1]).toBeGreaterThanOrEqual(0);
+    expect(versioned[1]).toBeLessThanOrEqual(3);
+
+    // Checksum = (versioned.length * 2) & 0xFF
+    expect(checksum).toBe((versioned.length * 2) & 0xff);
+  });
+});
+
+// ─── XXTEA Known-Answer Test ────────────────────────────────────────────
+
+describe('xxteaEncrypt known-answer', () => {
+  it('should match known ciphertext for reference input/key', () => {
+    // Known-answer test vector: verifies the XXTEA implementation produces
+    // the correct output. Any endianness or round-count bug would break this.
+    const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+    const key = [0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210];
+    const result = xxteaEncrypt(data, key);
+    expect(Array.from(result)).toEqual([106, 119, 16, 21, 43, 51, 68, 131]);
+  });
+});
+
+// ─── deriveAndXor ────────────────────────────────────────────────────────
+
+describe('deriveAndXor', () => {
+  it('should return data unchanged for empty key', () => {
+    const data = new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]);
+    const result = deriveAndXor('', 0, '0', data);
+    expect(Array.from(result)).toEqual([0xaa, 0xbb, 0xcc, 0xdd]);
+  });
+
+  it('should produce known XOR result', () => {
+    const data = new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]);
+    const result = deriveAndXor('abcdef1234', 6, '3', data);
+    expect(Array.from(result)).toEqual([116, 65, 112, 3]);
+  });
+
+  it('should be self-inverse (XOR is its own inverse)', () => {
+    const data = new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]);
+    const encrypted = deriveAndXor('abcdef1234', 6, '3', data);
+    const decrypted = deriveAndXor('abcdef1234', 6, '3', encrypted);
+    expect(Array.from(decrypted)).toEqual(Array.from(data));
+  });
+
+  it('should produce different output with different rotation chars', () => {
+    const data = new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]);
+    const result1 = deriveAndXor('abcdef1234', 6, '3', data);
+    const result2 = deriveAndXor('abcdef1234', 6, '5', data);
+    expect(Array.from(result1)).not.toEqual(Array.from(result2));
   });
 });

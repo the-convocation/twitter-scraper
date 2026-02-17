@@ -161,6 +161,14 @@ export function clearDocumentCache(): void {
   cachedDocumentTimestamp = 0;
 }
 
+/**
+ * Returns a cached x.com Document, fetching a fresh one if stale.
+ *
+ * **Note:** Only the first caller's `fetchFn` is captured (first-caller-wins).
+ * Subsequent callers within the cache TTL share the same cached document
+ * regardless of which `fetchFn` they pass. This is acceptable because all
+ * callers in practice share the same fetch configuration.
+ */
 async function getCachedDocument(fetchFn: typeof fetch): Promise<Document> {
   const now = Date.now();
   if (

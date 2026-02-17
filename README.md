@@ -233,8 +233,12 @@ Using Chrome/Edge:
 Using Firefox:
 
 1. Log in to X.com in your browser
-2. Open DevTools (F12) → Storage tab → Cookies
-3. Select all cookies and export them
+2. Open DevTools (F12) → Storage tab → Cookies → `https://x.com`
+3. Find the `ct0` cookie and copy its value
+4. Find the `auth_token` cookie and copy its value
+5. Construct the cookie string: `ct0=<value>; auth_token=<value>`
+
+> **Tip:** You can use the [Cookie-Editor](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) extension to export cookies in a convenient format.
 
 **Step 2: Use cookies in your code**
 
