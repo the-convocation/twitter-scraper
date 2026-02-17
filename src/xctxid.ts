@@ -148,6 +148,12 @@ async function handleXMigration(fetchFn: typeof fetch): Promise<Document> {
 // If multiple Scraper instances use different fetch functions or auth contexts, they will
 // still share the same cached document. This is acceptable because the document content
 // (JS bundle hashes for transaction ID generation) is the same regardless of auth state.
+//
+// WARNING: When using multiple Scraper instances with different proxies (e.g., different
+// IP addresses or regions), the first instance's fetch function wins for the cache duration.
+// Subsequent instances will reuse the cached document even if their proxy would return
+// different content. If this is a problem, call clearDocumentCache() between switching
+// scraper instances to force a fresh fetch with the new proxy's fetch function.
 let cachedDocumentPromise: Promise<Document> | null = null;
 let cachedDocumentTimestamp = 0;
 const DOCUMENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -205,6 +211,13 @@ async function clientTransaction(): Promise<
   return ClientTransaction;
 }
 
+/**
+ * Generate a client transaction ID for the given URL and HTTP method.
+ *
+ * Uses a module-level cached document (shared across all Scraper instances).
+ * When using multiple scrapers with different proxies, call
+ * {@link clearDocumentCache} between instances to avoid stale cache hits.
+ */
 export async function generateTransactionId(
   url: string,
   fetchFn: typeof fetch,

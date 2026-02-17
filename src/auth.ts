@@ -8,6 +8,7 @@ import {
   FetchTransformOptions,
   flexParseJson,
 } from './api';
+import type { BrowserProfile } from './castle';
 import {
   RateLimitEvent,
   RateLimitStrategy,
@@ -29,9 +30,15 @@ export interface TwitterAuthOptions {
     /**
      * Delay in milliseconds between login flow steps, to mimic human-like timing.
      * Without a delay, Twitter may flag rapid-fire requests as bot activity (error 399).
-     * Set to 0 to disable (e.g. in tests). Default is ~2000ms with random jitter.
+     * Set to 0 to disable (e.g. in tests). Default is 1-3 seconds (average ~2s) with random jitter.
      */
     flowStepDelay?: number;
+    /**
+     * Override the browser profile used for Castle.io fingerprint token generation.
+     * Unspecified fields are randomized from realistic value pools.
+     * Set this if you want a consistent fingerprint or need to match specific hardware.
+     */
+    browserProfile?: Partial<BrowserProfile>;
   };
 }
 

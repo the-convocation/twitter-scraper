@@ -537,16 +537,17 @@ export class TwitterUserAuth extends TwitterGuestAuth {
    * 'ui_metrics'.
    *
    * In browser environments, uses a hidden iframe with native DOM APIs.
-   * In Node.js, uses linkedom (for DOM) and the vm module (for sandboxed execution).
+   * In Node.js, uses linkedom (for DOM) and the vm module for execution.
    *
    * @security This method executes **remote JavaScript** fetched from Twitter's servers.
    * - In browsers, execution is isolated in a disposable iframe.
-   * - In Node.js, execution uses `vm.runInContext`, which is NOT a security sandbox.
-   *   A malicious or compromised script could potentially escape the VM context.
-   *   This is an inherent trade-off of the reverse-engineering approach used by this library.
-   *   The risk is mitigated by: (1) only fetching from Twitter's known instrumentation URLs,
-   *   (2) enforcing a maximum script size limit, and (3) using a minimal sandbox with
-   *   limited globals. However, this should not be considered secure against a targeted attack.
+   * - In Node.js, `vm.runInContext` is used for convenience, NOT for security.
+   *   Node's `vm` module provides NO security sandbox — a malicious script can
+   *   trivially escape the context (e.g., via `this.constructor.constructor('return process')()`).
+   *   The only real trust boundary is that scripts are fetched from Twitter's known CDN URLs.
+   *   Setting `process: undefined` etc. in the sandbox context is cosmetic and does not
+   *   prevent escape.
+   * - A maximum script size limit (512KB) and a 5-second timeout provide basic sanity checks.
    */
   private async executeJsInstrumentation(url: string): Promise<string> {
     log(`Fetching JS instrumentation from: ${url}`);
@@ -572,7 +573,9 @@ export class TwitterUserAuth extends TwitterGuestAuth {
    * The iframe provides natural isolation — the script gets its own document
    * and window, and we can override setTimeout without affecting the host page.
    */
-  private executeJsInstrumentationBrowser(scriptContent: string): string {
+  private async executeJsInstrumentationBrowser(
+    scriptContent: string,
+  ): Promise<string> {
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     document.body.appendChild(iframe);
@@ -617,9 +620,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
    * Execute JS instrumentation in Node.js using linkedom for DOM emulation
    * and the vm module for sandboxed script execution.
    *
-   * @security Node's `vm` module does NOT provide a true security sandbox.
-   * The executed script has limited globals but could potentially escape the
-   * context. See the parent method's JSDoc for full security considerations.
+   * @security Node's `vm` module does NOT provide a security sandbox. A
+   * malicious script can trivially escape the context. The only real trust
+   * boundary is that scripts come from Twitter's CDN. The undefined globals
+   * (process, require, etc.) are cosmetic — they do not prevent sandbox escape.
    */
   private async executeJsInstrumentationNode(
     scriptContent: string,
@@ -774,7 +778,8 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   private async generateCastleToken(): Promise<string> {
     const userAgent = CHROME_USER_AGENT;
 
-    const { token, cuid } = generateLocalCastleToken(userAgent);
+    const browserProfile = this.options?.experimental?.browserProfile;
+    const { token, cuid } = generateLocalCastleToken(userAgent, browserProfile);
 
     // Set the __cuid cookie (Castle.io uses this for tracking)
     await this.setCookie('__cuid', cuid);

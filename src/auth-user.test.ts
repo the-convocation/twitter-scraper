@@ -383,6 +383,154 @@ describe('TwitterUserAuth', () => {
     });
   });
 
+  describe('JS instrumentation', () => {
+    const JS_SCRIPT_URL =
+      'https://abs.twimg.com/responsive-web/client-web/test-instrumentation.js';
+
+    // Helper: subtask response that optionally includes js_instrumentation.url
+    const jsInstrumentationSubtask = (
+      token: string,
+      subtaskId: string,
+      jsUrl?: string,
+    ): Response => {
+      const subtask: Record<string, unknown> = { subtask_id: subtaskId };
+      if (jsUrl) {
+        subtask.js_instrumentation = { url: jsUrl };
+      }
+      const body = { flow_token: token, subtasks: [subtask] };
+      return {
+        ok: true,
+        json: () => Promise.resolve(body),
+        text: () => Promise.resolve(JSON.stringify(body)),
+        headers: new Headers(),
+      } as Response;
+    };
+
+    const scriptResponse = (content: string): Response =>
+      ({
+        ok: true,
+        text: () => Promise.resolve(content),
+        headers: new Headers(),
+      } as Response);
+
+    it('should pass ui_metrics result to flow request when script sets it', async () => {
+      const metricsJson = '{"rf":{"test_key":"test_value"}}';
+      const script = `document.getElementsByName('ui_metrics')[0].value = '${metricsJson}';`;
+
+      mockFetch
+        .mockResolvedValueOnce(mockResponses.xcomHomepage) // Pre-flight
+        .mockResolvedValueOnce(mockResponses.guestToken) // Guest token
+        .mockResolvedValueOnce(
+          jsInstrumentationSubtask(
+            'token1',
+            'LoginJsInstrumentationSubtask',
+            JS_SCRIPT_URL,
+          ),
+        ) // initLogin → returns JS instrumentation subtask with URL
+        .mockResolvedValueOnce(scriptResponse(script)) // Script fetch
+        .mockResolvedValueOnce(
+          mockResponses.subtask('token2', 'LoginSuccessSubtask'),
+        ); // Flow request after instrumentation → success
+
+      await auth.login('testuser', 'testpass');
+
+      // Script URL should have been fetched
+      expect(mockFetch.mock.calls[3][0]).toBe(JS_SCRIPT_URL);
+
+      // The flow request (call 4) should contain the metrics from the script
+      const flowRequestBody = JSON.parse(
+        mockFetch.mock.calls[4][1]?.body as string,
+      );
+      expect(
+        flowRequestBody.subtask_inputs[0].js_instrumentation.response,
+      ).toBe(metricsJson);
+    });
+
+    it('should fall back to {} when script exceeds 512KB size limit', async () => {
+      const oversizedScript = 'x'.repeat(512 * 1024 + 1);
+
+      mockFetch
+        .mockResolvedValueOnce(mockResponses.xcomHomepage)
+        .mockResolvedValueOnce(mockResponses.guestToken)
+        .mockResolvedValueOnce(
+          jsInstrumentationSubtask(
+            'token1',
+            'LoginJsInstrumentationSubtask',
+            JS_SCRIPT_URL,
+          ),
+        )
+        .mockResolvedValueOnce(scriptResponse(oversizedScript))
+        .mockResolvedValueOnce(
+          mockResponses.subtask('token2', 'LoginSuccessSubtask'),
+        );
+
+      await auth.login('testuser', 'testpass');
+
+      // The flow request (call 4) should contain '{}' fallback
+      const flowRequestBody = JSON.parse(
+        mockFetch.mock.calls[4][1]?.body as string,
+      );
+      expect(
+        flowRequestBody.subtask_inputs[0].js_instrumentation.response,
+      ).toBe('{}');
+    });
+
+    it('should fall back to {} when script throws an error', async () => {
+      const throwingScript = 'throw new Error("test error");';
+
+      mockFetch
+        .mockResolvedValueOnce(mockResponses.xcomHomepage)
+        .mockResolvedValueOnce(mockResponses.guestToken)
+        .mockResolvedValueOnce(
+          jsInstrumentationSubtask(
+            'token1',
+            'LoginJsInstrumentationSubtask',
+            JS_SCRIPT_URL,
+          ),
+        )
+        .mockResolvedValueOnce(scriptResponse(throwingScript))
+        .mockResolvedValueOnce(
+          mockResponses.subtask('token2', 'LoginSuccessSubtask'),
+        );
+
+      await auth.login('testuser', 'testpass');
+
+      // The flow request (call 4) should contain '{}' fallback
+      const flowRequestBody = JSON.parse(
+        mockFetch.mock.calls[4][1]?.body as string,
+      );
+      expect(
+        flowRequestBody.subtask_inputs[0].js_instrumentation.response,
+      ).toBe('{}');
+    });
+
+    it('should send {} when subtask has no instrumentation URL', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponses.xcomHomepage)
+        .mockResolvedValueOnce(mockResponses.guestToken)
+        .mockResolvedValueOnce(
+          // Subtask has no js_instrumentation.url field
+          mockResponses.subtask('token1', 'LoginJsInstrumentationSubtask'),
+        )
+        .mockResolvedValueOnce(
+          mockResponses.subtask('token2', 'LoginSuccessSubtask'),
+        );
+
+      await auth.login('testuser', 'testpass');
+
+      // No script fetch — only 4 calls total
+      expect(mockFetch).toHaveBeenCalledTimes(4);
+
+      // The flow request (call 3) should contain '{}' as the response
+      const flowRequestBody = JSON.parse(
+        mockFetch.mock.calls[3][1]?.body as string,
+      );
+      expect(
+        flowRequestBody.subtask_inputs[0].js_instrumentation.response,
+      ).toBe('{}');
+    });
+  });
+
   describe('isLoggedIn', () => {
     it('should return true when ct0 and auth_token cookies are present', async () => {
       // Both ct0 (CSRF) and auth_token (session) cookies are required for authenticated state

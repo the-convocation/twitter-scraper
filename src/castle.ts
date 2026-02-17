@@ -87,8 +87,11 @@ const FP_PART = {
 /**
  * Simulated browser environment values embedded in the fingerprint.
  * These should match a realistic Chrome-on-Windows configuration.
+ *
+ * Users can provide a partial override via `ScraperOptions.experimental.browserProfile`
+ * to customize the fingerprint. Unspecified fields are randomized from realistic pools.
  */
-interface BrowserProfile {
+export interface BrowserProfile {
   locale: string;
   language: string;
   timezone: string;
@@ -110,7 +113,7 @@ interface BrowserProfile {
   devicePixelRatio: number;
 }
 
-/** Default profile: Chrome 144 on Windows 10, NVIDIA GTX 1080 Ti, 1080p */
+/** Default fallback profile: Chrome 144 on Windows 10, NVIDIA GTX 1080 Ti, 1080p */
 const DEFAULT_PROFILE: BrowserProfile = {
   locale: 'en-US',
   language: 'en',
@@ -126,6 +129,74 @@ const DEFAULT_PROFILE: BrowserProfile = {
   colorDepth: 24,
   devicePixelRatio: 1.0,
 };
+
+// ─── Randomization Pools ─────────────────────────────────────────────────────
+// These pools are available for callers who want to build a custom BrowserProfile.
+//
+// WARNING: Randomizing gpuRenderer without also changing the static canvas hashes
+// (fields 13 and 18 in the token) creates an impossible fingerprint — different GPUs
+// produce different canvas renderings. Twitter cross-references these, so a mismatch
+// triggers 399 bot-detection errors. Until we have per-GPU canvas hashes, the default
+// profile uses a fixed GPU + matching canvas hashes. Only override gpuRenderer if you
+// also supply matching canvas fingerprints.
+
+/** Common desktop screen resolutions (width, height, available height with taskbar) */
+const SCREEN_RESOLUTIONS = [
+  { w: 1920, h: 1080, ah: 1032 },
+  { w: 2560, h: 1440, ah: 1392 },
+  { w: 1366, h: 768, ah: 720 },
+  { w: 1536, h: 864, ah: 816 },
+  { w: 1440, h: 900, ah: 852 },
+  { w: 1680, h: 1050, ah: 1002 },
+  { w: 3840, h: 2160, ah: 2112 },
+];
+
+/** Common WebGL ANGLE renderer strings for Chrome on Windows.
+ * Not used by default — see WARNING above about canvas hash correlation. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const GPU_RENDERERS = [
+  'ANGLE (NVIDIA, NVIDIA GeForce GTX 1080 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (AMD, AMD Radeon RX 580 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (AMD, AMD Radeon RX 6700 XT Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)',
+];
+
+/** navigator.deviceMemory values reported by Chrome (in GB) */
+const DEVICE_MEMORY_VALUES = [4, 8, 8, 16]; // 8 weighted more heavily
+
+/** navigator.hardwareConcurrency values */
+const HARDWARE_CONCURRENCY_VALUES = [4, 8, 8, 12, 16, 24];
+
+/**
+ * Generate a randomized browser profile by picking values from realistic pools.
+ *
+ * **Caution:** GPU renderer is NOT randomized because the canvas fingerprint
+ * hashes in the token are static and correspond to the DEFAULT_PROFILE GPU.
+ * Mismatching GPU + canvas hashes triggers Twitter 399 bot-detection errors.
+ * Screen resolution, device memory, and CPU cores are safe to randomize since
+ * they don't affect canvas rendering.
+ */
+export function randomizeBrowserProfile(): BrowserProfile {
+  const screen = SCREEN_RESOLUTIONS[randInt(0, SCREEN_RESOLUTIONS.length - 1)];
+  return {
+    ...DEFAULT_PROFILE,
+    screenWidth: screen.w,
+    screenHeight: screen.h,
+    availableWidth: screen.w,
+    availableHeight: screen.ah,
+    // gpuRenderer intentionally NOT randomized — see JSDoc above
+    deviceMemoryGB:
+      DEVICE_MEMORY_VALUES[randInt(0, DEVICE_MEMORY_VALUES.length - 1)],
+    hardwareConcurrency:
+      HARDWARE_CONCURRENCY_VALUES[
+        randInt(0, HARDWARE_CONCURRENCY_VALUES.length - 1)
+      ],
+  };
+}
 
 // ─── Utility Functions ───────────────────────────────────────────────────────
 
@@ -600,15 +671,21 @@ function buildDeviceFingerprint(
     encodeField(6, CompactInt, profile.hardwareConcurrency), // CPU logical cores
     encodeField(7, RoundedByte, profile.devicePixelRatio * 10), // Pixel ratio (* 10)
     encodeField(8, RawAppend, u8(tz.offset, tz.dstDiff)), // Timezone offset info
-    encodeField(9, RawAppend, u8(0x02, 0x7d, 0x5f, 0xc9, 0xa7)), // MIME type hash
-    encodeField(10, RawAppend, u8(0x05, 0x72, 0x93, 0x02, 0x08)), // Browser plugins hash
+    // MIME type hash — captured from Chrome 144 on Windows 10.
+    // Source: yubie-re/castleio-gen (Python SDK, MIT license).
+    encodeField(9, RawAppend, u8(0x02, 0x7d, 0x5f, 0xc9, 0xa7)),
+    // Browser plugins hash — Chrome no longer exposes plugins to navigator.plugins,
+    // so this is a fixed hash. Source: yubie-re/castleio-gen (Python SDK, MIT license).
+    encodeField(10, RawAppend, u8(0x05, 0x72, 0x93, 0x02, 0x08)),
     encodeField(
       11,
       RawAppend, // Browser feature flags
       concat(u8(12), encodeBits([0, 1, 2, 3, 4, 5, 6], 16)),
     ),
     encodeField(12, RawAppend, uaPayload), // User agent (encrypted)
-    encodeField(13, EncryptedBytes, textEnc('54b4b5cf'), initTime), // Canvas font hash
+    // Canvas font rendering hash — generated by Castle.io SDK's canvas fingerprinting (text rendering).
+    // Captured from Chrome 144 on Windows 10. Source: yubie-re/castleio-gen (Python SDK, MIT license).
+    encodeField(13, EncryptedBytes, textEnc('54b4b5cf'), initTime),
     encodeField(
       14,
       RawAppend, // Media input devices
@@ -616,7 +693,9 @@ function buildDeviceFingerprint(
     ),
     // Fields 15 (DoNotTrack) and 16 (JavaEnabled) intentionally omitted
     encodeField(17, Byte, 0), // productSub type
-    encodeField(18, EncryptedBytes, textEnc('c6749e76'), initTime), // Canvas circle hash
+    // Canvas circle rendering hash — generated by Castle.io SDK's canvas fingerprinting (arc drawing).
+    // Captured from Chrome 144 on Windows 10. Source: yubie-re/castleio-gen (Python SDK, MIT license).
+    encodeField(18, EncryptedBytes, textEnc('c6749e76'), initTime),
     encodeField(19, EncryptedBytes, textEnc(profile.gpuRenderer), initTime), // WebGL renderer
     encodeField(
       20,
@@ -637,7 +716,9 @@ function buildDeviceFingerprint(
     encodeField(27, CompactInt, 4644), // Stack trace string length
     encodeField(28, RawAppend, u8(0x00)), // Touch support metric
     encodeField(29, Byte, 3), // Undefined call error type
-    encodeField(30, RawAppend, u8(0x5d, 0xc5, 0xab, 0xb5, 0x88)), // Navigator props hash
+    // Navigator properties hash — hash of enumerable navigator property names.
+    // Captured from Chrome 144 on Windows 10. Source: yubie-re/castleio-gen (Python SDK, MIT license).
+    encodeField(30, RawAppend, u8(0x5d, 0xc5, 0xab, 0xb5, 0x88)),
     encodeField(31, RawAppend, encodeCodecPlayability()), // Codec playability
   ];
 
@@ -955,12 +1036,18 @@ function buildTokenHeader(
  *   Should match the UA used for HTTP requests.
  * @returns Object with `token` (the Castle request token) and `cuid` (for __cuid cookie)
  */
-export function generateLocalCastleToken(userAgent: string): {
+export function generateLocalCastleToken(
+  userAgent: string,
+  profileOverride?: Partial<BrowserProfile>,
+): {
   token: string;
   cuid: string;
 } {
   const now = Date.now();
-  const profile = DEFAULT_PROFILE;
+  // Use the known-good DEFAULT_PROFILE as base. Randomization is opt-in because
+  // the static canvas hashes (fields 13, 18) must match the GPU renderer — see
+  // randomizeBrowserProfile() JSDoc for details.
+  const profile = { ...DEFAULT_PROFILE, ...profileOverride };
 
   // Simulate page load: init_time is 2-30 minutes before current time
   const initTime = now - randFloat(2 * 60 * 1000, 30 * 60 * 1000);

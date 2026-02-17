@@ -7,6 +7,7 @@ import {
 } from './api';
 import { TwitterAuth, TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { FlowSubtaskHandler, TwitterUserAuth } from './auth-user';
+import type { BrowserProfile } from './castle';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
   fetchSearchProfiles,
@@ -90,9 +91,15 @@ export interface ScraperOptions {
     /**
      * Delay in milliseconds between login flow steps, to mimic human-like timing.
      * Without a delay, Twitter may flag rapid-fire requests as bot activity (error 399).
-     * Set to 0 to disable. Default is ~2000ms with random jitter.
+     * Set to 0 to disable. Default is 1-3 seconds (average ~2s) with random jitter.
      */
     flowStepDelay?: number;
+    /**
+     * Override the browser profile used for Castle.io fingerprint token generation.
+     * Unspecified fields are randomized from realistic value pools.
+     * Set this if you want a consistent fingerprint or need to match specific hardware.
+     */
+    browserProfile?: Partial<BrowserProfile>;
   };
 }
 
@@ -688,6 +695,7 @@ export class Scraper {
         xClientTransactionId: this.options?.experimental?.xClientTransactionId,
         xpff: this.options?.experimental?.xpff,
         flowStepDelay: this.options?.experimental?.flowStepDelay,
+        browserProfile: this.options?.experimental?.browserProfile,
       },
     };
   }
