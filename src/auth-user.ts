@@ -1,5 +1,5 @@
 import { TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import { flexParseJson, requestApi } from './api';
+import { CHROME_SEC_CH_UA, CHROME_USER_AGENT, flexParseJson } from './api';
 import { CookieJar } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
@@ -9,8 +9,9 @@ import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
 import { FetchParameters } from './api-types';
 import debug from 'debug';
-import { generateXPFFHeader } from './xpff';
+
 import { generateTransactionId } from './xctxid';
+import { generateLocalCastleToken } from './castle';
 
 const log = debug('twitter-scraper:auth-user');
 
@@ -36,10 +37,6 @@ export interface TwitterUserAuthFlowResponse {
   flow_token?: string;
   status?: string;
   subtasks?: TwitterUserAuthSubtask[];
-}
-
-interface TwitterUserAuthVerifyCredentials {
-  errors?: TwitterApiErrorRaw[];
 }
 
 const TwitterUserAuthSubtask = Type.Object({
@@ -240,8 +237,13 @@ export class TwitterUserAuth extends TwitterGuestAuth {
   }
 
   async isLoggedIn(): Promise<boolean> {
-    const cookie = await this.getCookieString();
-    return cookie.includes('ct0=');
+    const cookies = await this.getCookies();
+    // Both ct0 (CSRF token) and auth_token (session token) are required for authenticated requests.
+    // ct0 alone is NOT sufficient - without auth_token, Twitter returns 401 on all API calls.
+    return (
+      cookies.some((c) => c.key === 'ct0') &&
+      cookies.some((c) => c.key === 'auth_token')
+    );
   }
 
   async login(
@@ -250,7 +252,24 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     email?: string,
     twoFactorSecret?: string,
   ): Promise<void> {
-    await this.updateGuestToken();
+    // Pre-flight: visit x.com to establish Cloudflare cookies and session context.
+    // A real browser visits the page before starting the login API flow, and skipping
+    // this step can trigger Twitter's anti-bot detection (error 399).
+    // The preflight also extracts the guest token from the page HTML (via inline <script>
+    // that sets the `gt` cookie), matching real browser behavior where no separate
+    // guest/activate.json call is made.
+    await this.preflight();
+
+    // Only call guest/activate.json if preflight didn't set the guest token.
+    // Real browsers get the guest token from inline JS in the login page HTML,
+    // not from a separate API call.
+    if (!this.guestToken) {
+      await this.updateGuestToken();
+    }
+
+    // IMPORTANT: Do NOT generate ct0 or send x-csrf-token during login.
+    // Real browsers do NOT have a ct0 cookie during the unauthenticated login flow.
+    // Sending x-csrf-token when the server doesn't expect it triggers bot detection (error 399).
 
     const credentials: TwitterUserAuthCredentials = {
       username,
@@ -268,6 +287,20 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       }
 
       const subtaskId = next.response.subtasks[0].subtask_id;
+
+      // Add a human-like delay between flow steps.
+      // Real browsers take 1-3 seconds between steps (page render, user reading, typing).
+      // Without this delay, Twitter flags the rapid-fire request pattern as bot activity (error 399).
+      const configuredDelay = this.options?.experimental?.flowStepDelay;
+      const delay =
+        configuredDelay !== undefined
+          ? configuredDelay
+          : 1000 + Math.floor(Math.random() * 2000); // default: 1-3 seconds
+      if (delay > 0) {
+        log(`Waiting ${delay}ms before handling subtask: ${subtaskId}`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+
       const handler = this.subtaskHandlers.get(subtaskId);
 
       if (handler) {
@@ -284,20 +317,74 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
   }
 
+  /**
+   * Pre-flight request to establish Cloudflare cookies and session context.
+   * Mimics a real browser visiting x.com before starting the login API flow.
+   */
+  private async preflight(): Promise<void> {
+    try {
+      const headers = new Headers({
+        accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'accept-language': 'en-US,en;q=0.9',
+        'sec-ch-ua': CHROME_SEC_CH_UA,
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': CHROME_USER_AGENT,
+      });
+
+      log('Pre-flight: fetching https://x.com/i/flow/login');
+      const res = await this.fetch('https://x.com/i/flow/login', {
+        redirect: 'follow',
+        headers: headers,
+      });
+
+      await updateCookieJar(this.jar, res.headers);
+      log(`Pre-flight response: ${res.status}`);
+
+      // Extract guest token from the HTML page.
+      // Real browsers get the guest token from inline <script> tags that set
+      // document.cookie="gt=<token>; ..." rather than calling guest/activate.json.
+      try {
+        const html = await res.text();
+        const gtMatch = html.match(/document\.cookie="gt=(\d+)/);
+        if (gtMatch) {
+          this.guestToken = gtMatch[1];
+          this.guestCreatedAt = new Date();
+          // Also set the gt cookie in our jar (as the browser would)
+          await this.setCookie('gt', gtMatch[1]);
+          log(`Extracted guest token from HTML (length: ${gtMatch[1].length})`);
+        }
+      } catch (err) {
+        log('Failed to extract guest token from HTML (non-fatal):', err);
+      }
+    } catch (err) {
+      log('Pre-flight request failed (non-fatal):', err);
+    }
+  }
+
   async logout(): Promise<void> {
     if (!this.hasToken()) {
       return;
     }
 
     try {
-      await requestApi<void>(
-        'https://api.x.com/1.1/account/logout.json',
-        this,
-        'POST',
-      );
+      const logoutUrl = 'https://api.x.com/1.1/account/logout.json';
+      const headers = new Headers();
+      await this.installTo(headers, logoutUrl);
+
+      await this.fetch(logoutUrl, {
+        method: 'POST',
+        headers,
+      });
     } catch (error) {
       // Ignore errors during logout but still clean up state
-      console.warn('Error during logout:', error);
+      log('Error during logout:', error);
     } finally {
       this.deleteToken();
       this.jar = new CookieJar();
@@ -306,51 +393,38 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
   async installTo(
     headers: Headers,
-    _url: string,
+    url: string,
     bearerTokenOverride?: string,
   ): Promise<void> {
-    // Use the override token if provided, otherwise use the instance's bearer token
-    const tokenToUse = bearerTokenOverride ?? this.bearerToken;
-    headers.set('authorization', `Bearer ${tokenToUse}`);
-    headers.set(
-      'user-agent',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-    );
+    // Reuse all shared browser + auth headers from the guest auth base class
+    await super.installTo(headers, url, bearerTokenOverride);
 
-    if (this.guestToken) {
-      // Guest token is optional for authenticated users
-      headers.set('x-guest-token', this.guestToken);
-    }
+    // CRITICAL: Tell Twitter this is an authenticated user session (not guest)
+    headers.set('x-twitter-auth-type', 'OAuth2Session');
+    headers.set('x-twitter-active-user', 'yes');
+    headers.set('x-twitter-client-language', 'en');
 
-    await this.installCsrfToken(headers);
-
-    if (this.options?.experimental?.xpff) {
-      const guestId = await this.guestId();
-      if (guestId != null) {
-        const xpffHeader = await generateXPFFHeader(guestId);
-        headers.set('x-xp-forwarded-for', xpffHeader);
-      }
-    }
-
-    const cookie = await this.getCookieString();
-    headers.set('cookie', cookie);
+    // Note: Transaction ID generation is NOT done here. It is handled by
+    // requestApi() (api.ts) which knows the actual HTTP method (GET vs POST).
+    // Generating it here would use the wrong method and be immediately
+    // overwritten by requestApi anyway.
   }
 
   private async initLogin(): Promise<FlowTokenResult> {
-    // Reset certain session-related cookies because Twitter complains sometimes if we don't
-    this.removeCookie('twitter_ads_id=');
-    this.removeCookie('ads_prefs=');
-    this.removeCookie('_twitter_sess=');
-    this.removeCookie('zipbox_forms_auth_token=');
-    this.removeCookie('lang=');
-    this.removeCookie('bouncer_reset_cookie=');
-    this.removeCookie('twid=');
-    this.removeCookie('twitter_ads_idb=');
-    this.removeCookie('email_uid=');
-    this.removeCookie('external_referer=');
-    this.removeCookie('ct0=');
-    this.removeCookie('aa_u=');
-    this.removeCookie('__cf_bm=');
+    // Reset stale session cookies from previous logins.
+    // We preserve __cf_bm (Cloudflare cookie from preflight) and gt (guest token).
+    // ct0 should NOT exist during login - real browsers don't have it until authenticated.
+    await this.removeCookie('twitter_ads_id');
+    await this.removeCookie('ads_prefs');
+    await this.removeCookie('_twitter_sess');
+    await this.removeCookie('zipbox_forms_auth_token');
+    await this.removeCookie('lang');
+    await this.removeCookie('bouncer_reset_cookie');
+    await this.removeCookie('twid');
+    await this.removeCookie('twitter_ads_idb');
+    await this.removeCookie('email_uid');
+    await this.removeCookie('external_referer');
+    await this.removeCookie('aa_u');
 
     return await this.executeFlowTask({
       flow_name: 'login',
@@ -358,7 +432,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         flow_context: {
           debug_overrides: {},
           start_location: {
-            location: 'unknown',
+            location: 'manual_link',
           },
         },
       },
@@ -410,22 +484,219 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
   private async handleJsInstrumentationSubtask(
     subtaskId: string,
-    _prev: TwitterUserAuthFlowResponse,
+    prev: TwitterUserAuthFlowResponse,
     _credentials: TwitterUserAuthCredentials,
     api: FlowSubtaskHandlerApi,
   ): Promise<FlowTokenResult> {
+    // Extract the JS instrumentation URL from the subtask response.
+    // The script at this URL collects browser metrics (fingerprinting) that Twitter
+    // validates. Sending "{}" (empty) triggers bot detection (error 399).
+    const subtasks = prev.subtasks as {
+      subtask_id: string;
+      js_instrumentation?: { url: string };
+    }[];
+    const jsSubtask = subtasks?.find((s) => s.subtask_id === subtaskId);
+    const jsUrl: string | undefined = jsSubtask?.js_instrumentation?.url;
+
+    let metricsResponse = '{}';
+    if (jsUrl) {
+      try {
+        metricsResponse = await this.executeJsInstrumentation(jsUrl);
+        log(
+          `JS instrumentation executed successfully, response length: ${metricsResponse.length}`,
+        );
+      } catch (err) {
+        log('Failed to execute JS instrumentation (falling back to {})', err);
+      }
+    }
+
     return await api.sendFlowRequest({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
           subtask_id: subtaskId,
           js_instrumentation: {
-            response: '{}',
+            response: metricsResponse,
             link: 'next_link',
           },
         },
       ],
     });
+  }
+
+  /**
+   * Maximum allowed size (in bytes) for the JS instrumentation script.
+   * Twitter's scripts are typically ~50-100KB. Anything significantly larger
+   * may indicate tampering or an unexpected response.
+   */
+  private static readonly JS_INSTRUMENTATION_MAX_SIZE = 512 * 1024; // 512KB
+
+  /**
+   * Fetches and executes the JS instrumentation script to generate browser
+   * fingerprinting data. The result is written to an input element named
+   * 'ui_metrics'.
+   *
+   * In browser environments, uses a hidden iframe with native DOM APIs.
+   * In Node.js, uses linkedom (for DOM) and the vm module for execution.
+   *
+   * @security This method executes **remote JavaScript** fetched from Twitter's servers.
+   * - In browsers, execution is isolated in a disposable iframe.
+   * - In Node.js, `vm.runInContext` is used for convenience, NOT for security.
+   *   Node's `vm` module provides NO security sandbox — a malicious script can
+   *   trivially escape the context (e.g., via `this.constructor.constructor('return process')()`).
+   *   The only real trust boundary is that scripts are fetched from Twitter's known CDN URLs.
+   *   Setting `process: undefined` etc. in the sandbox context is cosmetic and does not
+   *   prevent escape.
+   * - A maximum script size limit (512KB) and a 5-second timeout provide basic sanity checks.
+   */
+  private async executeJsInstrumentation(url: string): Promise<string> {
+    log(`Fetching JS instrumentation from: ${url}`);
+    const response = await this.fetch(url);
+    const scriptContent = await response.text();
+    log(`JS instrumentation script fetched, length: ${scriptContent.length}`);
+
+    if (scriptContent.length > TwitterUserAuth.JS_INSTRUMENTATION_MAX_SIZE) {
+      log(
+        `WARNING: JS instrumentation script exceeds size limit (${scriptContent.length} > ${TwitterUserAuth.JS_INSTRUMENTATION_MAX_SIZE}), skipping execution`,
+      );
+      return '{}';
+    }
+
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      return this.executeJsInstrumentationBrowser(scriptContent);
+    }
+    return this.executeJsInstrumentationNode(scriptContent);
+  }
+
+  /**
+   * Execute JS instrumentation in a browser environment using a hidden iframe.
+   * The iframe provides natural isolation — the script gets its own document
+   * and window, and we can override setTimeout without affecting the host page.
+   */
+  private async executeJsInstrumentationBrowser(
+    scriptContent: string,
+  ): Promise<string> {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    try {
+      const iframeWin = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
+      if (!iframeWin || !iframeDoc) {
+        log('WARNING: Could not access iframe document/window');
+        return '{}';
+      }
+
+      // Add the ui_metrics input element that the script writes its result to
+      const input = iframeDoc.createElement('input');
+      input.name = 'ui_metrics';
+      input.type = 'hidden';
+      iframeDoc.body.appendChild(input);
+
+      // Override setTimeout to be synchronous — we need the result immediately
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (iframeWin as any).setTimeout = (fn: any) => fn();
+
+      // Execute the script in the iframe context via <script> tag injection
+      const script = iframeDoc.createElement('script');
+      script.textContent = scriptContent;
+      iframeDoc.body.appendChild(script);
+
+      const value = input.value;
+      if (value) {
+        log(`JS instrumentation result extracted, length: ${value.length}`);
+        return value;
+      }
+
+      log('WARNING: No ui_metrics value found after script execution');
+      return '{}';
+    } finally {
+      document.body.removeChild(iframe);
+    }
+  }
+
+  /**
+   * Execute JS instrumentation in Node.js using linkedom for DOM emulation
+   * and the vm module for sandboxed script execution.
+   *
+   * @security Node's `vm` module does NOT provide a security sandbox. A
+   * malicious script can trivially escape the context. The only real trust
+   * boundary is that scripts come from Twitter's CDN. The undefined globals
+   * (process, require, etc.) are cosmetic — they do not prevent sandbox escape.
+   */
+  private async executeJsInstrumentationNode(
+    scriptContent: string,
+  ): Promise<string> {
+    // Use linkedom to create a DOM environment with the required elements.
+    // The script needs: document.createElement, getElementsByName, getElementsByTagName,
+    // appendChild, removeChild, parentNode, children, innerText, lastElementChild, etc.
+    // We use parseHTML (not DOMParser) for a more complete window/document implementation.
+    const { parseHTML } = await import('linkedom');
+    const { document: doc, window: win } = parseHTML(
+      '<html><head></head><body><input name="ui_metrics" type="hidden" value="" /></body></html>',
+    );
+
+    // Polyfill getElementsByName if linkedom doesn't implement it.
+    if (typeof doc.getElementsByName !== 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).getElementsByName = (name: string) =>
+        doc.querySelectorAll(`[name="${name}"]`);
+    }
+
+    // Execute the script in a sandboxed VM context.
+    // The script expects `document` and `window` as globals and uses `setTimeout`
+    // to schedule execution. We make setTimeout synchronous since we need the result
+    // immediately. The script checks document.readyState to decide between setTimeout
+    // and addEventListener('load'/'DOMContentLoaded').
+    const vm = await import('vm');
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const origSetTimeout = (win as any).setTimeout;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (win as any).setTimeout = (fn: any) => fn();
+
+    try {
+      Object.defineProperty(doc, 'readyState', {
+        value: 'complete',
+        writable: true,
+        configurable: true,
+      });
+    } catch {
+      // If readyState can't be set, the script will use event listeners
+    }
+
+    const sandbox = {
+      document: doc,
+      window: win,
+      Date: Date,
+      JSON: JSON,
+      parseInt: parseInt,
+      // Deny access to Node.js internals to limit sandbox escape surface
+      process: undefined,
+      require: undefined,
+      global: undefined,
+      globalThis: undefined,
+    };
+    vm.runInNewContext(scriptContent, sandbox, { timeout: 5000 });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (win as any).setTimeout = origSetTimeout;
+
+    // Extract the result from the ui_metrics input element
+    const inputs = doc.getElementsByName('ui_metrics');
+    if (inputs && inputs.length > 0) {
+      const value =
+        (inputs[0] as HTMLInputElement).value ||
+        inputs[0].getAttribute('value');
+      if (value) {
+        log(`JS instrumentation result extracted, length: ${value.length}`);
+        return value;
+      }
+    }
+
+    log('WARNING: No ui_metrics value found after script execution');
+    return '{}';
   }
 
   private async handleEnterAlternateIdentifierSubtask(
@@ -454,25 +725,72 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     credentials: TwitterUserAuthCredentials,
     api: FlowSubtaskHandlerApi,
   ): Promise<FlowTokenResult> {
+    // Generate a Castle.io device fingerprint token.
+    // Twitter requires this token with the username submission step (settings_list).
+    // Without it, Twitter returns error 399 ("suspicious activity").
+    let castleToken: string | undefined;
+    try {
+      castleToken = await this.generateCastleToken();
+      log(`Castle token generated, length: ${castleToken.length}`);
+    } catch (err) {
+      log('Failed to generate castle token (continuing without it):', err);
+    }
+
+    const settingsList: {
+      setting_responses: {
+        key: string;
+        response_data: { text_data: { result: string } };
+      }[];
+      link: string;
+      castle_token?: string;
+    } = {
+      setting_responses: [
+        {
+          key: 'user_identifier',
+          response_data: {
+            text_data: { result: credentials.username },
+          },
+        },
+      ],
+      link: 'next_link',
+    };
+
+    if (castleToken) {
+      settingsList.castle_token = castleToken;
+    }
+
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          settings_list: {
-            setting_responses: [
-              {
-                key: 'user_identifier',
-                response_data: {
-                  text_data: { result: credentials.username },
-                },
-              },
-            ],
-            link: 'next_link',
-          },
+          settings_list: settingsList,
         },
       ],
     });
+  }
+
+  /**
+   * Generates a Castle.io device fingerprint token for the login flow.
+   * Uses local token generation (Castle.io v11 format) to avoid external
+   * API dependencies and rate limits.
+   */
+  private async generateCastleToken(): Promise<string> {
+    const userAgent = CHROME_USER_AGENT;
+
+    const browserProfile = this.options?.experimental?.browserProfile;
+    const { token, cuid } = generateLocalCastleToken(userAgent, browserProfile);
+
+    // Set the __cuid cookie (Castle.io uses this for tracking)
+    await this.setCookie('__cuid', cuid);
+
+    log(
+      `Castle token generated locally, length: ${
+        token.length
+      }, cuid: ${cuid.substring(0, 6)}...`,
+    );
+
+    return token;
   }
 
   private async handleEnterPassword(
@@ -481,15 +799,37 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     credentials: TwitterUserAuthCredentials,
     api: FlowSubtaskHandlerApi,
   ): Promise<FlowTokenResult> {
+    // Generate a fresh castle token for the password step too.
+    let castleToken: string | undefined;
+    try {
+      castleToken = await this.generateCastleToken();
+      log(`Castle token for password step, length: ${castleToken.length}`);
+    } catch (err) {
+      log(
+        'Failed to generate castle token for password (continuing without):',
+        err,
+      );
+    }
+
+    const enterPassword: {
+      password: string;
+      link: string;
+      castle_token?: string;
+    } = {
+      password: credentials.password,
+      link: 'next_link',
+    };
+
+    if (castleToken) {
+      enterPassword.castle_token = castleToken;
+    }
+
     return await this.executeFlowTask({
       flow_token: api.getFlowToken(),
       subtask_inputs: [
         {
           subtask_id: subtaskId,
-          enter_password: {
-            password: credentials.password,
-            link: 'next_link',
-          },
+          enter_password: enterPassword,
         },
       ],
     });
@@ -530,27 +870,30 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     const totp = new OTPAuth.TOTP({ secret: credentials.twoFactorSecret });
-    let error;
+    let lastResult!: FlowTokenResult;
     for (let attempts = 1; attempts < 4; attempts += 1) {
-      try {
-        return await api.sendFlowRequest({
-          flow_token: api.getFlowToken(),
-          subtask_inputs: [
-            {
-              subtask_id: subtaskId,
-              enter_text: {
-                link: 'next_link',
-                text: totp.generate(),
-              },
+      const result = await api.sendFlowRequest({
+        flow_token: api.getFlowToken(),
+        subtask_inputs: [
+          {
+            subtask_id: subtaskId,
+            enter_text: {
+              link: 'next_link',
+              text: totp.generate(),
             },
-          ],
-        });
-      } catch (err) {
-        error = err;
-        await new Promise((resolve) => setTimeout(resolve, 2000 * attempts));
+          },
+        ],
+      });
+
+      if (result.status === 'success') {
+        return result;
       }
+
+      lastResult = result;
+      log(`2FA attempt ${attempts} failed: ${result.err.message}`);
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempts));
     }
-    throw error;
+    return lastResult;
   }
 
   private async handleAcid(
@@ -591,30 +934,40 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     log(`Making POST request to ${onboardingTaskUrl}`);
+    log(
+      'Request data:',
+      JSON.stringify(
+        data,
+        (key, value) => (key === 'password' ? '[REDACTED]' : value),
+        2,
+      ),
+    );
+    // Match exact headers observed from real Chrome browser during login flow.
+    // Notable absences vs authenticated requests: no cache-control, no pragma,
+    // no x-csrf-token, no x-twitter-auth-type, no x-xp-forwarded-for.
+    // We use installAuthCredentials() (not installTo()) to get only the auth
+    // essentials (bearer token, guest token, cookies) without browser headers
+    // that would need to be deleted afterwards.
     const headers = new Headers({
       accept: '*/*',
       'accept-language': 'en-US,en;q=0.9',
       'content-type': 'application/json',
-      'cache-control': 'no-cache',
       origin: 'https://x.com',
-      pragma: 'no-cache',
       priority: 'u=1, i',
       referer: 'https://x.com/',
-      'sec-ch-ua':
-        '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+      'sec-ch-ua': CHROME_SEC_CH_UA,
       'sec-ch-ua-mobile': '?0',
       'sec-ch-ua-platform': '"Windows"',
       'sec-fetch-dest': 'empty',
       'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-origin',
-      'user-agent':
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-      'x-twitter-auth-type': 'OAuth2Client',
+      'sec-fetch-site': 'same-site',
+      'user-agent': CHROME_USER_AGENT,
       'x-twitter-active-user': 'yes',
       'x-twitter-client-language': 'en',
     });
-    await this.installTo(headers, onboardingTaskUrl);
+    await this.installAuthCredentials(headers);
 
+    // Generate x-client-transaction-id if enabled - real browsers send this during login.
     if (this.options?.experimental?.xClientTransactionId) {
       const transactionId = await generateTransactionId(
         onboardingTaskUrl,
@@ -622,6 +975,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
         'POST',
       );
       headers.set('x-client-transaction-id', transactionId);
+    }
+
+    // Strip flow_name from the body: real browsers only send it in the URL query parameter.
+    const bodyData: Record<string, unknown> = { ...data };
+    if ('flow_name' in bodyData) {
+      delete bodyData.flow_name;
     }
 
     let res: Response;
@@ -632,7 +991,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
           credentials: 'include',
           method: 'POST',
           headers: headers,
-          body: JSON.stringify(data),
+          body: JSON.stringify(bodyData),
         },
       ];
 
@@ -651,6 +1010,7 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
       await updateCookieJar(this.jar, res.headers);
 
+      log(`Response status: ${res.status}`);
       if (res.status === 429) {
         log('Rate limit hit, waiting before retrying...');
         await this.onRateLimit({
@@ -660,24 +1020,78 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       }
     } while (res.status === 429);
 
-    if (!res.ok) {
-      return { status: 'error', err: await ApiError.fromResponse(res) };
-    }
-
-    const flow: TwitterUserAuthFlowResponse = await flexParseJson(res);
-    if (flow?.flow_token == null) {
+    // Parse the response body once - we need it for both error and success handling.
+    // Twitter sometimes returns flow errors (e.g., error 399) with HTTP 400 status,
+    // so we must parse the body before checking res.ok.
+    let flow: TwitterUserAuthFlowResponse;
+    try {
+      flow = await flexParseJson(res);
+    } catch {
+      if (!res.ok) {
+        return {
+          status: 'error',
+          err: new ApiError(res, 'Failed to parse response body'),
+        };
+      }
       return {
         status: 'error',
-        err: new AuthenticationError('flow_token not found.'),
+        err: new AuthenticationError('Failed to parse flow response.'),
       };
     }
+    log(
+      'Flow response: status=%s subtasks=%s',
+      flow.status,
+      flow.subtasks?.map((s) => s.subtask_id).join(', '),
+    );
 
+    // Check for flow-level errors (can appear in both 200 and 400 responses)
     if (flow.errors?.length) {
+      log('Twitter auth flow errors:', JSON.stringify(flow.errors, null, 2));
+
+      // Special handling for error 399 - suspicious activity detected
+      if (flow.errors[0].code === 399) {
+        const message = flow.errors[0].message || '';
+
+        // Extract challenge token for logging (format: "g;...:...:...")
+        const challengeMatch = message.match(/g;[^:]+:[^:]+:[0-9]+/);
+        if (challengeMatch) {
+          log('Twitter challenge token detected:', challengeMatch[0]);
+        }
+
+        // Provide actionable error message
+        return {
+          status: 'error',
+          err: new AuthenticationError(
+            'Twitter blocked this login attempt due to suspicious activity (error 399). ' +
+              'This is not an issue with your credentials - Twitter requires additional authentication.\n\n' +
+              'Solutions:\n' +
+              '1. Use cookie-based authentication (RECOMMENDED): Export cookies from your browser ' +
+              'and use scraper.setCookies() - see README for details\n' +
+              '2. Enable Two-Factor Authentication (2FA) on your account and provide totp_secret\n' +
+              '3. Wait 15 minutes before retrying (Twitter rate limit for suspicious logins)\n' +
+              '4. Login via browser first to establish device trust\n\n' +
+              `Original error: ${message}`,
+          ),
+        };
+      }
+
       return {
         status: 'error',
         err: new AuthenticationError(
           `Authentication error (${flow.errors[0].code}): ${flow.errors[0].message}`,
         ),
+      };
+    }
+
+    // For non-200 responses without recognized flow errors, return generic API error
+    if (!res.ok) {
+      return { status: 'error', err: new ApiError(res, flow) };
+    }
+
+    if (flow?.flow_token == null) {
+      return {
+        status: 'error',
+        err: new AuthenticationError('flow_token not found.'),
       };
     }
 
@@ -689,7 +1103,12 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     }
 
     const subtask = flow.subtasks?.length ? flow.subtasks[0] : undefined;
-    Check(TwitterUserAuthSubtask, subtask);
+    if (subtask && !Check(TwitterUserAuthSubtask, subtask as unknown)) {
+      log(
+        'WARNING: Subtask failed schema validation: %s',
+        subtask.subtask_id ?? 'unknown',
+      );
+    }
 
     if (subtask && subtask.subtask_id === 'DenyLoginSubtask') {
       return {

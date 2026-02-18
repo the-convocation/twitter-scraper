@@ -62,10 +62,10 @@ export async function getScraper(
   });
 
   if (options.authMethod === 'password') {
-    await scraper.login(username!, password!, email, twoFactorSecret);
+    await scraper.login(username ?? '', password ?? '', email, twoFactorSecret);
   } else if (options.authMethod === 'cookies') {
     await scraper.setCookies(
-      JSON.parse(cookies!).map((c: string) => Cookie.fromJSON(c)),
+      JSON.parse(cookies ?? '[]').map((c: string) => Cookie.fromJSON(c)),
     );
   }
 

@@ -2,7 +2,13 @@ import { Cookie, CookieJar, MemoryCookieStore } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
-import { FetchTransformOptions, flexParseJson } from './api';
+import {
+  CHROME_SEC_CH_UA,
+  CHROME_USER_AGENT,
+  FetchTransformOptions,
+  flexParseJson,
+} from './api';
+import type { BrowserProfile } from './castle';
 import {
   RateLimitEvent,
   RateLimitStrategy,
@@ -21,6 +27,18 @@ export interface TwitterAuthOptions {
   experimental: {
     xClientTransactionId?: boolean;
     xpff?: boolean;
+    /**
+     * Delay in milliseconds between login flow steps, to mimic human-like timing.
+     * Without a delay, Twitter may flag rapid-fire requests as bot activity (error 399).
+     * Set to 0 to disable (e.g. in tests). Default is 1-3 seconds (average ~2s) with random jitter.
+     */
+    flowStepDelay?: number;
+    /**
+     * Override the browser profile used for Castle.io fingerprint token generation.
+     * Unspecified fields are randomized from realistic value pools.
+     * Set this if you want a consistent fingerprint or need to match specific hardware.
+     */
+    browserProfile?: Partial<BrowserProfile>;
   };
 }
 
@@ -182,13 +200,17 @@ export class TwitterGuestAuth implements TwitterAuth {
     return new Date(this.guestCreatedAt);
   }
 
-  async installTo(
+  /**
+   * Install only authentication credentials (bearer token, guest token, cookies)
+   * without browser fingerprint or platform headers. Useful for callers that
+   * build their own header set (e.g. the login flow).
+   */
+  protected async installAuthCredentials(
     headers: Headers,
-    _url: string,
     bearerTokenOverride?: string,
   ): Promise<void> {
-    // Use the override token if provided, otherwise use the instance's bearer token
     const tokenToUse = bearerTokenOverride ?? this.bearerToken;
+    headers.set('authorization', `Bearer ${tokenToUse}`);
 
     // Only use guest tokens when not overriding the bearer token
     // Guest tokens are tied to the bearer token they were generated with
@@ -202,11 +224,52 @@ export class TwitterGuestAuth implements TwitterAuth {
       }
     }
 
-    headers.set('authorization', `Bearer ${tokenToUse}`);
-    headers.set(
-      'user-agent',
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-    );
+    headers.set('cookie', await this.getCookieString());
+  }
+
+  async installTo(
+    headers: Headers,
+    url: string,
+    bearerTokenOverride?: string,
+  ): Promise<void> {
+    await this.installAuthCredentials(headers, bearerTokenOverride);
+
+    headers.set('user-agent', CHROME_USER_AGENT);
+
+    // Standard browser accept headers - required by Twitter API validation
+    if (!headers.has('accept')) {
+      headers.set('accept', '*/*');
+    }
+    headers.set('accept-language', 'en-US,en;q=0.9');
+
+    headers.set('sec-ch-ua', CHROME_SEC_CH_UA);
+    headers.set('sec-ch-ua-mobile', '?0');
+    headers.set('sec-ch-ua-platform', '"Windows"');
+
+    // Referer header - required by Cloudflare for GraphQL endpoints
+    headers.set('referer', 'https://x.com/');
+
+    // Origin header - required for cross-origin requests from x.com to api.x.com
+    headers.set('origin', 'https://x.com');
+
+    // Sec-Fetch headers - automatically set by browsers, required for API authentication
+    // Since we send requests from x.com origin to api.x.com, these are "same-site" (not same-origin)
+    headers.set('sec-fetch-site', 'same-site');
+    headers.set('sec-fetch-mode', 'cors');
+    headers.set('sec-fetch-dest', 'empty');
+
+    // Chrome priority hint - present on all API requests
+    headers.set('priority', 'u=1, i');
+
+    // Set content-type for GraphQL requests if not already set.
+    // Only match the known API base URLs (api.x.com and x.com/i/api).
+    if (
+      !headers.has('content-type') &&
+      (url.includes('api.x.com/graphql/') ||
+        url.includes('x.com/i/api/graphql/'))
+    ) {
+      headers.set('content-type', 'application/json');
+    }
 
     await this.installCsrfToken(headers);
 
@@ -217,8 +280,6 @@ export class TwitterGuestAuth implements TwitterAuth {
         headers.set('x-xp-forwarded-for', xpffHeader);
       }
     }
-
-    headers.set('cookie', await this.getCookieString());
   }
 
   async installCsrfToken(headers: Headers): Promise<void> {
@@ -257,7 +318,7 @@ export class TwitterGuestAuth implements TwitterAuth {
     const cookies = await this.jar.getCookies(this.getCookieJarUrl());
     for (const cookie of cookies) {
       if (!cookie.domain || !cookie.path) continue;
-      store.removeCookie(cookie.domain, cookie.path, key);
+      await store.removeCookie(cookie.domain, cookie.path, key);
 
       if (typeof document !== 'undefined') {
         document.cookie = `${cookie.key}=; Max-Age=0; path=${cookie.path}; domain=${cookie.domain}`;
@@ -291,9 +352,23 @@ export class TwitterGuestAuth implements TwitterAuth {
   private async updateGuestTokenCore() {
     const guestActivateUrl = 'https://api.x.com/1.1/guest/activate.json';
 
+    // Must include full browser headers - Cloudflare rejects requests
+    // that only have Authorization/Cookie without proper browser fingerprint
     const headers = new Headers({
-      Authorization: `Bearer ${this.bearerToken}`,
-      Cookie: await this.getCookieString(),
+      authorization: `Bearer ${this.bearerToken}`,
+      'user-agent': CHROME_USER_AGENT,
+      accept: '*/*',
+      'accept-language': 'en-US,en;q=0.9',
+      'content-type': 'application/x-www-form-urlencoded',
+      'sec-ch-ua': CHROME_SEC_CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      origin: 'https://x.com',
+      referer: 'https://x.com/',
+      'sec-fetch-site': 'same-site',
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-dest': 'empty',
+      cookie: await this.getCookieString(),
     });
 
     log(`Making POST request to ${guestActivateUrl}`);
@@ -301,7 +376,6 @@ export class TwitterGuestAuth implements TwitterAuth {
     const res = await this.fetch(guestActivateUrl, {
       method: 'POST',
       headers: headers,
-      referrerPolicy: 'no-referrer',
     });
 
     await updateCookieJar(this.jar, res.headers);
@@ -325,7 +399,7 @@ export class TwitterGuestAuth implements TwitterAuth {
 
     await this.setCookie('gt', newGuestToken);
 
-    log(`Updated guest token: ${newGuestToken}`);
+    log(`Updated guest token (length: ${newGuestToken.length})`);
   }
 
   /**

@@ -212,6 +212,64 @@ cycleTLSExit();
 
 See the [cycletls example](./examples/cycletls/) for a complete working example.
 
+### Cookie-based authentication
+
+If you're encountering `error 399` ("Incorrect. Please try again") or Twitter's suspicious activity detection during login, you can use cookies exported from an already-authenticated browser session instead. This approach:
+
+- Avoids Twitter's anti-bot protection that blocks automated logins
+- No need to store or handle passwords in code
+- Uses your established browser session
+- Bypasses rate limiting on authentication endpoints
+
+**Step 1: Export cookies from your browser**
+
+Using Chrome/Edge:
+
+1. Log in to X.com in your browser
+2. Open DevTools (F12) → Application tab → Cookies
+3. Click the URL bar that says "Filter cookies" and press Ctrl+A to select all cookies
+4. Copy all cookies (they'll be in format: `name1=value1; name2=value2; ...`)
+
+Using Firefox:
+
+1. Log in to X.com in your browser
+2. Open DevTools (F12) → Storage tab → Cookies → `https://x.com`
+3. Find the `ct0` cookie and copy its value
+4. Find the `auth_token` cookie and copy its value
+5. Construct the cookie string: `ct0=<value>; auth_token=<value>`
+
+> **Tip:** You can use the [Cookie-Editor](https://addons.mozilla.org/en-US/firefox/addon/cookie-editor/) extension to export cookies in a convenient format.
+
+**Step 2: Use cookies in your code**
+
+```ts
+import { Cookie } from 'tough-cookie';
+import { Scraper } from '@the-convocation/twitter-scraper';
+
+// Your cookie string from browser (name=value; name2=value2; ...)
+const cookieString = 'ct0=abc123; auth_token=xyz789; lang=en; ...';
+
+// Parse the cookie string
+const cookies = cookieString
+  .split(';')
+  .map((c) => Cookie.parse(c))
+  .filter(Boolean);
+
+// Create scraper and set cookies
+const scraper = new Scraper();
+await scraper.setCookies(cookies);
+
+// Verify authentication works
+const isLoggedIn = await scraper.isLoggedIn();
+if (isLoggedIn) {
+  console.log('✓ Successfully authenticated with cookies!');
+  // Now you can use authenticated features
+  const profile = await scraper.getProfile('username');
+}
+```
+
+Cookies expire over time. If authentication fails, you may need to export fresh cookies from your browser.
+
 ### Rate limiting
 
 The Twitter API heavily rate-limits clients, requiring that the scraper has its own

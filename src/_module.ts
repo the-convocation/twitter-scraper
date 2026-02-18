@@ -45,6 +45,7 @@ export {
   WaitingRateLimitStrategy,
   ErrorRateLimitStrategy,
 } from './rate-limit';
+export { randomizeBrowserProfile, type BrowserProfile } from './castle';
 export { Scraper, type ScraperOptions } from './scraper';
 export { SearchMode } from './search';
 export type { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';

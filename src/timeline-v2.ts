@@ -15,6 +15,7 @@ export interface TimelineUserResultRaw {
   rest_id?: string;
   legacy?: LegacyUserRaw;
   is_blue_verified?: boolean;
+  core?: CoreUserRaw;
 }
 
 export interface TimelineEntryItemContentRaw {

@@ -2309,10 +2309,10 @@ cssom@^0.5.0:
   resolved "https://registry.yarnpkg.com/cssom/-/cssom-0.5.0.tgz#d254fa92cd8b6fbd83811b9fbaed34663cc17c36"
   integrity sha512-iKuQcq+NdHqlAcwUY0o/HL69XQrUaQdMjmStJ8JFmUaiiQErlhrmuigkg/CU4E2J0IyUKUrMAgl36TvN67MqTw==
 
-cycletls@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/cycletls/-/cycletls-2.0.4.tgz#8ae978f05a43ba9aba2d3c19d89630cc736868ab"
-  integrity sha512-kyQewFdaKa+IiUd4sR0PmNP0+xXPTx+7eC8LPTmR0/F5Txv40Z7OSI46cQqWM8cgiCwOf6GsB3s9QK9TLizYog==
+cycletls@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/cycletls/-/cycletls-2.0.5.tgz#52c491eb34c5171022f3d896a7e6bb932ff429a2"
+  integrity sha512-Nud94JBPZu1JTXWJ1GpIoQNR1xxU84WYt7G0dxzwpUe1xAAs6YbihvlQhIhPv9xljjonINJfWPFaeb8Ex1wLhQ==
   dependencies:
     "@types/node" "^20.14.0"
     form-data "^4.0.0"

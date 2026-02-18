@@ -1,6 +1,13 @@
 import initCycleTLS from 'cycletls';
 import { Headers } from 'headers-polyfill';
 import debug from 'debug';
+import {
+  CHROME_USER_AGENT,
+  CHROME_JA3,
+  CHROME_JA4R,
+  CHROME_HTTP2_FINGERPRINT,
+  CHROME_HEADER_ORDER,
+} from './chrome-fingerprint';
 
 const log = debug('twitter-scraper:cycletls');
 
@@ -77,15 +84,17 @@ export async function cycleTLSFetch(
     }
   }
 
-  // Use Chrome 120 JA3 fingerprint for maximum compatibility
+  // All Chrome fingerprint constants imported from chrome-fingerprint.ts
   const options = {
     body,
     headers,
-    // Chrome 120 on Windows 10
-    ja3: '771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0',
-    userAgent:
-      headers['user-agent'] ||
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
+    ja3: CHROME_JA3,
+    ja4r: CHROME_JA4R,
+    http2Fingerprint: CHROME_HTTP2_FINGERPRINT,
+    headerOrder: CHROME_HEADER_ORDER,
+    orderAsProvided: true,
+    disableGrease: false,
+    userAgent: headers['user-agent'] || CHROME_USER_AGENT,
   };
 
   try {

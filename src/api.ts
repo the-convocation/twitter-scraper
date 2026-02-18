@@ -36,6 +36,10 @@ export const bearerToken =
 export const bearerToken2 =
   'AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
+// Re-exported from chrome-fingerprint.ts — see that file for all Chrome
+// version-dependent constants that must be updated together.
+export { CHROME_USER_AGENT, CHROME_SEC_CH_UA } from './chrome-fingerprint';
+
 export async function jitter(maxMs: number): Promise<void> {
   const jitter = Math.random() * maxMs;
   await new Promise((resolve) => setTimeout(resolve, jitter));
@@ -103,7 +107,7 @@ export async function requestApi<T>(
 
       return {
         success: false,
-        err: new Error('Failed to perform request.'),
+        err,
       };
     }
 

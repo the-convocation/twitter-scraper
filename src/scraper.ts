@@ -1,7 +1,13 @@
 import { Cookie } from 'tough-cookie';
-import { bearerToken, FetchTransformOptions, RequestApiResult } from './api';
+import {
+  bearerToken,
+  bearerToken2,
+  FetchTransformOptions,
+  RequestApiResult,
+} from './api';
 import { TwitterAuth, TwitterAuthOptions, TwitterGuestAuth } from './auth';
 import { FlowSubtaskHandler, TwitterUserAuth } from './auth-user';
+import type { BrowserProfile } from './castle';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
   fetchSearchProfiles,
@@ -35,6 +41,7 @@ import {
   fetchLikedTweets,
 } from './tweets';
 import fetch from 'cross-fetch';
+import debug from 'debug';
 import { RateLimitStrategy } from './rate-limit';
 import {
   DmConversationTimeline,
@@ -48,6 +55,7 @@ import {
   DmConversation,
 } from './direct-messages';
 
+const log = debug('twitter-scraper:scraper');
 const twUrl = 'https://x.com';
 
 export interface ScraperOptions {
@@ -80,6 +88,18 @@ export interface ScraperOptions {
      * Enables the generation of the `x-xp-forwarded-for` header on requests. This may resolve some errors.
      */
     xpff: boolean;
+    /**
+     * Delay in milliseconds between login flow steps, to mimic human-like timing.
+     * Without a delay, Twitter may flag rapid-fire requests as bot activity (error 399).
+     * Set to 0 to disable. Default is 1-3 seconds (average ~2s) with random jitter.
+     */
+    flowStepDelay?: number;
+    /**
+     * Override the browser profile used for Castle.io fingerprint token generation.
+     * Unspecified fields are randomized from realistic value pools.
+     * Set this if you want a consistent fingerprint or need to match specific hardware.
+     */
+    browserProfile?: Partial<BrowserProfile>;
   };
 }
 
@@ -91,6 +111,7 @@ export class Scraper {
   private auth!: TwitterAuth;
   private authTrends!: TwitterAuth;
   private token: string;
+  private readonly subtaskHandlers: Map<string, FlowSubtaskHandler> = new Map();
 
   /**
    * Creates a new Scraper object.
@@ -112,12 +133,25 @@ export class Scraper {
     subtaskId: string,
     subtaskHandler: FlowSubtaskHandler,
   ): void {
+    // Always store so handlers survive auth transitions (guest -> user)
+    this.subtaskHandlers.set(subtaskId, subtaskHandler);
+
     if (this.auth instanceof TwitterUserAuth) {
       this.auth.registerSubtaskHandler(subtaskId, subtaskHandler);
     }
 
     if (this.authTrends instanceof TwitterUserAuth) {
       this.authTrends.registerSubtaskHandler(subtaskId, subtaskHandler);
+    }
+  }
+
+  /**
+   * Applies all stored subtask handlers to the given auth instance.
+   * @internal
+   */
+  private applySubtaskHandlers(auth: TwitterUserAuth): void {
+    for (const [subtaskId, handler] of this.subtaskHandlers) {
+      auth.registerSubtaskHandler(subtaskId, handler);
     }
   }
 
@@ -525,7 +559,10 @@ export class Scraper {
     twoFactorSecret?: string,
   ): Promise<void> {
     // Swap in a real authorizer for all requests
-    const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
+    // Use bearerToken2 for the login flow - this is the same token the Twitter frontend uses.
+    // Guest activation and the onboarding/task.json endpoint both require this token.
+    const userAuth = new TwitterUserAuth(bearerToken2, this.getAuthOptions());
+    this.applySubtaskHandlers(userAuth);
     await userAuth.login(username, password, email, twoFactorSecret);
     this.auth = userAuth;
     this.authTrends = userAuth;
@@ -559,13 +596,58 @@ export class Scraper {
    * @param cookies The cookies to set for the current session.
    */
   public async setCookies(cookies: (string | Cookie)[]): Promise<void> {
-    const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
+    // Use bearerToken2 for authenticated user requests
+    const userAuth = new TwitterUserAuth(bearerToken2, this.getAuthOptions());
+    this.applySubtaskHandlers(userAuth);
     for (const cookie of cookies) {
-      await userAuth.cookieJar().setCookie(cookie, twUrl);
+      if (cookie == null) continue;
+
+      if (typeof cookie === 'string') {
+        // String cookies are parsed by tough-cookie, which normalizes domains correctly
+        try {
+          await userAuth.cookieJar().setCookie(cookie, 'https://x.com');
+        } catch (err) {
+          log(`Failed to parse cookie string: ${(err as Error).message}`);
+        }
+      } else {
+        // Cookie objects from Cookie.fromJSON() preserve the domain literally.
+        // tough-cookie's getCookies() won't match ".x.com" against "https://x.com",
+        // so we must strip the leading dot and set hostOnly=false to allow
+        // subdomain matching (matching how tough-cookie normalizes string cookies).
+        if (cookie.domain && cookie.domain.startsWith('.')) {
+          cookie.domain = cookie.domain.substring(1);
+          cookie.hostOnly = false;
+        }
+
+        const cookieDomain = cookie.domain || 'x.com';
+        const cookieUrl = `https://${cookieDomain}`;
+        await userAuth.cookieJar().setCookie(cookie, cookieUrl);
+      }
     }
 
     this.auth = userAuth;
     this.authTrends = userAuth;
+
+    // Warn if auth_token is missing - this is the most common cause of 401 errors.
+    // auth_token is an HttpOnly cookie that cannot be accessed via document.cookie;
+    // it must be exported using a browser extension or DevTools.
+    const isLoggedIn = await userAuth.isLoggedIn();
+    if (!isLoggedIn) {
+      const cookieString = await userAuth
+        .cookieJar()
+        .getCookies(twUrl)
+        .then((c) => c.map((cookie) => cookie.key));
+      if (
+        cookieString.includes('ct0') &&
+        !cookieString.includes('auth_token')
+      ) {
+        log(
+          'auth_token cookie is missing. This is required for authenticated API access. ' +
+            'The auth_token is an HttpOnly cookie that cannot be accessed via document.cookie. ' +
+            'Export it using a browser extension (e.g., EditThisCookie) or DevTools Application tab.',
+        );
+      }
+    }
   }
 
   /**
@@ -612,6 +694,8 @@ export class Scraper {
       experimental: {
         xClientTransactionId: this.options?.experimental?.xClientTransactionId,
         xpff: this.options?.experimental?.xpff,
+        flowStepDelay: this.options?.experimental?.flowStepDelay,
+        browserProfile: this.options?.experimental?.browserProfile,
       },
     };
   }

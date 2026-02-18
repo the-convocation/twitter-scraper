@@ -7,7 +7,7 @@
     "scraper",
     "crawler"
   ],
-  "version": "0.21.1",
+  "version": "0.22.0",
   "main": "dist/default/cjs/index.js",
   "types": "./dist/types/index.d.ts",
   "exports": {
@@ -41,6 +41,8 @@
     "docs:generate": "typedoc --options typedoc.json",
     "docs:deploy": "yarn docs:generate && gh-pages -d docs",
     "format": "prettier --write src/**/*.ts examples/**/*.{ts,js,tsx}",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "prepare": "husky install",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --forceExit"
   },
@@ -76,7 +78,7 @@
     "@types/tough-cookie": "^4.0.2",
     "@typescript-eslint/eslint-plugin": "^5.59.7",
     "@typescript-eslint/parser": "^5.59.7",
-    "cycletls": "^2.0.4",
+    "cycletls": "^2.0.5",
     "cz-conventional-changelog": "^3.3.0",
     "dotenv": "^16.3.1",
     "esbuild": "^0.21.5",
