@@ -80,6 +80,11 @@ export type ApiRequestInfo<EndpointUrl> = EndpointFields<EndpointUrl> & {
    * Converts the request back into a URL to be sent to the Twitter API.
    */
   toRequestUrl(): string;
+
+  /**
+   * Converts the request into a JSON body for POST requests.
+   */
+  toRequestBody(): Record<string, unknown>;
 };
 
 /** Wrapper class for API request information. */
@@ -117,6 +122,17 @@ class ApiRequest<EndpointUrl> {
     }
 
     return `${this.url}?${params.toString()}`;
+  }
+
+  /**
+   * Converts the request into a JSON body for POST requests.
+   */
+  toRequestBody(): Record<string, unknown> {
+    const body: Record<string, unknown> = {};
+    if (this.variables) body.variables = this.variables;
+    if (this.features) body.features = this.features;
+    if (this.fieldToggles) body.fieldToggles = this.fieldToggles;
+    return body;
   }
 }
 

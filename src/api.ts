@@ -61,6 +61,7 @@ export type RequestApiResult<T> =
  * @param platform - The platform extensions to use.
  * @param headers - The headers to include in the request.
  * @param bearerTokenOverride - Optional bearer token to use instead of the default one.
+ * @param body - Optional JSON body to send with POST requests.
  */
 export async function requestApi<T>(
   url: string,
@@ -69,6 +70,7 @@ export async function requestApi<T>(
   platform: PlatformExtensions = new Platform(),
   headers: Headers = new Headers(),
   bearerTokenOverride?: string,
+  body?: Record<string, unknown>,
 ): Promise<RequestApiResult<T>> {
   log(`Making ${method} request to ${url}`);
 
@@ -87,6 +89,10 @@ export async function requestApi<T>(
     headers.set('x-client-transaction-id', transactionId);
   }
 
+  if (body && method === 'POST') {
+    headers.set('content-type', 'application/json');
+  }
+
   let res: Response;
   do {
     const fetchParameters: FetchParameters = [
@@ -95,6 +101,7 @@ export async function requestApi<T>(
         method,
         headers,
         credentials: 'include',
+        ...(body && method === 'POST' ? { body: JSON.stringify(body) } : {}),
       },
     ];
 

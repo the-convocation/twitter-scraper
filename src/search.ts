@@ -122,12 +122,13 @@ async function getSearchTimeline(
   }
 
   const res = await requestApi<SearchTimeline>(
-    searchTimelineRequest.toRequestUrl(),
+    searchTimelineRequest.url,
     auth,
-    'GET',
+    'POST',
     undefined,
     undefined,
     bearerToken2,
+    searchTimelineRequest.toRequestBody(),
   );
 
   if (!res.success) {
