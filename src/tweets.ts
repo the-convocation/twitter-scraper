@@ -688,14 +688,6 @@ export async function sendTweet(
     tweetResult.__typename = 'Tweet';
   }
 
-  const userResult = tweetResult?.core?.user_results?.result;
-  console.log('[sendTweet] __typename:', tweetResult?.__typename);
-  console.log('[sendTweet] has tweet legacy:', !!tweetResult?.legacy);
-  console.log('[sendTweet] has user legacy:', !!userResult?.legacy);
-  console.log('[sendTweet] has user core:', !!userResult?.core);
-  console.log('[sendTweet] rest_id:', tweetResult?.rest_id);
-  console.log('[sendTweet] id_str:', tweetResult?.legacy?.id_str);
-
   const tweetId: string = tweetResult?.rest_id ?? '';
   return parseTimelineEntryItemContentRaw(entryContent, tweetId) ?? null;
 }
