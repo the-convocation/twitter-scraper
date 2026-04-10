@@ -39,6 +39,8 @@ import {
   getTweetsAndRepliesByUserId,
   getTweetsAndReplies,
   fetchLikedTweets,
+  MediaData,
+  sendTweet,
 } from './tweets';
 import fetch from 'cross-fetch';
 import debug from 'debug';
@@ -471,6 +473,29 @@ export class Scraper {
     } else {
       return getTweetAnonymous(id, this.auth);
     }
+  }
+
+  /**
+   * Posts a tweet. Requires authentication.
+   * @param text The text of the tweet.
+   * @param replyToTweetId The ID of the tweet to reply to, if any.
+   * @param mediaData An array of media items to attach to the tweet.
+   * @param hideLinkPreview Whether to hide the link preview card.
+   * @returns The created {@link Tweet} object, or `null` if it couldn't be parsed.
+   */
+  public sendTweet(
+    text: string,
+    replyToTweetId?: string,
+    mediaData?: MediaData[],
+    hideLinkPreview?: boolean,
+  ): Promise<Tweet | null> {
+    return sendTweet(
+      text,
+      replyToTweetId,
+      mediaData,
+      hideLinkPreview,
+      this.auth,
+    );
   }
 
   /**

@@ -1,5 +1,7 @@
 import { addApiFeatures, requestApi, bearerToken2 } from './api';
-import { TwitterAuth } from './auth';
+import { TwitterAuth, TwitterGuestAuth } from './auth';
+import { Headers } from 'headers-polyfill';
+import { generateTransactionId } from './xctxid';
 import { getUserIdByScreenName } from './profile';
 import { LegacyTweetRaw, QueryTweetsResponse } from './timeline-v1';
 import {
@@ -11,7 +13,7 @@ import {
   parseThreadedConversation,
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
-import { apiRequestFactory } from './api-data';
+import { apiRequestFactory, mutationEndpoints } from './api-data';
 import { ListTimeline, parseListTimelineTweets } from './timeline-list';
 import { AuthenticationError } from './errors';
 
@@ -447,4 +449,253 @@ export async function getTweetAnonymous(
   }
 
   return parseTimelineEntryItemContentRaw(res.value.data, id);
+}
+
+export interface MediaData {
+  data: Buffer;
+  mediaType: string;
+}
+
+const MEDIA_UPLOAD_URL = 'https://upload.twitter.com/1.1/media/upload.json';
+
+async function pollUploadStatus(
+  mediaId: string,
+  auth: TwitterAuth,
+): Promise<void> {
+  while (true) {
+    const headers = new Headers();
+    await auth.installTo(headers, MEDIA_UPLOAD_URL, bearerToken2);
+    const params = new URLSearchParams({
+      command: 'STATUS',
+      media_id: mediaId,
+    });
+    const res = await auth.fetch(`${MEDIA_UPLOAD_URL}?${params}`, {
+      headers,
+      credentials: 'include',
+    });
+    const data = await res.json();
+    const info = data.processing_info;
+    if (!info || info.state === 'succeeded') return;
+    if (info.state === 'failed') throw new Error('Media processing failed');
+    await new Promise((resolve) =>
+      setTimeout(resolve, (info.check_after_secs ?? 5) * 1000),
+    );
+  }
+}
+
+export async function uploadMedia(
+  mediaData: MediaData,
+  auth: TwitterAuth,
+): Promise<string> {
+  const { data, mediaType } = mediaData;
+
+  if (mediaType.startsWith('video/')) {
+    const totalBytes = data.byteLength;
+
+    // INIT
+    const initHeaders = new Headers();
+    await auth.installTo(initHeaders, MEDIA_UPLOAD_URL, bearerToken2);
+    initHeaders.set('content-type', 'application/x-www-form-urlencoded');
+    const initRes = await auth.fetch(MEDIA_UPLOAD_URL, {
+      method: 'POST',
+      headers: initHeaders,
+      credentials: 'include',
+      body: new URLSearchParams({
+        command: 'INIT',
+        media_type: mediaType,
+        total_bytes: totalBytes.toString(),
+      }).toString(),
+    });
+    const initData = await initRes.json();
+    const mediaId: string = initData.media_id_string;
+
+    // APPEND (5 MB chunks)
+    const chunkSize = 5 * 1024 * 1024;
+    let segmentIndex = 0;
+    for (let offset = 0; offset < totalBytes; offset += chunkSize) {
+      const chunk = data.slice(offset, offset + chunkSize);
+      const appendForm = new FormData();
+      appendForm.append('command', 'APPEND');
+      appendForm.append('media_id', mediaId);
+      appendForm.append('segment_index', segmentIndex.toString());
+      appendForm.append('media', new Blob([chunk], { type: mediaType }));
+      const appendHeaders = new Headers();
+      await auth.installTo(appendHeaders, MEDIA_UPLOAD_URL, bearerToken2);
+      await auth.fetch(MEDIA_UPLOAD_URL, {
+        method: 'POST',
+        headers: appendHeaders,
+        credentials: 'include',
+        body: appendForm,
+      });
+      segmentIndex++;
+    }
+
+    // FINALIZE
+    const finalizeHeaders = new Headers();
+    await auth.installTo(finalizeHeaders, MEDIA_UPLOAD_URL, bearerToken2);
+    finalizeHeaders.set('content-type', 'application/x-www-form-urlencoded');
+    const finalizeRes = await auth.fetch(MEDIA_UPLOAD_URL, {
+      method: 'POST',
+      headers: finalizeHeaders,
+      credentials: 'include',
+      body: new URLSearchParams({
+        command: 'FINALIZE',
+        media_id: mediaId,
+      }).toString(),
+    });
+    const finalizeData = await finalizeRes.json();
+    if (finalizeData.processing_info) {
+      await pollUploadStatus(mediaId, auth);
+    }
+    return mediaId;
+  } else {
+    // Simple upload for images
+    const form = new FormData();
+    form.append('media', new Blob([data], { type: mediaType }));
+    const headers = new Headers();
+    await auth.installTo(headers, MEDIA_UPLOAD_URL, bearerToken2);
+    const res = await auth.fetch(MEDIA_UPLOAD_URL, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: form,
+    });
+    if (!res.ok) {
+      throw new Error(`Media upload failed: ${res.status} ${res.statusText}`);
+    }
+    const uploadData = await res.json();
+    return uploadData.media_id_string as string;
+  }
+}
+
+export async function sendTweet(
+  text: string,
+  replyToTweetId: string | undefined,
+  mediaData: MediaData[] | undefined,
+  hideLinkPreview: boolean | undefined,
+  auth: TwitterAuth,
+): Promise<Tweet | null> {
+  const mediaIds: string[] = [];
+  if (mediaData?.length) {
+    for (const m of mediaData) {
+      mediaIds.push(await uploadMedia(m, auth));
+    }
+  }
+
+  const variables: Record<string, unknown> = {
+    tweet_text: text,
+    media: {
+      media_entities: mediaIds.map((id) => ({
+        media_id: id,
+        tagged_users: [],
+      })),
+      possibly_sensitive: false,
+    },
+    semantic_annotation_ids: [],
+    disallowed_reply_options: null,
+    semantic_annotation_options: { source: 'Profile' },
+  };
+
+  if (hideLinkPreview) variables.card_uri = 'tombstone://card';
+  if (replyToTweetId)
+    variables.reply = { in_reply_to_tweet_id: replyToTweetId };
+
+  const body: Record<string, unknown> = {
+    queryId: mutationEndpoints.CreateTweet.queryId,
+    variables,
+    features: {
+      premium_content_api_read_enabled: false,
+      communities_web_enable_tweet_community_results_fetch: true,
+      c9s_tweet_anatomy_moderator_badge_enabled: true,
+      responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+      responsive_web_grok_analyze_post_followups_enabled: true,
+      responsive_web_jetfuel_frame: true,
+      responsive_web_grok_share_attachment_enabled: true,
+      responsive_web_grok_annotations_enabled: true,
+      responsive_web_edit_tweet_api_enabled: true,
+      graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+      view_counts_everywhere_api_enabled: true,
+      longform_notetweets_consumption_enabled: true,
+      responsive_web_twitter_article_tweet_consumption_enabled: true,
+      content_disclosure_indicator_enabled: true,
+      content_disclosure_ai_generated_indicator_enabled: true,
+      responsive_web_grok_show_grok_translated_post: true,
+      responsive_web_grok_analysis_button_from_backend: true,
+      post_ctas_fetch_enabled: false,
+      longform_notetweets_rich_text_read_enabled: true,
+      longform_notetweets_inline_media_enabled: false,
+      profile_label_improvements_pcf_label_in_post_enabled: true,
+      responsive_web_profile_redirect_enabled: false,
+      rweb_tipjar_consumption_enabled: false,
+      verified_phone_label_enabled: false,
+      articles_preview_enabled: true,
+      responsive_web_grok_community_note_auto_translation_is_enabled: true,
+      responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+      freedom_of_speech_not_reach_fetch_enabled: true,
+      standardized_nudges_misinfo: true,
+      tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
+        true,
+      responsive_web_grok_image_annotation_enabled: true,
+      responsive_web_grok_imagine_annotation_enabled: true,
+      responsive_web_graphql_timeline_navigation_enabled: true,
+      responsive_web_enhance_cards_enabled: false,
+    },
+  };
+
+  const headers = new Headers();
+  await auth.installTo(
+    headers,
+    mutationEndpoints.CreateTweet.url,
+    bearerToken2,
+  );
+  headers.set('content-type', 'application/json');
+
+  if (
+    auth instanceof TwitterGuestAuth &&
+    auth.options?.experimental?.xClientTransactionId
+  ) {
+    const transactionId = await generateTransactionId(
+      mutationEndpoints.CreateTweet.url,
+      auth.fetch.bind(auth),
+      'POST',
+    );
+    headers.set('x-client-transaction-id', transactionId);
+  }
+
+  const res = await auth.fetch(mutationEndpoints.CreateTweet.url, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(`CreateTweet failed: ${res.status} ${res.statusText}`);
+  }
+
+  const json = await res.json();
+
+  if (json?.errors?.length) {
+    const err = json.errors[0];
+    throw new Error(`CreateTweet error ${err.code}: ${err.message}`);
+  }
+
+  const entryContent = json?.data?.create_tweet;
+  if (!entryContent) return null;
+  const tweetResult = entryContent.tweet_results?.result;
+
+  if (tweetResult && !tweetResult.__typename) {
+    tweetResult.__typename = 'Tweet';
+  }
+
+  const userResult = tweetResult?.core?.user_results?.result;
+  console.log('[sendTweet] __typename:', tweetResult?.__typename);
+  console.log('[sendTweet] has tweet legacy:', !!tweetResult?.legacy);
+  console.log('[sendTweet] has user legacy:', !!userResult?.legacy);
+  console.log('[sendTweet] has user core:', !!userResult?.core);
+  console.log('[sendTweet] rest_id:', tweetResult?.rest_id);
+  console.log('[sendTweet] id_str:', tweetResult?.legacy?.id_str);
+
+  const tweetId: string = tweetResult?.rest_id ?? '';
+  return parseTimelineEntryItemContentRaw(entryContent, tweetId) ?? null;
 }

@@ -192,3 +192,15 @@ function createApiRequestFactory<Endpoints extends Record<string, string>>(
 }
 
 export const apiRequestFactory = createApiRequestFactory(endpoints);
+
+/**
+ * Mutation endpoints (POST). These don't use the query-parameter pattern of
+ * read endpoints, so they are exported as plain URL/queryId pairs rather than
+ * going through the apiRequestFactory.
+ */
+export const mutationEndpoints = {
+  CreateTweet: {
+    queryId: 'S1qcGUn68_U0lDKdMlYSGg',
+    url: 'https://x.com/i/api/graphql/S1qcGUn68_U0lDKdMlYSGg/CreateTweet',
+  },
+} as const;
