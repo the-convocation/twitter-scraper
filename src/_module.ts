@@ -56,4 +56,5 @@ export type {
   Photo,
   PlaceRaw,
   Video,
+  MediaData,
 } from './tweets';
